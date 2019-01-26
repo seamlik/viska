@@ -1,0 +1,11 @@
+[package]
+authors = ["殷啟聰 | Kai-Chung Yan <seamlik@debian.org>"]
+edition = "2018"
+name = "viska"
+version = "0.1.0"
+
+[dependencies]
+failure = "0.1.5"
+openssl = "0.10.16"
+quinn = "0.2.0"
+uuid = { version = "0.7.1", features = ["v4"] }
