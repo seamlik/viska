@@ -6,6 +6,7 @@ version = "0.1.0"
 
 [dependencies]
 failure = "0.1.5"
+multihash = "0.8.0"
 openssl = "0.10.16"
 quinn = "0.2.0"
 uuid = { version = "0.7.1", features = ["v4"] }

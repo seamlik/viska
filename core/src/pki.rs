@@ -28,9 +28,7 @@
 //! the algorithms, it must notify the user and urge for an immediate update on software.
 
 use crate::Address;
-use failure::Context;
 use failure::Error;
-use failure::ResultExt;
 use openssl::pkey::HasPrivate;
 use openssl::pkey::PKey;
 use openssl::pkey::PKeyRef;
@@ -57,7 +55,8 @@ pub fn verify_certificate_chain(
 
 /// X.509 certificate with extra features.
 pub trait Certificate {
-    fn id(&self) -> Vec<u8>;
+    /// Calculates the ID.
+    fn id(&self) -> Result<Vec<u8>, Error>;
     fn certificate_type(&self) -> CertificateType;
     fn verify_signer(&self, certificate: &X509) -> bool;
 }
@@ -69,8 +68,8 @@ impl Certificate for X509 {
     fn verify_signer(&self, issuer: &X509) -> bool {
         panic!()
     }
-    fn id(&self) -> Vec<u8> {
-        panic!()
+    fn id(&self) -> Result<Vec<u8>, Error> {
+        multihash::encode(multihash::Hash::SHA2256, &self.to_der()?).map_err(Into::<Error>::into)
     }
 }
 
