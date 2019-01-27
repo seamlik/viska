@@ -1,48 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
-
 <svg
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:cc="http://creativecommons.org/ns#"
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
    xmlns:svg="http://www.w3.org/2000/svg"
    xmlns="http://www.w3.org/2000/svg"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="1600mm"
-   height="900mm"
-   viewBox="0 0 1600 900.00002"
-   version="1.1"
    id="svg8"
-   inkscape:version="0.92.1 r15371"
-   sodipodi:docname="banner.svg"
-   inkscape:export-filename="/home/seamlik/Documents/banner.png"
-   inkscape:export-xdpi="64.013"
-   inkscape:export-ydpi="64.013">
+   version="1.1"
+   viewBox="0 0 1600 900.00002"
+   height="900mm"
+   width="1600mm">
   <defs
      id="defs2" />
-  <sodipodi:namedview
-     id="base"
-     pagecolor="#ffffff"
-     bordercolor="#666666"
-     borderopacity="1.0"
-     inkscape:pageopacity="0.0"
-     inkscape:pageshadow="2"
-     inkscape:zoom="0.24748738"
-     inkscape:cx="1211.6657"
-     inkscape:cy="1460.6041"
-     inkscape:document-units="mm"
-     inkscape:current-layer="layer2"
-     showgrid="false"
-     inkscape:window-width="3840"
-     inkscape:window-height="2031"
-     inkscape:window-x="0"
-     inkscape:window-y="55"
-     inkscape:window-maximized="1"
-     fit-margin-top="0"
-     fit-margin-left="0"
-     fit-margin-right="0"
-     fit-margin-bottom="0" />
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -56,72 +25,63 @@
     </rdf:RDF>
   </metadata>
   <g
-     inkscape:groupmode="layer"
-     id="layer2"
-     inkscape:label="background"
+     transform="translate(523.24243,360.33099)"
      style="display:inline"
-     transform="translate(523.24243,360.33099)">
+     id="layer2">
     <rect
-       style="opacity:1;fill:#c1006c;fill-opacity:1;fill-rule:nonzero;stroke-width:0;stroke-miterlimit:4;stroke-dasharray:none"
-       id="rect5012"
-       width="1600"
-       height="900"
+       y="-360.33099"
        x="-523.24243"
-       y="-360.33099" />
+       height="900"
+       width="1600"
+       id="rect5012"
+       style="opacity:1;fill:#c1006c;fill-opacity:1;fill-rule:nonzero;stroke-width:0;stroke-miterlimit:4;stroke-dasharray:none" />
     <flowRoot
-       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:40px;line-height:1.25;font-family:'Noto Mono';-inkscape-font-specification:'Noto Mono';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
        id="flowRoot6536"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:40px;line-height:1.25;font-family:'Noto Mono';-inkscape-font-specification:'Noto Mono';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"><flowRegion
-         id="flowRegion6538"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Noto Mono';-inkscape-font-specification:'Noto Mono'"><rect
-           id="rect6540"
-           width="1056.6195"
-           height="535.38086"
-           x="967.72614"
+       xml:space="preserve"><flowRegion
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Noto Mono';-inkscape-font-specification:'Noto Mono'"
+         id="flowRegion6538"><rect
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Noto Mono';-inkscape-font-specification:'Noto Mono'"
            y="203.04135"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Noto Mono';-inkscape-font-specification:'Noto Mono'" /></flowRegion><flowPara
+           x="967.72614"
+           height="535.38086"
+           width="1056.6195"
+           id="rect6540" /></flowRegion><flowPara
          id="flowPara6542" /></flowRoot>    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:180.28262329px;line-height:1.25;font-family:'Noto Mono';-inkscape-font-specification:'Noto Mono';letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1.87794387"
-       x="243.08621"
+       id="text6550"
        y="157.27498"
-       id="text6550"><tspan
-         sodipodi:role="line"
-         id="tspan6548"
-         x="243.08621"
+       x="243.08621"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:180.28262329px;line-height:1.25;font-family:'Noto Mono';-inkscape-font-specification:'Noto Mono';letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1.87794387"
+       xml:space="preserve"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:180.28262329px;font-family:'Noto Mono';-inkscape-font-specification:'Noto Mono';fill:#ffffff;fill-opacity:1;stroke-width:1.87794387"
          y="157.27498"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:180.28262329px;font-family:'Noto Mono';-inkscape-font-specification:'Noto Mono';fill:#ffffff;fill-opacity:1;stroke-width:1.87794387">Viska</tspan></text>
+         x="243.08621"
+         id="tspan6548">Viska</tspan></text>
   </g>
   <g
-     inkscape:label="main"
-     inkscape:groupmode="layer"
-     id="layer1"
-     transform="translate(512.72221,251.25325)">
+     transform="translate(512.72221,251.25325)"
+     id="layer1">
     <g
        id="g4534" />
     <circle
-       style="fill:#e334e7;fill-opacity:1;stroke-width:1.02751195"
-       id="path4540"
-       cx="-24.535887"
+       r="177.22891"
        cy="198.74657"
-       r="177.22891" />
+       cx="-24.535887"
+       id="path4540"
+       style="fill:#e334e7;fill-opacity:1;stroke-width:1.02751195" />
     <path
-       style="fill:#48fffb;fill-opacity:1;stroke-width:1.02751195"
-       d="m 122.8146,100.49686 c -168.271938,43.69749 -132.0222381,178.6431 -197.874578,268.03549 16.39354,4.90731 33.41138,7.41449 50.52364,7.44351 97.88116,2.1e-4 177.229538,-79.34821 177.229318,-177.22937 -0.0451,-34.98085 -10.44107,-69.16606 -29.87838,-98.24963 z"
        id="path4540-6"
-       inkscape:connector-curvature="0"
-       sodipodi:nodetypes="ccccc" />
+       d="m 122.8146,100.49686 c -168.271938,43.69749 -132.0222381,178.6431 -197.874578,268.03549 16.39354,4.90731 33.41138,7.41449 50.52364,7.44351 97.88116,2.1e-4 177.229538,-79.34821 177.229318,-177.22937 -0.0451,-34.98085 -10.44107,-69.16606 -29.87838,-98.24963 z"
+       style="fill:#48fffb;fill-opacity:1;stroke-width:1.02751195" />
     <circle
-       style="fill:#4f4324;fill-opacity:1;stroke-width:0.30694363"
-       id="path4578"
-       cx="31.65378"
+       r="13.952694"
        cy="106.19498"
-       r="13.952694" />
+       cx="31.65378"
+       id="path4578"
+       style="fill:#4f4324;fill-opacity:1;stroke-width:0.30694363" />
     <path
-       style="fill:#e334e7;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-       d="m -198.13307,356.49653 c 20.6834,-19.11943 52.17733,-32.83358 47.47675,-64.64499 l 54.145952,62.73007 c -67.338222,13.4197 -83.605562,7.33314 -101.622702,1.91492 z"
        id="path4991"
-       inkscape:connector-curvature="0"
-       sodipodi:nodetypes="cccc" />
+       d="m -198.13307,356.49653 c 20.6834,-19.11943 52.17733,-32.83358 47.47675,-64.64499 l 54.145952,62.73007 c -67.338222,13.4197 -83.605562,7.33314 -101.622702,1.91492 z"
+       style="fill:#e334e7;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
   </g>
 </svg>
