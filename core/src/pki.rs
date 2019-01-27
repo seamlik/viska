@@ -137,7 +137,7 @@ impl Certificate for X509 {
         panic!()
     }
     fn id(&self) -> Result<Vec<u8>, Error> {
-        multihash::encode(multihash::Hash::SHA2256, &self.to_der()?).map_err(Into::<Error>::into)
+        multihash::encode(multihash::Hash::SHA2256, &self.to_der()?).map_err(Into::into)
     }
 }
 
