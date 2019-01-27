@@ -125,12 +125,12 @@ pub fn verify_certificate_chain(
 pub trait Certificate {
     /// Calculates the ID.
     fn id(&self) -> Result<Vec<u8>, Error>;
-    fn certificate_type(&self) -> CertificateType;
+    fn kind(&self) -> CertificateKind;
     fn verify_signer(&self, certificate: &X509) -> bool;
 }
 
 impl Certificate for X509 {
-    fn certificate_type(&self) -> CertificateType {
+    fn kind(&self) -> CertificateKind {
         panic!()
     }
     fn verify_signer(&self, issuer: &X509) -> bool {
@@ -144,15 +144,15 @@ impl Certificate for X509 {
 /// Indicates whether a certificate is for an account or a device.
 ///
 /// An account certificate must be self-signed, while a device certificate is signed by an account certificate.
-pub enum CertificateType {
+pub enum CertificateKind {
     /// Account certificate.
     ///
-    /// This type of certificates must be self-signed.
+    /// This kind of certificates must be self-signed.
     Account,
 
     /// Account certificate.
     ///
-    /// This type of certificates must be signed by an account certificate.
+    /// This kind of certificates must be signed by an account certificate.
     Device,
 
     /// Unable to determine the nature of a certificate.
