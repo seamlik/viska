@@ -124,6 +124,11 @@ pub fn verify_certificate_chain(
 /// X.509 certificate with extra features.
 pub trait Certificate {
     /// Calculates the ID.
+    ///
+    /// # Errors
+    ///
+    /// * `multihash::Error`
+    /// * `openssl::error::ErrorStack`
     fn id(&self) -> Result<Vec<u8>, Error>;
     fn kind(&self) -> CertificateKind;
     fn verify_signer(&self, certificate: &X509) -> bool;
