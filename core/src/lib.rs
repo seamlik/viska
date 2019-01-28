@@ -5,10 +5,9 @@ pub mod pki;
 
 /// Combination of an account ID and a device ID.
 ///
-/// This struct is used to identify an entity a client can interact with. For example, somewhere a real-time message can
-/// be sent to.
+/// It is used to identify an entity a client can interact with. For example, specifying the destination of a message.
 ///
-/// Fields are [Multihash](https://multiformats.io/multihash) values in raw bytes and are optional. However, an
+/// Fields are bytes returned from `pki::Certificate::id()` and are optional. However, an
 /// `Address` with the `device` part but not the `account` part is likely invalid in most cases.
 pub struct Address {
     pub account: Option<Vec<u8>>,

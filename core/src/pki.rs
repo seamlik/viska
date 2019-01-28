@@ -19,9 +19,6 @@
 //! * `subject`: `CN` = `Viska Account` or `Viska Device`
 //! * `validity`: Never expire.
 //!
-//! Additionally, the ID of a certificate is the SHA-256 hash value of the entire certificate encoded in ANS.1 DER
-//! format. It must be displayed in [Multihash](https://multiformats.io/multihash) when interfacing with a user or JSON-RPC.
-//!
 //! All decisions on crytographic algorithms in this section are only advisory during certificate creation. A client
 //! should be able perform verification based on the built-in information. If a legacy client does not support some of
 //! the algorithms, it must notify the user and urge for an immediate update on software.
@@ -124,6 +121,9 @@ pub fn verify_certificate_chain(
 /// X.509 certificate with extra features.
 pub trait Certificate {
     /// Calculates the ID.
+    ///
+    /// This is the [Multihash](https://multiformats.io/multihash) value of the SHA-256 hash of the entire certificate.
+    /// The certificate is encoded in ASN.1 DER format when being hashed.
     ///
     /// # Errors
     ///
