@@ -4,10 +4,7 @@
 //! multiple device certificates in order to identify devices this user has logged in. Therefor, this module is one of
 //! the most critical part of the project.
 //!
-//! Certificates are used in various places, which include but not limited to:
-//!
-//! * TLS sessions between devices.
-//! * Peer identity during peer discovery and user interaction.
+//! These certificates are used in TLS sessions between devices, which provides end-to-end encryption and authentication.
 //!
 //! # Format
 //!
@@ -22,13 +19,7 @@
 //! All decisions on crytographic algorithms in this section are only advisory during certificate creation. A client
 //! should be able perform verification based on the built-in information. If a legacy client does not support some of
 //! the algorithms, it must notify the user and urge for an immediate update on software.
-//!
-//! # Errors
-//!
-//! Since this module uses `openssl` crate to perform most cryptographic operations, an `openssl::error::ErrorStack`
-//! will most likely be the immediate cause when an `Error` is returned.
 
-use crate::Address;
 use failure::Error;
 use openssl::asn1::Asn1Time;
 use openssl::bn::BigNum;
@@ -112,14 +103,6 @@ pub fn new_certificate_device<T: HasPrivate>(
     Ok((builder.build(), key))
 }
 
-pub fn verify_certificate_chain(
-    addr: &Address,
-    cert_account: &X509,
-    cert_device: &X509,
-) -> Result<bool, Error> {
-    panic!()
-}
-
 /// X.509 certificate with extra features.
 pub trait Certificate {
     /// Calculates the ID.
@@ -132,38 +115,10 @@ pub trait Certificate {
     /// * `multihash::Error`: Fails to encode into Multihash
     /// * `openssl::error::ErrorStack`: Fails to encode into DER
     fn id(&self) -> Result<Vec<u8>, Error>;
-    fn kind(&self) -> CertificateKind;
-    fn verify_signer(&self, certificate: &X509) -> bool;
 }
 
 impl Certificate for X509 {
-    fn kind(&self) -> CertificateKind {
-        panic!()
-    }
-    fn verify_signer(&self, issuer: &X509) -> bool {
-        panic!()
-    }
     fn id(&self) -> Result<Vec<u8>, Error> {
         multihash::encode(multihash::Hash::SHA2256, &self.to_der()?).map_err(Into::into)
     }
-}
-
-/// Indicates whether a certificate is for an account or a device.
-///
-/// An account certificate must be self-signed, while a device certificate is signed by an account certificate.
-pub enum CertificateKind {
-    /// Account certificate.
-    ///
-    /// This kind of certificates must be self-signed.
-    Account,
-
-    /// Account certificate.
-    ///
-    /// This kind of certificates must be signed by an account certificate.
-    Device,
-
-    /// Unable to determine the nature of a certificate.
-    ///
-    /// This variant is reserved for future changes to how to define the type of a certificate.
-    Unknown,
 }
