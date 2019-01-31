@@ -32,6 +32,7 @@ use crate::Address;
 use failure::Error;
 use openssl::asn1::Asn1Time;
 use openssl::bn::BigNum;
+use openssl::error::ErrorStack;
 use openssl::hash::MessageDigest;
 use openssl::pkey::HasPrivate;
 use openssl::pkey::PKey;
@@ -60,13 +61,13 @@ fn new_digest_for_certificate_signatures() -> MessageDigest {
     MessageDigest::sha256()
 }
 
-fn new_x509name_with_one_entry(key: &str, value: &str) -> Result<X509Name, Error> {
+fn new_x509name_with_one_entry(key: &str, value: &str) -> Result<X509Name, ErrorStack> {
     let mut builder = X509NameBuilder::new()?;
     builder.append_entry_by_text(key, value)?;
     Ok(builder.build())
 }
 
-fn prepare_new_certificate() -> Result<(X509Builder, PKey<Private>), Error> {
+fn prepare_new_certificate() -> Result<(X509Builder, PKey<Private>), ErrorStack> {
     let mut builder = X509Builder::new()?;
 
     let key = PKey::from_rsa(Rsa::generate(LENGTH_KEY)?)?;
@@ -84,7 +85,7 @@ fn prepare_new_certificate() -> Result<(X509Builder, PKey<Private>), Error> {
 }
 
 /// Generates a certificate for an account.
-pub fn new_certificate_account() -> Result<(X509, PKey<Private>), Error> {
+pub fn new_certificate_account() -> Result<(X509, PKey<Private>), ErrorStack> {
     let (mut builder, key) = prepare_new_certificate()?;
     let subject = new_x509name_with_one_entry("CN", "Viska Account")?;
 
@@ -99,7 +100,7 @@ pub fn new_certificate_account() -> Result<(X509, PKey<Private>), Error> {
 pub fn new_certificate_device<T: HasPrivate>(
     account_cert: &X509Ref,
     account_key: &PKeyRef<T>,
-) -> Result<(X509, PKey<Private>), Error> {
+) -> Result<(X509, PKey<Private>), ErrorStack> {
     let (mut builder, key) = prepare_new_certificate()?;
     let subject = new_x509name_with_one_entry("CN", "Viska Device")?;
 
