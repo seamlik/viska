@@ -129,8 +129,8 @@ pub trait Certificate {
     ///
     /// # Errors
     ///
-    /// * `multihash::Error`
-    /// * `openssl::error::ErrorStack`
+    /// * `multihash::Error`: Fails to encode into Multihash
+    /// * `openssl::error::ErrorStack`: Fails to encode into DER
     fn id(&self) -> Result<Vec<u8>, Error>;
     fn kind(&self) -> CertificateKind;
     fn verify_signer(&self, certificate: &X509) -> bool;
