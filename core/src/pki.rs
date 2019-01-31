@@ -38,6 +38,7 @@ use openssl::pkey::HasPrivate;
 use openssl::pkey::PKey;
 use openssl::pkey::PKeyRef;
 use openssl::pkey::Private;
+use openssl::nid::Nid;
 use openssl::rsa::Rsa;
 use openssl::x509::X509Builder;
 use openssl::x509::X509Name;
@@ -61,9 +62,9 @@ fn new_digest_for_certificate_signatures() -> MessageDigest {
     MessageDigest::sha256()
 }
 
-fn new_x509name_with_one_entry(key: &str, value: &str) -> Result<X509Name, ErrorStack> {
+fn new_x509name_with_one_entry(key: Nid, value: &str) -> Result<X509Name, ErrorStack> {
     let mut builder = X509NameBuilder::new()?;
-    builder.append_entry_by_text(key, value)?;
+    builder.append_entry_by_nid(key, value)?;
     Ok(builder.build())
 }
 
@@ -87,7 +88,7 @@ fn prepare_new_certificate() -> Result<(X509Builder, PKey<Private>), ErrorStack>
 /// Generates a certificate for an account.
 pub fn new_certificate_account() -> Result<(X509, PKey<Private>), ErrorStack> {
     let (mut builder, key) = prepare_new_certificate()?;
-    let subject = new_x509name_with_one_entry("CN", "Viska Account")?;
+    let subject = new_x509name_with_one_entry(Nid::COMMONNAME, "Viska Account")?;
 
     builder.set_issuer_name(&subject)?;
     builder.set_subject_name(&subject)?;
@@ -102,7 +103,7 @@ pub fn new_certificate_device<T: HasPrivate>(
     account_key: &PKeyRef<T>,
 ) -> Result<(X509, PKey<Private>), ErrorStack> {
     let (mut builder, key) = prepare_new_certificate()?;
-    let subject = new_x509name_with_one_entry("CN", "Viska Device")?;
+    let subject = new_x509name_with_one_entry(Nid::COMMONNAME, "Viska Device")?;
 
     builder.set_issuer_name(&account_cert.subject_name())?;
     builder.set_subject_name(&subject)?;
