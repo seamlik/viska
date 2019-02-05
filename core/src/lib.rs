@@ -1,3 +1,6 @@
+use openssl::pkey::PKey;
+use openssl::pkey::Private;
+use openssl::x509::X509;
 use std::fmt::Display;
 use std::fmt::Formatter;
 
@@ -22,4 +25,49 @@ impl Display for Address {
         };
         write!(f, "{}/{}", convert(&self.account), convert(&self.device))
     }
+}
+
+/// Collection of files representing a device profile.
+///
+/// The majority of the data is structured in the form of filesystem tree instead of structured data formats such as
+/// JSON. The reasons include faster random access, fewer conflicts during Git merges, avoiding overhead of byte-to-text
+/// encoding such as Base64, etc..
+///
+/// # Directory structure
+///
+/// * `account.key`: Private key to the account certificate, in PKCS #8 PEM, might be encrypted.
+/// * `device.chain`: Certificate chain and private key to the device certificate, in PKCS #12 DER, might be encrypted.
+/// * `devices/`: Linked devices (including the local one).
+///   * `<device-id>/`: Repeatable directories containing the device description.
+///     * `name`: Display name.
+///     * `network/`: Discovery networks the account has joined.
+///       * `<network-name>`: Repeatable files containing the contact info in the network.
+/// * `messages/`: All historical messages.
+///   * `<chatroom-id>/`: Repeatable directories representing a chatroom.
+///     * `<message-id>/`: Repeatable directories containing the history in a chatroom.
+///       * `body`: Format depends on `type`.
+///       * `sender`: Full address of the sender.
+///       * `time`: Sent time.
+///       * `type`: IANA-registered media type.
+/// * `roster/`: Trusted peer accounts.
+///   * `<account-id>/`: Repeatable directories.
+///     * `vCard/*`: Same as the `vCard` directory at the top level.
+/// * `unmanaged/`: Data that are not managed by Git.
+/// * `vCard/`: Public information of an account.
+///   * `avatar`: Profile photo, in any image format.
+///   * `description`: Additional description of the account.
+///   * `name`: Display name of the account, must not contain multiple lines.
+///   * `time`: Last time `vCard` was updated.
+/// 
+/// If not specified, the content of the file must be encoded in UTF-8. Timestamps are encoded in ISO 8601
+/// date+time+timezone format.
+///
+/// Git is used to synchronize all data in a device profile between devices, while the synchronization of vCard between
+/// rosters simply relies on comparing the update time. More information about synchronization can be found at the
+/// corresponding sections of the documents.
+pub struct Profile {
+    account_certificate: X509,
+    account_key: PKey<Private>,
+    device_certificate: X509,
+    device_key: PKey<Private>,
 }
