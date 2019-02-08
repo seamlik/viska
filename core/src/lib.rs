@@ -20,7 +20,7 @@ pub struct Address {
 impl Display for Address {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let convert = |x: &Option<Vec<u8>>| match x {
-            Some(data) => multihash::to_hex(&data),
+            Some(data) => data_encoding::HEXUPPER.encode(&data),
             None => "".to_string(),
         };
         write!(f, "{}/{}", convert(&self.account), convert(&self.device))

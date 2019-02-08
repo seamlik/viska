@@ -20,7 +20,8 @@
 //! should be able perform verification based on the built-in information. If a legacy client does not support some of
 //! the algorithms, it must notify the user and urge for an immediate update on software.
 
-use failure::Error;
+use blake2::Blake2b;
+use blake2::Digest;
 use openssl::asn1::Asn1Time;
 use openssl::bn::BigNum;
 use openssl::error::ErrorStack;
@@ -107,18 +108,17 @@ pub fn new_certificate_device<T: HasPrivate>(
 pub trait Certificate {
     /// Calculates the ID.
     ///
-    /// This is the [Multihash](https://multiformats.io/multihash) value of the SHA-256 hash of the entire certificate.
-    /// The certificate is encoded in ASN.1 DER format when being hashed.
+    /// This is a [BLAKE2b](https://blake2.net) 512-bit digest of the entire certificate encoded in ASN.1 DER.
     ///
     /// # Errors
     ///
     /// * `multihash::Error`: Fails to encode into Multihash
     /// * `openssl::error::ErrorStack`: Fails to encode into DER
-    fn id(&self) -> Result<Vec<u8>, Error>;
+    fn id(&self) -> Result<Vec<u8>, ErrorStack>;
 }
 
 impl Certificate for X509 {
-    fn id(&self) -> Result<Vec<u8>, Error> {
-        multihash::encode(multihash::Hash::SHA2256, &self.to_der()?).map_err(Into::into)
+    fn id(&self) -> Result<Vec<u8>, ErrorStack> {
+        Ok(Blake2b::digest(&self.to_der()?).into_iter().collect())
     }
 }
