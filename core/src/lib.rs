@@ -35,8 +35,10 @@ impl Display for Address {
 ///
 /// # Directory structure
 ///
-/// * `account.key`: Private key to the account certificate, in PKCS #8 PEM, might be encrypted.
-/// * `device.chain`: Certificate chain and private key to the device certificate, in PKCS #12 DER, might be encrypted.
+/// * `account.cert`: Account certificate, in X.509.
+/// * `account.key`: Private key to the account certificate, in RFC 5958 PKCS #8 encoded in ASN.1 DER.
+/// * `device.cert`: Device certificate, in X.509.
+/// * `device.key`: Private key to the device certificate, in RFC 5958 PKCS #8 encoded in ASN.1 DER.
 /// * `devices/`: Linked devices (including the local one).
 ///   * `<device-id>/`: Repeatable directories containing the device description.
 ///     * `name`: Display name.
