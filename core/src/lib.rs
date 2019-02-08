@@ -39,11 +39,6 @@ impl Display for Address {
 /// * `account.key`: Private key to the account certificate, in RFC 5958 PKCS #8 encoded in ASN.1 DER.
 /// * `device.cert`: Device certificate, in X.509.
 /// * `device.key`: Private key to the device certificate, in RFC 5958 PKCS #8 encoded in ASN.1 DER.
-/// * `devices/`: Linked devices (including the local one).
-///   * `<device-id>/`: Repeatable directories containing the device description.
-///     * `name`: Display name.
-///     * `network/`: Discovery networks the account has joined.
-///       * `<network-name>`: Repeatable files containing the contact info in the network.
 /// * `messages/`: All historical messages.
 ///   * `<chatroom-id>/`: Repeatable directories representing a chatroom.
 ///     * `<message-id>/`: Repeatable directories containing the history in a chatroom.
@@ -58,7 +53,12 @@ impl Display for Address {
 /// * `vCard/`: Public information of an account.
 ///   * `avatar`: Profile photo, in any image format.
 ///   * `description`: Additional description of the account.
-///   * `name`: Display name of the account, must not contain multiple lines.
+///   * `devices/`: Linked devices.
+///     * `<device-id>/`: Repeatable directories.
+///       * `name`: Display name, only the first line is read.
+///       * `network/`: Discovery networks the account has joined.
+///         * `<network-name>`: Repeatable files containing the contact info in the network.
+///   * `name`: Display name of the account, only the first line is read.
 ///   * `time`: Last time `vCard` was updated.
 /// 
 /// If not specified, the content of the file must be encoded in UTF-8. Timestamps are encoded in ISO 8601
