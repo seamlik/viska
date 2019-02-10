@@ -43,7 +43,7 @@ impl Display for Address {
 ///       * `body`: Format depends on `type`.
 ///       * `sender`: Full address of the sender.
 ///       * `time`: Sent time.
-///       * `type`: IANA-registered media type.
+///       * `type`: (Optional) IANA-registered media type, defaults to `text/plain`
 /// * `roster/`: Trusted peer accounts.
 ///   * `<account-id>/`: Repeatable directories.
 ///     * `vCard/*`: Same as the `vCard` directory at the top level.
