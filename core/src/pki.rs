@@ -105,12 +105,8 @@ pub fn new_certificate_device<T: HasPrivate>(
 pub trait Certificate {
     /// Calculates the ID.
     ///
-    /// This is a [BLAKE2b](https://blake2.net) 512-bit digest of the entire certificate encoded in ASN.1 DER.
-    ///
-    /// # Errors
-    ///
-    /// * `multihash::Error`: Fails to encode into Multihash
-    /// * `openssl::error::ErrorStack`: Fails to encode into DER
+    /// This is a [BLAKE2b](https://blake2.net) 512-bit digest of the entire certificate encoded in ASN.1 DER. Must be
+    /// displayed in uppercase Base16.
     fn id(&self) -> Result<Vec<u8>, ErrorStack>;
 }
 
