@@ -33,6 +33,8 @@ impl Display for Address {
 ///
 /// * `account.cert`: Account certificate, in X.509 encoded in ASN.1 DER.
 /// * `account.key`: Private key to the account certificate, in RFC 5958 PKCS #8 encoded in ASN.1 DER.
+/// * `blacklist/`: Accounts whose connections must be refused.
+///   * `<account-id>`: Repeatable empty files.
 /// * `device.cert`: Device certificate, in X.509 encoded in ASN.1 DER.
 /// * `device.key`: Private key to the device certificate, in RFC 5958 PKCS #8 encoded in ASN.1 DER.
 /// * `messages/`: All historical messages.
