@@ -31,9 +31,9 @@ impl Display for Address {
 ///
 /// # Directory structure
 ///
-/// * `account.cert`: Account certificate, in X.509.
+/// * `account.cert`: Account certificate, in X.509 encoded in ASN.1 DER.
 /// * `account.key`: Private key to the account certificate, in RFC 5958 PKCS #8 encoded in ASN.1 DER.
-/// * `device.cert`: Device certificate, in X.509.
+/// * `device.cert`: Device certificate, in X.509 encoded in ASN.1 DER.
 /// * `device.key`: Private key to the device certificate, in RFC 5958 PKCS #8 encoded in ASN.1 DER.
 /// * `messages/`: All historical messages.
 ///   * `<chatroom-id>/`: Repeatable directories representing a chatroom.
