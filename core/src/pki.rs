@@ -10,9 +10,6 @@
 //!
 //! The format of a certificate are defined by the X.509 version 3 standards with the following specializations:
 //!
-//! * `serialNumber`: [RFC 4122](https://datatracker.ietf.org/doc/rfc4122) UUID v4.
-//! * `signatureAlgorithm`: SHA-256 + RSA.
-//! * `subjectPublicKeyInfo`: RSA 4096-bit
 //! * `subject`: `CN` = `Viska Account` or `Viska Device`
 //! * `validity`: Never expire.
 //!
