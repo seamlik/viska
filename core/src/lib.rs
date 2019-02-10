@@ -41,6 +41,7 @@ impl Display for Address {
 ///   * `<chatroom-id>/`: Repeatable directories representing a chatroom.
 ///     * `<message-id>/`: Repeatable directories containing the history in a chatroom.
 ///       * `body`: Format depends on `type`.
+///       * `filename`: (Optional) suggested filename if the message is the result of a file transfer.
 ///       * `sender`: Full address of the sender.
 ///       * `time`: Sent time.
 ///       * `type`: (Optional) IANA-registered media type, defaults to `text/plain`
