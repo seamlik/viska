@@ -50,7 +50,7 @@ impl Display for Address {
 ///     * `vCard/*`: Same as the `vCard` directory at the top level.
 /// * `unmanaged/`: Data that are not managed by Git.
 /// * `vCard/`: Public information of an account.
-///   * `avatar`: Profile photo, in any image format.
+///   * `avatar`: User photo, must be an WebP or an SVG.
 ///   * `description`: Additional description of the account.
 ///   * `devices/`: Linked devices.
 ///     * `<device-id>/`: Repeatable directories.
