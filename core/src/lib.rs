@@ -16,9 +16,7 @@ pub struct Address {
 
 impl Display for Address {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        let convert = |data: &[u8]| {
-            data_encoding::HEXUPPER.encode(&data)
-        };
+        let convert = |data: &[u8]| data_encoding::HEXUPPER.encode(data);
         write!(f, "{}/{}", convert(&self.account), convert(&self.device))
     }
 }
@@ -31,12 +29,12 @@ impl Display for Address {
 ///
 /// # Directory structure
 ///
-/// * `account.cert`: Account certificate, in X.509 encoded in ASN.1 DER.
-/// * `account.key`: Private key to the account certificate, in RFC 5958 PKCS #8 encoded in ASN.1 DER.
+/// * `account.cert`: Account certificate.
+/// * `account.key`: Private key to the account certificate.
 /// * `blacklist/`: Accounts whose connections must be refused.
 ///   * `<account-id>`: Repeatable empty files.
-/// * `device.cert`: Device certificate, in X.509 encoded in ASN.1 DER.
-/// * `device.key`: Private key to the device certificate, in RFC 5958 PKCS #8 encoded in ASN.1 DER.
+/// * `device.cert`: Device certificate.
+/// * `device.key`: Private key to the device certificate.
 /// * `messages/`: All historical messages.
 ///   * `<chatroom-id>/`: Repeatable directories representing a chatroom.
 ///     * `<message-id>/`: Repeatable directories containing the history in a chatroom.
@@ -47,7 +45,7 @@ impl Display for Address {
 ///       * `type`: (Optional) IANA-registered media type, defaults to `text/plain`
 /// * `roster/`: Trusted peer accounts.
 ///   * `<account-id>/`: Repeatable directories.
-///     * `vCard/*`: Same as the `vCard` directory at the top level.
+///     * `vCard/*`: Same as the account `vCard/*`.
 /// * `unmanaged/`: Data that are not managed by Git.
 /// * `vCard/`: Public information of an account.
 ///   * `avatar`: User photo, must be an WebP or an SVG.
@@ -59,9 +57,12 @@ impl Display for Address {
 ///         * `<network-name>`: Repeatable files containing the contact info in the network.
 ///   * `name`: Display name of the account, only the first line is read.
 ///   * `time`: Last time `vCard` was updated.
-/// 
-/// If not specified, the content of the file must be encoded in UTF-8. Timestamps are encoded in ISO 8601
-/// date+time+timezone format.
+///
+/// If not specified, the content of the file must be encoded in UTF-8. Other rules include:
+///
+/// * Certificates must conform to X.509 and encoded in ASN.1 DER.
+/// * Cryptographic keys must be contained in RFC 5958 PKCS #8 encoded in ASN.1 DER.
+/// * Timestamps must be encoded in ISO 8601 date+time+timezone format.
 ///
 /// Git is used to synchronize all data in a device profile between devices, while the synchronization of vCard between
 /// rosters simply relies on comparing the update time. More information about synchronization can be found at the

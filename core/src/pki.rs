@@ -1,7 +1,7 @@
 //! Public key infrastructure for managing certificates of accounts and devices.
 //!
-//! A user account is essentially an X.509 certificate combined with its pricate key.  Such certificate may issue
-//! multiple device certificates in order to identify devices this user has logged in. Therefor, this module is one of
+//! A user account is essentially an X.509 certificate combined with its pricate key. Such certificate may issue
+//! multiple device certificates in order to identify devices this user has logged in. Therefore, this module is one of
 //! the most critical part of the project.
 //!
 //! These certificates are used in TLS sessions between devices, which provides end-to-end encryption and authentication.
@@ -23,11 +23,11 @@ use openssl::asn1::Asn1Time;
 use openssl::bn::BigNum;
 use openssl::error::ErrorStack;
 use openssl::hash::MessageDigest;
+use openssl::nid::Nid;
 use openssl::pkey::HasPrivate;
 use openssl::pkey::PKey;
 use openssl::pkey::PKeyRef;
 use openssl::pkey::Private;
-use openssl::nid::Nid;
 use openssl::rsa::Rsa;
 use openssl::x509::X509Builder;
 use openssl::x509::X509Name;
