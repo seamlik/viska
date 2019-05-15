@@ -1,3 +1,12 @@
-*.rs.bk
+*.bk
+*.iml
+.gradle/
+.idea/
+/gradle/wrapper/
+/gradlew
+/gradlew.bat
 /target/
 Cargo.lock
+build/
+local.properties
+out/
