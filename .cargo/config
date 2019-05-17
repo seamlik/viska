@@ -1,0 +1,8 @@
+[target.aarch64-linux-android]
+linker = "android/NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android28-clang"
+
+[target.x86_64-linux-android]
+linker = "android/NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android28-clang"
+
+[target.i686-linux-android]
+linker = "android/NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android28-clang"

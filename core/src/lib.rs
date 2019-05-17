@@ -1,9 +1,11 @@
-use openssl::pkey::PKey;
-use openssl::pkey::Private;
-use openssl::x509::X509;
+#[macro_use]
+extern crate log;
+
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::path::PathBuf;
 
+pub mod android;
 pub mod pki;
 
 /// Combination of an account ID and a device ID.
@@ -68,8 +70,5 @@ impl Display for Address {
 /// rosters simply relies on comparing the update time. More information about synchronization can be found at the
 /// corresponding sections of the documents.
 pub struct Profile {
-    account_certificate: X509,
-    account_key: PKey<Private>,
-    device_certificate: X509,
-    device_key: PKey<Private>,
+    path: PathBuf,
 }

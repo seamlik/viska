@@ -1,7 +1,9 @@
 *.bk
 *.iml
+.editorconfig
 .gradle/
 .idea/
+/android/NDK_HOME
 /gradle/wrapper/
 /gradlew
 /gradlew.bat

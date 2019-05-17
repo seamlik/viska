@@ -4,10 +4,17 @@ edition = "2018"
 name = "viska"
 version = "0.1.0"
 
+[lib]
+crate-type = ["dylib"]
+
 [dependencies]
 blake2 = "0.8.0"
 data-encoding = "2.1.2"
-failure = "0.1.5"
-openssl = "0.10.16"
+log = { version = "0.4.6", features = ["max_level_debug", "release_max_level_warn"] }
+openssl = { version = "0.10.22", features = ["vendored"] }
 quinn = "0.2.0"
 uuid = { version = "0.7.1", features = ["v4"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.8.3"
+jni = "0.12.2"

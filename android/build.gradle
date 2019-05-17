@@ -27,4 +27,9 @@ android {
     versionName '0'
     versionCode 1
   }
+  splits {
+    abi {
+      enable true
+    }
+  }
 }
