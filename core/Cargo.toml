@@ -9,6 +9,7 @@ crate-type = ["dylib"]
 
 [dependencies]
 blake2 = "0.8.0"
+chrono = "0.4.6"
 data-encoding = "2.1.2"
 log = { version = "0.4.6", features = ["max_level_debug", "release_max_level_warn"] }
 openssl = { version = "0.10.22", features = ["vendored"] }

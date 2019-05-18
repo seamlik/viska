@@ -115,3 +115,5 @@ impl Certificate for X509 {
         Ok(Blake2b::digest(&self.to_der()?).into_iter().collect())
     }
 }
+
+pub type CertificateId = Vec<u8>;
