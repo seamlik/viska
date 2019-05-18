@@ -11,8 +11,8 @@ Build
 ### Android
 
 1. Set `ANDROID_HOME` and `NDK_HOME`
-2. Run `android/build.sh` & `android/build.sh`
-3. Run `./gradlew assemble`
+2. Run `android/build.sh`
+3. Run `./gradlew assembleDebug`
 
 License
 -------
