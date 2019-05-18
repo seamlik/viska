@@ -1,0 +1,26 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+  <group android:id="@+id/navigator" android:checkableBehavior="single" >
+    <item
+      android:icon="@drawable/forum"
+      android:id="@+id/chatrooms"
+      android:title="@string/title_chatrooms"/>
+    <item
+      android:icon="@drawable/contacts"
+      android:id="@+id/roster"
+      android:title="@string/title_roster"/>
+  </group>
+  <group android:id="@+id/misc">
+    <item
+      android:icon="@drawable/settings"
+      android:id="@+id/settings"
+      android:title="@string/title_settings"/>
+    <item
+      android:icon="@drawable/info"
+      android:id="@+id/about"
+      android:title="@string/title_about"/>
+    <item
+      android:icon="@drawable/exit_to_app"
+      android:id="@+id/exit"
+      android:title="@string/title_exit"/>
+  </group>
+</menu>

@@ -1,0 +1,10 @@
+<resources>
+  <string name="dummy_account_address">1010101:1231310</string>
+  <string name="dummy_account_name">Kai-Chung Yan</string>
+  <string name="title_about">About</string>
+  <string name="title_app">Viska</string>
+  <string name="title_chatrooms">Chatrooms</string>
+  <string name="title_exit">Exit</string>
+  <string name="title_roster">Roster</string>
+  <string name="title_settings">Settings</string>
+</resources>
