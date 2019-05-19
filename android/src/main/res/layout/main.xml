@@ -1,39 +1,17 @@
 <androidx.drawerlayout.widget.DrawerLayout
-  android:id="@+id/drawer"
+  android:id="@+id/root"
   android:layout_height="match_parent"
   android:layout_width="match_parent"
   xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto">
 
-  <androidx.coordinatorlayout.widget.CoordinatorLayout
-    android:id="@+id/coordinator"
+  <FrameLayout
+    android:id="@+id/container_main"
     android:layout_height="match_parent"
-    android:layout_width="match_parent">
-
-    <com.google.android.material.appbar.AppBarLayout
-      android:id="@+id/app_bar_layout"
-      android:layout_height="wrap_content"
-      android:layout_width="match_parent">
-
-      <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/action_bar"
-        android:layout_height="match_parent"
-        android:layout_width="match_parent"
-        app:navigationIcon="@drawable/menu"
-        app:titleTextColor="?attr/colorOnPrimary"/>
-
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <FrameLayout
-      android:id="@+id/container"
-      android:layout_height="match_parent"
-      android:layout_width="match_parent">
-    </FrameLayout>
-
-  </androidx.coordinatorlayout.widget.CoordinatorLayout>
+    android:layout_width="match_parent"/>
 
   <com.google.android.material.navigation.NavigationView
-    android:id="@+id/navigation"
+    android:id="@+id/drawer"
     android:layout_gravity="start"
     android:layout_height="match_parent"
     android:layout_width="wrap_content"
