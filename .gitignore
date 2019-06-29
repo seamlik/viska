@@ -1,6 +1,5 @@
 *.bk
 *.iml
-.editorconfig
 .gradle/
 .idea/
 /android/NDK_HOME

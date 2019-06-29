@@ -7,7 +7,7 @@ Build
 
 1. Set `ANDROID_HOME` and `NDK_HOME`
 2. Run `android/build.sh`
-3. Run `./gradlew assembleDebug`
+3. Run `./gradlew assemble`
 
 License
 -------

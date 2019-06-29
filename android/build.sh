@@ -11,6 +11,7 @@ then
   exit 1
 fi
 
+# For `.cargo/config` which does not support environment variables
 ln --symbolic --force "${NDK_HOME}" android/NDK_HOME
 
 ANDROID_MINSDK=28
