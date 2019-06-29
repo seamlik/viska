@@ -1,4 +1,4 @@
-package chat.viska;
+package viska;
 
 public class LibViska {
   private LibViska() {

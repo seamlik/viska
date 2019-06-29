@@ -1,4 +1,4 @@
-package chat.viska.android.main;
+package viska.android.main;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -6,8 +6,8 @@ import android.view.LayoutInflater;
 import android.view.ViewStub;
 import androidx.annotation.LayoutRes;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
-import chat.viska.R;
 import com.google.android.material.appbar.MaterialToolbar;
+import viska.android.R;
 
 public abstract class ContentView extends CoordinatorLayout {
   private MaterialToolbar actionBar;

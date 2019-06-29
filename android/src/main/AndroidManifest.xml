@@ -1,16 +1,16 @@
 <manifest
-  package="chat.viska"
+  package="viska.android"
   xmlns:android="http://schemas.android.com/apk/res/android">
   <application
     android:icon="@drawable/icon"
     android:label="@string/title_app"
     android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
-    <activity android:name=".android.main.Activity">
+    <activity android:name=".main.Activity">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
         <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
     </activity>
-    <service android:name=".android.ViskaService"/>
+    <service android:name=".ViskaService"/>
   </application>
 </manifest>

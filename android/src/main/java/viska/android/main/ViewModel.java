@@ -1,4 +1,4 @@
-package chat.viska.android.main;
+package viska.android.main;
 
 import androidx.lifecycle.MutableLiveData;
 

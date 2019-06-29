@@ -1,4 +1,4 @@
-package chat.viska.android.main;
+package viska.android.main;
 
 import android.os.Bundle;
 import android.view.MenuItem;
@@ -7,8 +7,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.ViewModelProviders;
-import chat.viska.R;
 import com.google.android.material.navigation.NavigationView;
+import viska.android.R;
 
 public class Activity extends AppCompatActivity {
 
@@ -55,11 +55,11 @@ public class Activity extends AppCompatActivity {
     switch (screen) {
       case CHATROOMS:
         drawerMenuChatrooms.setChecked(true);
-        view = new chat.viska.android.chatrooms.View(this);
+        view = new viska.android.chatrooms.View(this);
         break;
       case ROSTER:
         drawerMenuRoster.setChecked(true);
-        view = new chat.viska.android.roster.View(this);
+        view = new viska.android.roster.View(this);
         break;
       default:
         return;

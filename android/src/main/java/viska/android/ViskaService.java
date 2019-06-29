@@ -1,10 +1,10 @@
-package chat.viska.android;
+package viska.android;
 
 import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
-import chat.viska.LibViska;
+import viska.LibViska;
 
 public class ViskaService extends Service {
 
