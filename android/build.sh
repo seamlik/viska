@@ -16,7 +16,6 @@ ln --symbolic --force "${NDK_HOME}" android/NDK_HOME
 ANDROID_MINSDK=28
 TARGETS=(
   aarch64-linux-android
-  i686-linux-android
   x86_64-linux-android
 )
 for target in "${TARGETS[@]}"
