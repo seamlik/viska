@@ -2,19 +2,18 @@ package viska.android.main;
 
 import android.os.Bundle;
 import android.view.MenuItem;
-import android.view.ViewGroup;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.ViewModelProviders;
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.navigation.NavigationView;
 import viska.android.R;
 
 public class Activity extends AppCompatActivity {
 
   private ViewModel model;
-  private ViewGroup container;
-  private DrawerLayout root;
+  private DrawerLayout drawerLayout;
   private MenuItem drawerMenuChatrooms;
   private MenuItem drawerMenuRoster;
 
@@ -22,14 +21,17 @@ public class Activity extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.main);
-    model = ViewModelProviders.of(this).get(ViewModel.class);
 
-    container = findViewById(R.id.container_main);
-    root = findViewById(R.id.root);
+    model = ViewModelProviders.of(this).get(ViewModel.class);
+    drawerLayout = findViewById(R.id.drawer_layout);
 
     final NavigationView drawer = findViewById(R.id.drawer);
     drawerMenuChatrooms = drawer.getMenu().findItem(R.id.chatrooms);
     drawerMenuRoster = drawer.getMenu().findItem(R.id.roster);
+
+    final MaterialToolbar actionBar = findViewById(R.id.action_bar);
+    setSupportActionBar(actionBar);
+    actionBar.setNavigationOnClickListener(it -> drawerLayout.openDrawer(GravityCompat.START));
 
     model.screens.observe(this, this::changeScreen);
     drawer.setNavigationItemSelectedListener(this::onNavigationItemSelected);
@@ -51,22 +53,20 @@ public class Activity extends AppCompatActivity {
   }
 
   private void changeScreen(final Screen screen) {
-    ContentView view;
     switch (screen) {
       case CHATROOMS:
         drawerMenuChatrooms.setChecked(true);
-        view = new viska.android.chatrooms.View(this);
+        getSupportActionBar().setTitle(R.string.title_chatrooms);
+        // Change list adapter
         break;
       case ROSTER:
         drawerMenuRoster.setChecked(true);
-        view = new viska.android.roster.View(this);
+        getSupportActionBar().setTitle(R.string.title_roster);
+        // Change list adapter
         break;
       default:
         return;
     }
-    root.closeDrawers();
-    container.removeAllViews();
-    container.addView(view);
-    view.getActionBar().setNavigationOnClickListener(it -> root.openDrawer(GravityCompat.START));
+    drawerLayout.closeDrawers();
   }
 }
