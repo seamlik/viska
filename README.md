@@ -1,8 +1,3 @@
-Viska
-=====
-
-> Peer-to-peer chatting app hiding inside popular distributed networks
-
 Nothing right now, come back later.
 
 Build

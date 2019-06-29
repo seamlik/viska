@@ -10,7 +10,7 @@ public class ViskaService extends Service {
 
   private static boolean libViskaInitialized = false;
 
-  private static void initializeLibViska() {
+  public static void initializeLibViska() {
     if (libViskaInitialized) {
       return;
     }

@@ -1,2 +1,38 @@
-[workspace]
-members = ["core"]
+[package]
+authors = ["殷啟聰 | Kai-Chung Yan <seamlik@debian.org>"]
+description = "Peer-to-peer chatting app hiding inside popular distributed networks"
+edition = "2018"
+name = "viska"
+version = "0.0.1"
+
+[lib]
+crate-type = ["dylib", "lib"]
+path = "core/src/lib.rs"
+
+[[test]]
+name = "integration-tests"
+path = "core/tests/tests.rs"
+
+[features]
+android = ["android_logger", "jni"]
+mock_profiles = []
+
+[dependencies]
+android_logger = { version = "0.8.3", optional = true }
+blake2 = "0.8.0"
+chrono = { version = "0.4", features = ["serde"] }
+data-encoding = "2.1.2"
+fake = { version = "1.3.0", features = ["chrono"] }
+jni = { version = "0.12", optional = true }
+log = { version = "0.4.6", features = ["max_level_debug", "release_max_level_warn"] }
+mime = "0.3.13"
+openssl = { version = "0.10", features = ["vendored"] }
+quinn = "0.3.0"
+serde = { version = "1.0.94", features = ["derive"] }
+serde_cbor = "0.9"
+serde_with = "1.3.1"
+sled = "0.24.1"
+uuid = { version = "0.7.4", features = ["v4"] }
+
+[dev-dependencies]
+env_logger = "0.6.1"

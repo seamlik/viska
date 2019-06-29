@@ -2,13 +2,18 @@ package viska.android.main;
 
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.ViewModelProviders;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.snackbar.Snackbar;
+import java.util.Locale;
+import viska.LibViska;
 import viska.android.R;
+import viska.android.ViskaService;
 
 public class Activity extends AppCompatActivity {
 
@@ -32,6 +37,9 @@ public class Activity extends AppCompatActivity {
     final MaterialToolbar actionBar = findViewById(R.id.action_bar);
     setSupportActionBar(actionBar);
     actionBar.setNavigationOnClickListener(it -> drawerLayout.openDrawer(GravityCompat.START));
+
+    final View fab = findViewById(R.id.fab);
+    fab.setOnClickListener(this::onFabClicked);
 
     model.screens.observe(this, this::changeScreen);
     drawer.setNavigationItemSelectedListener(this::onNavigationItemSelected);
@@ -68,5 +76,25 @@ public class Activity extends AppCompatActivity {
         return;
     }
     drawerLayout.closeDrawers();
+  }
+
+  private void onFabClicked(final View view) {
+    final String mockProfilePath = getFilesDir()
+            .toPath()
+            .resolve(String.format(Locale.US, "test-%1d", System.currentTimeMillis()))
+            .toString();
+    final Snackbar snackbar = Snackbar.make(
+            view,
+            "Generating mock profile...",
+            Snackbar.LENGTH_INDEFINITE
+    );
+    final Runnable action = () -> {
+      ViskaService.initializeLibViska();
+      LibViska.newMockProfile(mockProfilePath);
+      snackbar.dismiss();
+    };
+
+    snackbar.show();
+    new Thread(action).start();
   }
 }

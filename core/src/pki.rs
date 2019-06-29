@@ -1,10 +1,8 @@
 //! Public key infrastructure for managing certificates of accounts and devices.
 //!
-//! A user account is essentially an X.509 certificate combined with its pricate key. Such certificate may issue
-//! multiple device certificates in order to identify devices this user has logged in. Therefore, this module is one of
-//! the most critical part of the project.
-//!
-//! These certificates are used in TLS sessions between devices, which provides end-to-end encryption and authentication.
+//! A user account is essentially an X.509 certificate combined with its private key. Such
+//! certificate may issue multiple device certificates. These certificates are used in TLS sessions
+//! between clients, thus providing end-to-end encryption and authentication.
 //!
 //! # Format
 //!
@@ -19,6 +17,7 @@
 
 use blake2::Blake2b;
 use blake2::Digest;
+use data_encoding::HEXUPPER_PERMISSIVE;
 use openssl::asn1::Asn1Time;
 use openssl::bn::BigNum;
 use openssl::error::ErrorStack;
@@ -104,16 +103,20 @@ pub fn new_certificate_device<T: HasPrivate>(
 /// X.509 certificate with extra features.
 pub trait Certificate {
     /// Calculates the ID.
-    ///
-    /// This is a [BLAKE2b](https://blake2.net) 512-bit digest of the entire certificate encoded in ASN.1 DER. Must be
-    /// displayed in uppercase Base16.
-    fn id(&self) -> Result<Vec<u8>, ErrorStack>;
+    fn id(&self) -> CertificateId;
 }
 
 impl Certificate for X509 {
-    fn id(&self) -> Result<Vec<u8>, ErrorStack> {
-        Ok(Blake2b::digest(&self.to_der()?).into_iter().collect())
+    fn id(&self) -> CertificateId {
+        Blake2b::digest(&self.to_der().unwrap())
+            .into_iter()
+            .collect()
     }
 }
 
+/// [BLAKE2b](https://blake2.net)-512 digest of the entire certificate encoded in ASN.1 DER.
 pub type CertificateId = Vec<u8>;
+
+pub fn display_certificate_id(raw: &CertificateId) -> String {
+    HEXUPPER_PERMISSIVE.encode(raw)
+}
