@@ -102,11 +102,11 @@ pub fn new_certificate_device<T: HasPrivate>(
 /// X.509 certificate with extra features.
 pub trait Certificate {
     /// Calculates the ID.
-    fn id(&self) -> CertificateId;
+    fn id(&self) -> Vec<u8>;
 }
 
 impl Certificate for X509 {
-    fn id(&self) -> CertificateId {
+    fn id(&self) -> Vec<u8> {
         Blake2b::digest(&self.to_der().unwrap())
             .into_iter()
             .collect()
@@ -114,4 +114,4 @@ impl Certificate for X509 {
 }
 
 /// [BLAKE2b](https://blake2.net)-512 digest of the entire certificate encoded in ASN.1 DER.
-pub type CertificateId = Vec<u8>;
+pub type CertificateId = [u8];

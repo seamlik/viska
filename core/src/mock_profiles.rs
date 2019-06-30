@@ -12,7 +12,6 @@ use crate::models::Chatroom;
 use crate::models::DeviceInfo;
 use crate::models::Vcard;
 use crate::pki::Certificate;
-use crate::pki::CertificateId;
 use fake::faker::Chrono;
 use fake::faker::Faker;
 use fake::faker::Internet;
@@ -68,7 +67,7 @@ pub fn new_mock_profile(dst: &Path) {
     let whitelist_ids = write_vcard_list(&database, PeerList::Whitelist, num_whitelist);
 
     info!("Arranging chatrooms...");
-    for chatroom in random_chatroom(whitelist_ids.into_iter(), num_chatrooms) {
+    for chatroom in random_chatroom(&whitelist_ids, num_chatrooms) {
         database.add_chatroom(&chatroom).unwrap();
     }
 }
@@ -78,8 +77,8 @@ enum PeerList {
     Whitelist,
 }
 
-fn write_vcard_list(database: &Tree, list_type: PeerList, num: u8) -> HashSet<CertificateId> {
-    let list: HashSet<CertificateId> = (0..num).map(|_| random_certificate_id()).collect();
+fn write_vcard_list(database: &Tree, list_type: PeerList, num: u8) -> HashSet<Vec<u8>> {
+    let list = (0..num).map(|_| random_certificate_id()).collect();
 
     // List
     match list_type {
@@ -101,11 +100,11 @@ fn write_vcard_list(database: &Tree, list_type: PeerList, num: u8) -> HashSet<Ce
     list
 }
 
-fn random_certificate_id() -> CertificateId {
+fn random_certificate_id() -> Vec<u8> {
     crate::pki::new_certificate_account().unwrap().0.id()
 }
 
-fn random_vcard(ids: Option<HashSet<CertificateId>>) -> Vcard {
+fn random_vcard(ids: Option<HashSet<Vec<u8>>>) -> Vcard {
     let num_devices_default = 2;
     let ids_nonnull = match ids {
         None => (0..num_devices_default)
@@ -117,7 +116,7 @@ fn random_vcard(ids: Option<HashSet<CertificateId>>) -> Vcard {
         .into_iter()
         .map(|id| {
             let name = Faker::user_agent().to_owned();
-            (id, DeviceInfo { name})
+            (id, DeviceInfo { name })
         })
         .collect();
 
@@ -130,19 +129,11 @@ fn random_vcard(ids: Option<HashSet<CertificateId>>) -> Vcard {
     }
 }
 
-fn random_chatroom(
-    candidates: impl ExactSizeIterator<Item = CertificateId>,
-    num: usize,
-) -> Vec<Chatroom> {
-    let mut candidates_sorted: Vec<CertificateId> = candidates.collect();
-    candidates_sorted.sort();
-    candidates_sorted.dedup();
-
+fn random_chatroom(candidates: &HashSet<Vec<u8>>, num: usize) -> Vec<Chatroom> {
     let mut rng = rand::thread_rng();
-
     (0..num)
         .map(|_| {
-            let members: HashSet<CertificateId> = candidates_sorted
+            let members: HashSet<Vec<u8>> = candidates
                 .iter()
                 .filter(|_| rng.gen_bool(0.5))
                 .cloned()

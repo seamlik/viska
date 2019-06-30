@@ -26,20 +26,20 @@ fn tabled_key(table: &str, key: &str) -> String {
 
 /// Low-level operations for accessing a profile stored in a database.
 pub trait RawProfile {
-    fn account_certificate(&self) -> Result<Option<Certificate>>;
-    fn account_key(&self) -> Result<Option<CryptoKey>>;
+    fn account_certificate(&self) -> Result<Option<Vec<u8>>>;
+    fn account_key(&self) -> Result<Option<Vec<u8>>>;
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<()>;
     fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<()>;
-    fn blacklist(&self) -> Result<HashSet<CertificateId>>;
-    fn device_certificate(&self) -> Result<Option<Certificate>>;
-    fn device_key(&self) -> Result<Option<CryptoKey>>;
+    fn blacklist(&self) -> Result<HashSet<Vec<u8>>>;
+    fn device_certificate(&self) -> Result<Option<Vec<u8>>>;
+    fn device_key(&self) -> Result<Option<Vec<u8>>>;
     fn set_account_certificate(&self, cert: &Certificate) -> Result<()>;
-    fn set_account_key(&self, key: &[u8]) -> Result<()>;
-    fn set_blacklist(&self, blacklist: &HashSet<CertificateId>) -> Result<()>;
+    fn set_account_key(&self, key: &CryptoKey) -> Result<()>;
+    fn set_blacklist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<()>;
     fn set_device_certificate(&self, cert: &Certificate) -> Result<()>;
-    fn set_device_key(&self, key: &[u8]) -> Result<()>;
-    fn set_whitelist(&self, blacklist: &HashSet<CertificateId>) -> Result<()>;
-    fn whitelist(&self) -> Result<HashSet<CertificateId>>;
+    fn set_device_key(&self, key: &CryptoKey) -> Result<()>;
+    fn set_whitelist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<()>;
+    fn whitelist(&self) -> Result<HashSet<Vec<u8>>>;
 }
 
 impl RawProfile for Tree {
@@ -50,7 +50,7 @@ impl RawProfile for Tree {
         )?;
         Ok(())
     }
-    fn set_account_key(&self, key: &[u8]) -> Result<()> {
+    fn set_account_key(&self, key: &CryptoKey) -> Result<()> {
         self.set(tabled_key(TABLE_PROFILE, "account-key"), key)?;
         Ok(())
     }
@@ -61,31 +61,31 @@ impl RawProfile for Tree {
         )?;
         Ok(())
     }
-    fn set_device_key(&self, key: &[u8]) -> Result<()> {
+    fn set_device_key(&self, key: &CryptoKey) -> Result<()> {
         self.set(tabled_key(TABLE_PROFILE, "device-key"), key)?;
         Ok(())
     }
-    fn account_certificate(&self) -> Result<Option<Certificate>> {
+    fn account_certificate(&self) -> Result<Option<Vec<u8>>> {
         self.get(tabled_key(TABLE_PROFILE, "account-certificate"))
             .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
-    fn account_key(&self) -> Result<Option<CryptoKey>> {
+    fn account_key(&self) -> Result<Option<Vec<u8>>> {
         self.get(tabled_key(TABLE_PROFILE, "account-key"))
             .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
-    fn device_certificate(&self) -> Result<Option<Certificate>> {
+    fn device_certificate(&self) -> Result<Option<Vec<u8>>> {
         self.get(tabled_key(TABLE_PROFILE, "device-certificate"))
             .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
-    fn device_key(&self) -> Result<Option<CryptoKey>> {
+    fn device_key(&self) -> Result<Option<Vec<u8>>> {
         self.get(tabled_key(TABLE_PROFILE, "device-key"))
             .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
-    fn blacklist(&self) -> Result<HashSet<CertificateId>> {
+    fn blacklist(&self) -> Result<HashSet<Vec<u8>>> {
         let raw = self.get(tabled_key(TABLE_PROFILE, "blacklist"))?;
         match raw {
             None => Ok(HashSet::default()),
@@ -93,12 +93,12 @@ impl RawProfile for Tree {
             Some(raw) => serde_cbor::from_slice(&raw).map_err(|e| e.into()),
         }
     }
-    fn set_blacklist(&self, blacklist: &HashSet<CertificateId>) -> Result<()> {
+    fn set_blacklist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<()> {
         let cbor = serde_cbor::to_vec(blacklist).unwrap();
         self.set(tabled_key(TABLE_PROFILE, "blacklist"), cbor)?;
         Ok(())
     }
-    fn whitelist(&self) -> Result<HashSet<CertificateId>> {
+    fn whitelist(&self) -> Result<HashSet<Vec<u8>>> {
         let raw = self.get(tabled_key(TABLE_PROFILE, "whitelist"))?;
         match raw {
             None => Ok(HashSet::default()),
@@ -106,7 +106,7 @@ impl RawProfile for Tree {
             Some(raw) => serde_cbor::from_slice(&raw).map_err(|e| e.into()),
         }
     }
-    fn set_whitelist(&self, whitelist: &HashSet<CertificateId>) -> Result<()> {
+    fn set_whitelist(&self, whitelist: &HashSet<Vec<u8>>) -> Result<()> {
         let cbor = serde_cbor::to_vec(whitelist).unwrap();
         self.set(tabled_key(TABLE_PROFILE, "whitelist"), cbor)?;
         Ok(())

@@ -24,7 +24,7 @@ pub const DEFAULT_MIME: &Mime = &mime::TEXT_PLAIN_UTF_8;
 pub type MessageId = [u8; 16];
 
 /// Blake2b-512
-pub type ChatroomId = Vec<u8>;
+pub type ChatroomId = [u8];
 
 #[derive(Deserialize, Serialize)]
 pub struct MessageHead {
@@ -40,8 +40,8 @@ pub struct MessageHead {
 
 #[derive(Deserialize, Serialize)]
 pub struct Chatroom {
-    /// Self account is excluded.
-    pub members: HashSet<CertificateId>,
+    /// Set of Certificate IDs.
+    pub members: HashSet<Vec<u8>>,
 }
 
 /// Generates a Chatroom ID from its member IDs.
@@ -50,9 +50,9 @@ pub struct Chatroom {
 /// same set of accounts are always stored in the same chatroom. The ID generation is reproducible
 /// and not affected by the order of the members.
 pub fn chatroom_id_from_members<'a>(
-    members: impl ExactSizeIterator<Item = &'a CertificateId>,
-) -> ChatroomId {
-    let mut members_sorted: Vec<&'a CertificateId> = members.collect();
+    members: impl ExactSizeIterator<Item = &'a Vec<u8>>,
+) -> Vec<u8> {
+    let mut members_sorted: Vec<&Vec<u8>> = members.collect();
     members_sorted.sort();
     members_sorted.dedup();
 
@@ -68,7 +68,7 @@ pub fn chatroom_id_from_members<'a>(
 pub struct Vcard {
     pub avatar: Vec<u8>,
     pub description: String,
-    pub devices: HashMap<CertificateId, DeviceInfo>,
+    pub devices: HashMap<Vec<u8>, DeviceInfo>,
     pub name: String,
     pub time_updated: DateTime<Utc>,
 }
@@ -79,10 +79,10 @@ pub struct DeviceInfo {
 }
 
 /// X.509 certificate encoded in ASN.1 DER.
-pub type Certificate = Vec<u8>;
+pub type Certificate = [u8];
 
 /// RFC 5958 PKCS #8 encoded in ASN.1 DER.
-pub type CryptoKey = Vec<u8>;
+pub type CryptoKey = [u8];
 
 /// Combination of an account ID and a device ID.
 ///
