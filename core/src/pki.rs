@@ -17,7 +17,6 @@
 
 use blake2::Blake2b;
 use blake2::Digest;
-use data_encoding::HEXUPPER_PERMISSIVE;
 use openssl::asn1::Asn1Time;
 use openssl::bn::BigNum;
 use openssl::error::ErrorStack;
@@ -116,7 +115,3 @@ impl Certificate for X509 {
 
 /// [BLAKE2b](https://blake2.net)-512 digest of the entire certificate encoded in ASN.1 DER.
 pub type CertificateId = Vec<u8>;
-
-pub fn display_certificate_id(raw: &CertificateId) -> String {
-    HEXUPPER_PERMISSIVE.encode(raw)
-}

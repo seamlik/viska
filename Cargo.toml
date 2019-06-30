@@ -15,7 +15,7 @@ path = "core/tests/tests.rs"
 
 [features]
 android = ["android_logger", "jni"]
-mock-profiles = []
+mock-profiles = ["rand"]
 
 [dependencies]
 android_logger = { version = "0.8.3", optional = true }
@@ -28,6 +28,7 @@ log = { version = "0.4.6", features = ["max_level_debug", "release_max_level_war
 mime = "0.3.13"
 openssl = { version = "0.10", features = ["vendored"] }
 quinn = "0.3.0"
+rand = { version = "0.7", optional = true }
 serde = { version = "1.0.94", features = ["derive"] }
 serde_cbor = "0.9"
 serde_with = "1.3.1"

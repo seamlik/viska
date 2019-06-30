@@ -8,6 +8,7 @@
 #![cfg(feature = "mock-profiles")]
 
 use crate::database::RawProfile;
+use crate::models::Chatroom;
 use crate::models::DeviceInfo;
 use crate::models::Vcard;
 use crate::pki::Certificate;
@@ -17,6 +18,7 @@ use fake::faker::Faker;
 use fake::faker::Internet;
 use fake::faker::Lorem;
 use fake::faker::Name;
+use rand::Rng;
 use sled::Db;
 use sled::Tree;
 use std::collections::HashMap;
@@ -30,6 +32,7 @@ pub fn new_mock_profile(dst: &Path) {
     let num_blacklist = 10;
     let num_devices = 5;
     let num_whitelist = 10;
+    let num_chatrooms = 5;
 
     let database = Db::start_default(dst).unwrap();
 
@@ -63,7 +66,12 @@ pub fn new_mock_profile(dst: &Path) {
     write_vcard_list(&database, PeerList::Blacklist, num_blacklist);
 
     info!("Generating imaginary friends...");
-    write_vcard_list(&database, PeerList::Whitelist, num_whitelist);
+    let whitelist_ids = write_vcard_list(&database, PeerList::Whitelist, num_whitelist);
+
+    info!("Arranging chatrooms...");
+    for chatroom in random_chatroom(whitelist_ids.into_iter(), num_chatrooms) {
+        database.add_chatroom(&chatroom).unwrap();
+    }
 }
 
 enum PeerList {
@@ -71,7 +79,7 @@ enum PeerList {
     Whitelist,
 }
 
-fn write_vcard_list(database: &Tree, list_type: PeerList, num: u8) {
+fn write_vcard_list(database: &Tree, list_type: PeerList, num: u8) -> HashSet<CertificateId> {
     let list: HashSet<CertificateId> = (0..num).map(|_| random_certificate_id()).collect();
 
     // List
@@ -85,11 +93,13 @@ fn write_vcard_list(database: &Tree, list_type: PeerList, num: u8) {
     }
 
     // Vcard
-    for id in list {
+    for id in &list {
         database
             .add_vcard(&id, &random_vcard(Option::None))
             .unwrap();
     }
+
+    list
 }
 
 fn random_certificate_id() -> CertificateId {
@@ -119,4 +129,26 @@ fn random_vcard(ids: Option<HashSet<CertificateId>>) -> Vcard {
         name: Faker::name(),
         time_updated: Faker::datetime(None).parse().unwrap(),
     }
+}
+
+fn random_chatroom(
+    candidates: impl ExactSizeIterator<Item = CertificateId>,
+    num: usize,
+) -> Vec<Chatroom> {
+    let mut candidates_sorted: Vec<CertificateId> = candidates.collect();
+    candidates_sorted.sort();
+    candidates_sorted.dedup();
+
+    let mut rng = rand::thread_rng();
+
+    (0..num)
+        .map(|_| {
+            let members: HashSet<CertificateId> = candidates_sorted
+                .iter()
+                .filter(|_| rng.gen_bool(0.5))
+                .map(|id| id.clone())
+                .collect();
+            Chatroom { members: members }
+        })
+        .collect()
 }

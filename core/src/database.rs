@@ -3,6 +3,7 @@
 //! Only key-value store is supported.
 
 use crate::models::Certificate;
+use crate::models::Chatroom;
 use crate::models::CryptoKey;
 use crate::models::Vcard;
 use crate::pki::CertificateId;
@@ -27,6 +28,7 @@ fn tabled_key(table: &str, key: &str) -> String {
 pub trait RawProfile {
     fn account_certificate(&self) -> Result<Option<Certificate>>;
     fn account_key(&self) -> Result<Option<CryptoKey>>;
+    fn add_chatroom(&self, chatroom: &Chatroom) -> Result<()>;
     fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<()>;
     fn blacklist(&self) -> Result<HashSet<CertificateId>>;
     fn device_certificate(&self) -> Result<Option<Certificate>>;
@@ -111,8 +113,18 @@ impl RawProfile for Tree {
     }
     fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<()> {
         self.set(
-            tabled_key(TABLE_VCARDS, &crate::pki::display_certificate_id(id)),
+            tabled_key(TABLE_VCARDS, &crate::utils::display_id(id)),
             serde_cbor::to_vec(vcard)?,
+        )?;
+        Ok(())
+    }
+    fn add_chatroom(&self, chatroom: &Chatroom) -> Result<()> {
+        let chatroom_id = crate::utils::display_id(&crate::models::chatroom_id_from_members(
+            chatroom.members.iter(),
+        ));
+        self.set(
+            tabled_key(TABLE_CHATROOMS, &chatroom_id),
+            serde_cbor::to_vec(chatroom)?,
         )?;
         Ok(())
     }
