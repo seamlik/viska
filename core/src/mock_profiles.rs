@@ -21,7 +21,6 @@ use fake::faker::Name;
 use rand::Rng;
 use sled::Db;
 use sled::Tree;
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -118,14 +117,14 @@ fn random_vcard(ids: Option<HashSet<CertificateId>>) -> Vcard {
         .into_iter()
         .map(|id| {
             let name = Faker::user_agent().to_owned();
-            (id, DeviceInfo { name: name })
+            (id, DeviceInfo { name})
         })
         .collect();
 
     Vcard {
         avatar: Vec::new(),
         description: crate::utils::join_strings(Faker::sentences(2).into_iter()),
-        devices: devices,
+        devices,
         name: Faker::name(),
         time_updated: Faker::datetime(None).parse().unwrap(),
     }
@@ -146,9 +145,9 @@ fn random_chatroom(
             let members: HashSet<CertificateId> = candidates_sorted
                 .iter()
                 .filter(|_| rng.gen_bool(0.5))
-                .map(|id| id.clone())
+                .cloned()
                 .collect();
-            Chatroom { members: members }
+            Chatroom { members }
         })
         .collect()
 }

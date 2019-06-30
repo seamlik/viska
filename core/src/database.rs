@@ -13,11 +13,11 @@ use sled::Tree;
 use std::collections::HashSet;
 use std::ops::Deref;
 
-const TABLE_CHATROOMS: &'static str = "chatrooms";
-const TABLE_MESSAGE_BODIES: &'static str = "message-bodies";
-const TABLE_MESSAGE_HEADS: &'static str = "message-heads";
-const TABLE_PROFILE: &'static str = "profile";
-const TABLE_VCARDS: &'static str = "vcards";
+const TABLE_CHATROOMS: &str = "chatrooms";
+const TABLE_MESSAGE_BODIES: &str = "message-bodies";
+const TABLE_MESSAGE_HEADS: &str = "message-heads";
+const TABLE_PROFILE: &str = "profile";
+const TABLE_VCARDS: &str = "vcards";
 
 /// Makes a key with a table.
 fn tabled_key(table: &str, key: &str) -> String {
@@ -67,22 +67,22 @@ impl RawProfile for Tree {
     }
     fn account_certificate(&self) -> Result<Option<Certificate>> {
         self.get(tabled_key(TABLE_PROFILE, "account-certificate"))
-            .map(|it| IntoBytes::into(it))
+            .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
     fn account_key(&self) -> Result<Option<CryptoKey>> {
         self.get(tabled_key(TABLE_PROFILE, "account-key"))
-            .map(|it| IntoBytes::into(it))
+            .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
     fn device_certificate(&self) -> Result<Option<Certificate>> {
         self.get(tabled_key(TABLE_PROFILE, "device-certificate"))
-            .map(|it| IntoBytes::into(it))
+            .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
     fn device_key(&self) -> Result<Option<CryptoKey>> {
         self.get(tabled_key(TABLE_PROFILE, "device-key"))
-            .map(|it| IntoBytes::into(it))
+            .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
     fn blacklist(&self) -> Result<HashSet<CertificateId>> {
