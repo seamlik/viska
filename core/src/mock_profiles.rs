@@ -6,11 +6,13 @@
 #![cfg(feature = "mock_profiles")]
 
 use crate::database::RawProfile;
+use crate::models::DeviceInfo;
 use crate::models::Vcard;
 use crate::pki::Certificate;
 use crate::pki::CertificateId;
 use fake::faker::Chrono;
 use fake::faker::Faker;
+use fake::faker::Internet;
 use fake::faker::Lorem;
 use fake::faker::Name;
 use sled::Db;
@@ -37,14 +39,13 @@ pub fn new_mock_profile(dst: &Path) {
     database
         .set_account_key(&account_key.private_key_to_der().unwrap())
         .unwrap();
-    database
-        .add_vcard(&account_cert.id(), &random_vcard())
-        .unwrap();
 
     info!("Issuing device certificates...");
+    let mut device_ids = HashSet::default();
     for _ in 0..num_devices {
         let (device_cert, device_key) =
             crate::pki::new_certificate_device(&account_cert, &account_key).unwrap();
+        device_ids.insert(device_cert.id());
         database
             .set_device_certificate(&device_cert.to_der().unwrap())
             .unwrap();
@@ -52,6 +53,9 @@ pub fn new_mock_profile(dst: &Path) {
             .set_device_key(&device_key.private_key_to_der().unwrap())
             .unwrap();
     }
+    database
+        .add_vcard(&account_cert.id(), &random_vcard(Some(device_ids)))
+        .unwrap();
 
     info!("Generating blacklist...");
     write_vcard_list(&database, PeerList::Blacklist, num_blacklist);
@@ -80,7 +84,9 @@ fn write_vcard_list(database: &Tree, list_type: PeerList, num: u8) {
 
     // Vcard
     for id in list {
-        database.add_vcard(&id, &random_vcard()).unwrap();
+        database
+            .add_vcard(&id, &random_vcard(Option::None))
+            .unwrap();
     }
 }
 
@@ -88,11 +94,26 @@ fn random_certificate_id() -> CertificateId {
     crate::pki::new_certificate_account().unwrap().0.id()
 }
 
-fn random_vcard() -> Vcard {
+fn random_vcard(ids: Option<HashSet<CertificateId>>) -> Vcard {
+    let num_devices_default = 2;
+    let ids_nonnull = match ids {
+        None => (0..num_devices_default)
+            .map(|_| random_certificate_id())
+            .collect(),
+        Some(it) => it,
+    };
+    let devices = ids_nonnull
+        .into_iter()
+        .map(|id| {
+            let name = Faker::user_agent().to_owned();
+            (id, DeviceInfo { name: name })
+        })
+        .collect();
+
     Vcard {
         avatar: Vec::new(),
         description: crate::utils::join_strings(Faker::sentences(2).into_iter()),
-        devices: HashMap::new(),
+        devices: devices,
         name: Faker::name(),
         time_updated: Faker::datetime(None).parse().unwrap(),
     }
