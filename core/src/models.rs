@@ -54,6 +54,7 @@ pub fn chatroom_id_from_members<'a>(
 ) -> ChatroomId {
     let mut members_sorted: Vec<&'a CertificateId> = members.collect();
     members_sorted.sort();
+    members_sorted.dedup();
 
     let mut digest = Blake2b::default();
     for it in members_sorted {
