@@ -16,8 +16,5 @@ public class LibViska {
     System.loadLibrary("viska");
   }
 
-  /**
-   * Available only with Rust feature {@code mock_profiles}.
-   */
   public static native void newMockProfile(String profilePath);
 }

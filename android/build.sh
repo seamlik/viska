@@ -23,6 +23,6 @@ for target in "${TARGETS[@]}"
 do
   export AR=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}-ar
   export CC=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}${ANDROID_MINSDK}-clang
-  cargo build --target $target --features "android mock_profiles" $@
+  cargo build --target $target --features "android mock-profiles" $@
   cargo build --target $target --features "android" --release $@
 done

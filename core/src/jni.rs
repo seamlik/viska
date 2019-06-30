@@ -5,7 +5,7 @@ use jni::objects::JString;
 use jni::JNIEnv;
 use std::path::Path;
 
-#[cfg(feature = "mock_profiles")]
+#[cfg(feature = "mock-profiles")]
 #[no_mangle]
 pub unsafe extern "C" fn Java_viska_LibViska_newMockProfile(
     env: JNIEnv,

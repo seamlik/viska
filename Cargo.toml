@@ -15,7 +15,7 @@ path = "core/tests/tests.rs"
 
 [features]
 android = ["android_logger", "jni"]
-mock_profiles = []
+mock-profiles = []
 
 [dependencies]
 android_logger = { version = "0.8.3", optional = true }

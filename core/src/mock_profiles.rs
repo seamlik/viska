@@ -2,8 +2,10 @@
 //!
 //! A mock profile is filled with random yet sensible data. This is convenient for testing and
 //! application prototyping.
+//!
+//! Feature-gated by `mock-profiles`
 
-#![cfg(feature = "mock_profiles")]
+#![cfg(feature = "mock-profiles")]
 
 use crate::database::RawProfile;
 use crate::models::DeviceInfo;

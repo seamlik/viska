@@ -9,7 +9,7 @@ fn init() {
         .init();
 }
 
-#[cfg(feature = "mock_profiles")]
+#[cfg(feature = "mock-profiles")]
 #[test]
 fn run() {
     init();
