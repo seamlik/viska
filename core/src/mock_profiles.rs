@@ -7,10 +7,11 @@
 
 #![cfg(feature = "mock-profiles")]
 
+use crate::database::Chatroom;
+use crate::database::DeviceInfo;
+use crate::database::MessageHead;
 use crate::database::RawProfile;
-use crate::models::Chatroom;
-use crate::models::DeviceInfo;
-use crate::models::Vcard;
+use crate::database::Vcard;
 use crate::pki::Certificate;
 use fake::faker::Chrono;
 use fake::faker::Faker;
