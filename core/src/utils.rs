@@ -3,14 +3,17 @@
 use data_encoding::HEXUPPER_PERMISSIVE;
 use std::error::Error;
 
+/// Join multiple `String`s with a space as the delimiter.
 pub fn join_strings(strings: impl Iterator<Item = String>) -> String {
-    strings.fold("".to_owned(), |acc, x| {
-        if acc.is_empty() {
-            x
-        } else {
-            format!("{} {}", acc, x).to_owned()
+    let mut result = String::default();
+    for it in strings {
+        if !result.is_empty() {
+            result.push(' ');
         }
-    })
+        result.push_str(&it)
+    }
+
+    result
 }
 
 /// The simplest `Result` that supports polymorphism in error handling.
