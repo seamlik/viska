@@ -92,6 +92,9 @@ impl Chatroom {
 pub fn chatroom_id_from_members<'a>(
     members: impl ExactSizeIterator<Item = &'a Vec<u8>>,
 ) -> Vec<u8> {
+    if members.len() == 0 {
+       return Vec::default();
+    }
     let mut members_sorted: Vec<&Vec<u8>> = members.collect();
     members_sorted.sort();
     members_sorted.dedup();
@@ -290,6 +293,11 @@ impl RawDatabase for Db {
         body: Vec<u8>,
         chatroom_id: &ChatroomId,
     ) -> Result<()> {
+        if chatroom_id.is_empty() {
+            warn!("Message is being sent to an empty chatroom, ignoring.");
+            return Ok(())
+        }
+
         let message_key: IVec = id.as_bytes().into();
         self.open_tree(table_messages(chatroom_id))?
             .set(message_key, serde_cbor::to_vec(&head)?)?;
