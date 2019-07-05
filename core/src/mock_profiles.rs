@@ -29,6 +29,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::path::Path;
+use std::path::PathBuf;
 use uuid::Uuid;
 
 /// Generates a mock profile.
@@ -42,7 +43,10 @@ pub fn new_mock_profile(dst: &Path) {
     let num_messages_min = 20;
     let num_messages_max = 50;
 
-    let database = Db::start_default(dst).unwrap();
+    let mut db_path = PathBuf::from(dst);
+    db_path.push("database");
+
+    let database = Db::start_default(&db_path).unwrap();
     let mut rng = rand::thread_rng();
 
     info!("Issuing account certificate...");
