@@ -21,11 +21,15 @@ use std::fmt::Formatter;
 use std::iter::ExactSizeIterator;
 use std::ops::Deref;
 use std::str::FromStr;
+use uuid::Uuid;
 
 pub const DEFAULT_MIME: &Mime = &mime::TEXT_PLAIN_UTF_8;
-
-/// UUID version 4.
-pub type MessageId = [u8; 16];
+fn default_mime() -> Mime {
+    DEFAULT_MIME.clone()
+}
+fn is_default_mime(value: &Mime) -> bool {
+    value == DEFAULT_MIME
+}
 
 /// Blake2b-512
 pub type ChatroomId = [u8];
@@ -37,18 +41,19 @@ pub type Certificate = [u8];
 pub type CryptoKey = [u8];
 
 const TABLE_CHATROOMS: &str = "chatrooms";
-const TABLE_MESSAGE_BODIES: &str = "message-bodies";
-const TABLE_MESSAGE_HEADS: &str = "message-heads";
+const TABLE_BLOBS: &str = "blobs";
 const TABLE_PROFILE: &str = "profile";
 const TABLE_VCARDS: &str = "vcards";
 
 #[derive(Deserialize, Serialize)]
-pub struct MessageHead {
-    #[serde(with = "serde_with::rust::display_fromstr")]
-    pub sender: Address,
-
+pub struct Message {
+    #[serde(default = "default_mime")]
+    #[serde(skip_serializing_if = "is_default_mime")]
     #[serde(with = "serde_with::rust::display_fromstr")]
     pub mime: Mime,
+
+    #[serde(with = "serde_with::rust::display_fromstr")]
+    pub sender: Address,
 
     #[serde(with = "chrono::serde::ts_seconds")]
     pub time: DateTime<Utc>,
@@ -62,7 +67,7 @@ pub struct Chatroom {
 
 impl Chatroom {
     pub fn id(&self) -> Vec<u8> {
-        unimplemented!()
+        chatroom_id_from_members(self.members.iter())
     }
 }
 
@@ -90,13 +95,13 @@ pub fn chatroom_id_from_members<'a>(
 pub struct Vcard {
     pub avatar: Vec<u8>,
     pub description: String,
-    pub devices: HashMap<Vec<u8>, DeviceInfo>,
+    pub devices: HashMap<Vec<u8>, Device>,
     pub name: String,
     pub time_updated: DateTime<Utc>,
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct DeviceInfo {
+pub struct Device {
     pub name: String,
 }
 
@@ -160,6 +165,13 @@ pub trait RawProfile {
     fn account_certificate(&self) -> Result<Option<Vec<u8>>>;
     fn account_key(&self) -> Result<Option<Vec<u8>>>;
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<()>;
+    fn add_message(
+        &self,
+        id: &Uuid,
+        head: Message,
+        body: Vec<u8>,
+        chatroom: &ChatroomId,
+    ) -> Result<()>;
     fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<()>;
     fn blacklist(&self) -> Result<HashSet<Vec<u8>>>;
     fn device_certificate(&self) -> Result<Option<Vec<u8>>>;
@@ -256,6 +268,24 @@ impl RawProfile for Tree {
             tabled_key(TABLE_CHATROOMS, &chatroom_id),
             serde_cbor::to_vec(chatroom)?,
         )?;
+        Ok(())
+    }
+    fn add_message(
+        &self,
+        id: &Uuid,
+        head: Message,
+        body: Vec<u8>,
+        chatroom: &ChatroomId,
+    ) -> Result<()> {
+        let message_key = tabled_key(
+            &format!("messages-{}", crate::utils::display_id(chatroom)),
+            &format!("{}", id.to_hyphenated_ref()),
+        );
+        self.set(message_key, serde_cbor::to_vec(&head)?)?;
+
+        let blob_key = tabled_key(TABLE_BLOBS, &format!("message-{}", id.to_hyphenated_ref()));
+        self.set(blob_key, body)?;
+
         Ok(())
     }
 }
