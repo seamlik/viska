@@ -1,7 +1,12 @@
 //! Database operations and models.
 //!
 //! A key-value store is used as the database backend. Data is serialized in [CBOR](https://cbor.io)
-//! format and stored as the "value" in the database entries.
+//! format and stored as the "value" in the database entries, while their "key" is described in
+//! their summaries.
+//!
+//! Since the default database ([Sled](https://crates.io/crates/sled)) does not provide tables (or
+//! [column families in RocksDB](https://github.com/facebook/rocksdb/wiki/Column-Families)), all
+//! keys are prefixed by a table name in the form of `{table}/{key}`.
 
 use crate::pki::CertificateId;
 use crate::utils::Result;
@@ -45,6 +50,12 @@ const TABLE_BLOBS: &str = "blobs";
 const TABLE_PROFILE: &str = "profile";
 const TABLE_VCARDS: &str = "vcards";
 
+/// Meta-info of a message.
+///
+/// Stored with key `messages-{chatroom ID}/{message ID}}`.
+///
+/// The body is stored in the "blobs" table. This is because a message body usually has a variable
+/// size and poses unstable overhead of querying `Message`s.
 #[derive(Deserialize, Serialize)]
 pub struct Message {
     #[serde(default = "default_mime")]
@@ -59,6 +70,9 @@ pub struct Message {
     pub time: DateTime<Utc>,
 }
 
+/// Meta-info of a chatroom.
+///
+/// Stored with key `chatrooms/{id}`.
 #[derive(Deserialize, Serialize)]
 pub struct Chatroom {
     /// Set of Certificate IDs.
@@ -91,14 +105,26 @@ pub fn chatroom_id_from_members<'a>(
     digest.result().into_iter().collect()
 }
 
+/// Public information of an account.
+///
+/// Stored with key `{vcards}/{account ID}`.
+///
+/// Since an avatar is usually binary data in variable sizes, it is stored in the "blobs" table with
+/// key `blobs/avatar-{account ID}`.
 #[derive(Deserialize, Serialize)]
 pub struct Vcard {
     pub description: String,
+    /// Devices registered with this account.
+    ///
+    /// Key represents the device ID.
     pub devices: HashMap<Vec<u8>, Device>,
     pub name: String,
     pub time_updated: DateTime<Utc>,
 }
 
+/// Meta-info of a device registered to an account.
+///
+/// This is a sub-level structure and is stored within a `Vcard`.
 #[derive(Deserialize, Serialize)]
 pub struct Device {
     pub name: String,
