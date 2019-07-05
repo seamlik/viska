@@ -3,10 +3,6 @@
 //! A key-value store is used as the database backend. Data is serialized in [CBOR](https://cbor.io)
 //! format and stored as the "value" in the database entries, while their "key" is described in
 //! their summaries.
-//!
-//! Since the default database ([Sled](https://crates.io/crates/sled)) does not provide tables (or
-//! [column families in RocksDB](https://github.com/facebook/rocksdb/wiki/Column-Families)), all
-//! keys are prefixed by a table name in the form of `{table}/{key}`.
 
 use crate::pki::CertificateId;
 use crate::utils::Result;
@@ -17,14 +13,13 @@ use chrono::DateTime;
 use mime::Mime;
 use serde::Deserialize;
 use serde::Serialize;
+use sled::Db;
 use sled::IVec;
-use sled::Tree;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::iter::ExactSizeIterator;
-use std::ops::Deref;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -50,9 +45,13 @@ const TABLE_BLOBS: &str = "blobs";
 const TABLE_PROFILE: &str = "profile";
 const TABLE_VCARDS: &str = "vcards";
 
+fn table_messages(chatroom_id: &ChatroomId) -> Vec<u8> {
+    format!("messages-{}", crate::utils::display_id(chatroom_id)).into()
+}
+
 /// Meta-info of a message.
 ///
-/// Stored with key `messages-{chatroom ID}/{message ID}}`.
+/// Stored in table `messages-{chatroom ID}` with raw `MessageID` as key.
 ///
 /// The body is stored in the "blobs" table. This is because a message body usually has a variable
 /// size and poses unstable overhead of querying `Message`s.
@@ -72,7 +71,7 @@ pub struct Message {
 
 /// Meta-info of a chatroom.
 ///
-/// Stored with key `chatrooms/{id}`.
+/// Stored in table `chatrooms` with raw `Uuid` as key.
 #[derive(Deserialize, Serialize)]
 pub struct Chatroom {
     /// Set of Certificate IDs.
@@ -107,10 +106,10 @@ pub fn chatroom_id_from_members<'a>(
 
 /// Public information of an account.
 ///
-/// Stored with key `{vcards}/{account ID}`.
+/// Stored in table `vcards` with raw account ID as key.
 ///
 /// Since an avatar is usually binary data in variable sizes, it is stored in the "blobs" table with
-/// key `blobs/avatar-{account ID}`.
+/// key `avatar-{account ID}`.
 #[derive(Deserialize, Serialize)]
 pub struct Vcard {
     pub description: String,
@@ -180,13 +179,8 @@ impl Display for AddressFromStrError {
     }
 }
 
-/// Makes a key with a table.
-fn tabled_key(table: &str, key: &str) -> String {
-    format!("{}/{}", table, key)
-}
-
 /// Low-level operations for accessing a profile stored in a database.
-pub trait RawProfile {
+pub trait RawDatabase {
     fn account_certificate(&self) -> Result<Option<Vec<u8>>>;
     fn account_key(&self) -> Result<Option<Vec<u8>>>;
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<()>;
@@ -195,7 +189,7 @@ pub trait RawProfile {
         id: &Uuid,
         head: Message,
         body: Vec<u8>,
-        chatroom: &ChatroomId,
+        chatroom_id: &ChatroomId,
     ) -> Result<()>;
     fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<()>;
     fn blacklist(&self) -> Result<HashSet<Vec<u8>>>;
@@ -210,51 +204,51 @@ pub trait RawProfile {
     fn whitelist(&self) -> Result<HashSet<Vec<u8>>>;
 }
 
-impl RawProfile for Tree {
+impl RawDatabase for Db {
     fn set_account_certificate(&self, cert: &Certificate) -> Result<()> {
-        self.set(
-            tabled_key(TABLE_PROFILE, "account-certificate"),
-            cert.deref(),
-        )?;
+        self.open_tree(TABLE_PROFILE)?
+            .set("account-certificate", cert)?;
         Ok(())
     }
     fn set_account_key(&self, key: &CryptoKey) -> Result<()> {
-        self.set(tabled_key(TABLE_PROFILE, "account-key"), key)?;
+        self.open_tree(TABLE_PROFILE)?.set("account-key", key)?;
         Ok(())
     }
     fn set_device_certificate(&self, cert: &Certificate) -> Result<()> {
-        self.set(
-            tabled_key(TABLE_PROFILE, "device-certificate"),
-            cert.deref(),
-        )?;
+        self.open_tree(TABLE_PROFILE)?
+            .set("device-certificate", cert)?;
         Ok(())
     }
     fn set_device_key(&self, key: &CryptoKey) -> Result<()> {
-        self.set(tabled_key(TABLE_PROFILE, "device-key"), key)?;
+        self.open_tree(TABLE_PROFILE)?.set("device-key", key)?;
         Ok(())
     }
     fn account_certificate(&self) -> Result<Option<Vec<u8>>> {
-        self.get(tabled_key(TABLE_PROFILE, "account-certificate"))
+        self.open_tree(TABLE_PROFILE)?
+            .get("account-certificate")
             .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
     fn account_key(&self) -> Result<Option<Vec<u8>>> {
-        self.get(tabled_key(TABLE_PROFILE, "account-key"))
+        self.open_tree(TABLE_PROFILE)?
+            .get("account-key")
             .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
     fn device_certificate(&self) -> Result<Option<Vec<u8>>> {
-        self.get(tabled_key(TABLE_PROFILE, "device-certificate"))
+        self.open_tree(TABLE_PROFILE)?
+            .get("device-certificate")
             .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
     fn device_key(&self) -> Result<Option<Vec<u8>>> {
-        self.get(tabled_key(TABLE_PROFILE, "device-key"))
+        self.open_tree(TABLE_PROFILE)?
+            .get("device-key")
             .map(IntoBytes::into)
             .map_err(|e| e.into())
     }
     fn blacklist(&self) -> Result<HashSet<Vec<u8>>> {
-        let raw = self.get(tabled_key(TABLE_PROFILE, "blacklist"))?;
+        let raw = self.open_tree(TABLE_PROFILE)?.get("blacklist")?;
         match raw {
             None => Ok(HashSet::default()),
             Some(ref raw) if raw.is_empty() => Ok(HashSet::default()),
@@ -263,11 +257,11 @@ impl RawProfile for Tree {
     }
     fn set_blacklist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<()> {
         let cbor = serde_cbor::to_vec(blacklist).unwrap();
-        self.set(tabled_key(TABLE_PROFILE, "blacklist"), cbor)?;
+        self.open_tree(TABLE_PROFILE)?.set("blacklist", cbor)?;
         Ok(())
     }
     fn whitelist(&self) -> Result<HashSet<Vec<u8>>> {
-        let raw = self.get(tabled_key(TABLE_PROFILE, "whitelist"))?;
+        let raw = self.open_tree(TABLE_PROFILE)?.get("whitelist")?;
         match raw {
             None => Ok(HashSet::default()),
             Some(ref raw) if raw.is_empty() => Ok(HashSet::default()),
@@ -276,23 +270,17 @@ impl RawProfile for Tree {
     }
     fn set_whitelist(&self, whitelist: &HashSet<Vec<u8>>) -> Result<()> {
         let cbor = serde_cbor::to_vec(whitelist).unwrap();
-        self.set(tabled_key(TABLE_PROFILE, "whitelist"), cbor)?;
+        self.open_tree(TABLE_PROFILE)?.set("whitelist", cbor)?;
         Ok(())
     }
     fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<()> {
-        self.set(
-            tabled_key(TABLE_VCARDS, &crate::utils::display_id(id)),
-            serde_cbor::to_vec(vcard)?,
-        )?;
+        self.open_tree(TABLE_VCARDS)?
+            .set(id, serde_cbor::to_vec(vcard)?)?;
         Ok(())
     }
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<()> {
-        let chatroom_id =
-            crate::utils::display_id(&chatroom_id_from_members(chatroom.members.iter()));
-        self.set(
-            tabled_key(TABLE_CHATROOMS, &chatroom_id),
-            serde_cbor::to_vec(chatroom)?,
-        )?;
+        self.open_tree(TABLE_CHATROOMS)?
+            .set(chatroom.id(), serde_cbor::to_vec(chatroom)?)?;
         Ok(())
     }
     fn add_message(
@@ -300,16 +288,14 @@ impl RawProfile for Tree {
         id: &Uuid,
         head: Message,
         body: Vec<u8>,
-        chatroom: &ChatroomId,
+        chatroom_id: &ChatroomId,
     ) -> Result<()> {
-        let message_key = tabled_key(
-            &format!("messages-{}", crate::utils::display_id(chatroom)),
-            &format!("{}", id.to_hyphenated_ref()),
-        );
-        self.set(message_key, serde_cbor::to_vec(&head)?)?;
+        let message_key: IVec = id.as_bytes().into();
+        self.open_tree(table_messages(chatroom_id))?
+            .set(message_key, serde_cbor::to_vec(&head)?)?;
 
-        let blob_key = tabled_key(TABLE_BLOBS, &format!("message-{}", id.to_hyphenated_ref()));
-        self.set(blob_key, body)?;
+        let blob_key = format!("message-{}", id.to_hyphenated_ref());
+        self.open_tree(TABLE_BLOBS)?.set(blob_key, body)?;
 
         Ok(())
     }

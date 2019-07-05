@@ -11,7 +11,7 @@ use crate::database::Address;
 use crate::database::Chatroom;
 use crate::database::Device;
 use crate::database::Message;
-use crate::database::RawProfile;
+use crate::database::RawDatabase;
 use crate::database::Vcard;
 use crate::database::DEFAULT_MIME;
 use crate::pki::Certificate;
@@ -24,7 +24,6 @@ use fake::faker::Name;
 use rand::seq::IteratorRandom;
 use rand::Rng;
 use sled::Db;
-use sled::Tree;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Deref;
@@ -112,7 +111,11 @@ enum PeerList {
 /// Writes whitelist or blacklist and stores their `Vcard`s.
 ///
 /// Returns a map of `CertificateId`s to `Vcard`s.
-fn write_vcard_list(database: &Tree, list_type: PeerList, num: u8) -> HashMap<Vec<u8>, Vcard> {
+fn write_vcard_list(
+    database: &impl RawDatabase,
+    list_type: PeerList,
+    num: u8,
+) -> HashMap<Vec<u8>, Vcard> {
     let accounts = (0..num).map(|_| random_certificate_id()).collect();
 
     // Set whitelist or blacklist
