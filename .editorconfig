@@ -1,0 +1,3 @@
+[{*.groovy, *.java, *.xml}]
+# Google style defined in CheckStyle
+indent_size = 2
