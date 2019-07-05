@@ -93,7 +93,6 @@ pub fn chatroom_id_from_members<'a>(
 
 #[derive(Deserialize, Serialize)]
 pub struct Vcard {
-    pub avatar: Vec<u8>,
     pub description: String,
     pub devices: HashMap<Vec<u8>, Device>,
     pub name: String,

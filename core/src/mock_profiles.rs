@@ -150,7 +150,6 @@ fn random_vcard(ids: Option<HashSet<Vec<u8>>>) -> Vcard {
         .collect();
 
     Vcard {
-        avatar: Vec::new(),
         description: crate::utils::join_strings(Faker::sentences(2).into_iter()),
         devices,
         name: Faker::name(),
