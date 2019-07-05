@@ -11,9 +11,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import java.util.Locale;
-import viska.LibViska;
 import viska.android.R;
-import viska.android.ViskaService;
 
 public class Activity extends AppCompatActivity {
 
@@ -89,8 +87,7 @@ public class Activity extends AppCompatActivity {
             Snackbar.LENGTH_INDEFINITE
     );
     final Runnable action = () -> {
-      ViskaService.initializeLibViska();
-      LibViska.newMockProfile(mockProfilePath);
+      viska.mock_profile.Module.newMockProfile(mockProfilePath);
       snackbar.dismiss();
     };
 

@@ -4,6 +4,7 @@
   <application
     android:icon="@drawable/icon"
     android:label="@string/title_app"
+    android:name=".Application"
     android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
     <activity android:name=".main.Activity">
       <intent-filter>
