@@ -87,7 +87,7 @@ public class Activity extends AppCompatActivity {
             Snackbar.LENGTH_INDEFINITE
     );
     final Runnable action = () -> {
-      viska.mock_profile.Module.newMockProfile(mockProfilePath);
+      viska.mock_profile.Module.new_mock_profile(mockProfilePath);
       snackbar.dismiss();
     };
 

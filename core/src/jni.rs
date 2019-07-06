@@ -7,7 +7,7 @@ use std::path::Path;
 
 #[cfg(feature = "mock_profiles")]
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_mock_1profile_Module_newMockProfile(
+pub unsafe extern "C" fn Java_viska_mock_1profile_Module_Rust_1new_1mock_1profile(
     env: JNIEnv,
     _: JClass,
     profile_path_java: JString,
@@ -17,6 +17,6 @@ pub unsafe extern "C" fn Java_viska_mock_1profile_Module_newMockProfile(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_android_Module_initialize(_: JNIEnv, _: JClass) {
+pub unsafe extern "C" fn Java_viska_android_Module_Rust_1initialize(_: JNIEnv, _: JClass) {
     crate::android::initialize()
 }
