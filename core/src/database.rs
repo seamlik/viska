@@ -5,7 +5,7 @@
 //! their summaries.
 
 use crate::pki::CertificateId;
-use crate::utils::Result;
+use crate::Result;
 use blake2::Blake2b;
 use blake2::Digest;
 use chrono::offset::Utc;
@@ -174,7 +174,7 @@ impl FromStr for Address {
 pub struct AddressFromStrError(&'static str);
 
 /// Low-level operations for accessing a profile stored in a database.
-pub trait RawDatabase {
+pub(crate) trait RawDatabase {
     fn account_certificate(&self) -> Result<Option<Vec<u8>>>;
     fn account_key(&self) -> Result<Option<Vec<u8>>>;
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<()>;
