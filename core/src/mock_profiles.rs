@@ -10,6 +10,7 @@
 use crate::database::Address;
 use crate::database::Chatroom;
 use crate::database::Device;
+use crate::database::DisplayableId;
 use crate::database::Message;
 use crate::database::RawDatabase;
 use crate::database::Vcard;
@@ -89,7 +90,7 @@ pub fn new_mock_profile(dst: &Path) {
 
         log::info!(
             "Generating messages for chatroom {}...",
-            crate::utils::display_id(chatroom.id().as_slice()),
+            chatroom.id().display(),
         );
         let members_map: HashMap<&CertificateId, &Vcard> = whitelist
             .iter()

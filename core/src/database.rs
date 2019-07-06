@@ -10,6 +10,7 @@ use blake2::Blake2b;
 use blake2::Digest;
 use chrono::offset::Utc;
 use chrono::DateTime;
+use derive_more::Display;
 use mime::Mime;
 use serde::Deserialize;
 use serde::Serialize;
@@ -17,8 +18,6 @@ use sled::Db;
 use sled::IVec;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fmt::Display;
-use std::fmt::Formatter;
 use std::iter::ExactSizeIterator;
 use std::str::FromStr;
 use uuid::Uuid;
@@ -46,7 +45,7 @@ const TABLE_PROFILE: &str = "profile";
 const TABLE_VCARDS: &str = "vcards";
 
 fn table_messages(chatroom_id: &ChatroomId) -> Vec<u8> {
-    format!("messages-{}", crate::utils::display_id(chatroom_id)).into()
+    format!("messages-{}", chatroom_id.display()).into()
 }
 
 /// Meta-info of a message.
@@ -138,16 +137,11 @@ pub struct Device {
 /// destination of a message.
 ///
 /// Components are separated by a `/`. For example: `1A2B/3D4C`.
+#[derive(Display)]
+#[display(fmt = "{}/{}", "account.display()", "device.display()")]
 pub struct Address {
     pub account: Vec<u8>,
     pub device: Vec<u8>,
-}
-
-impl Display for Address {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        let convert = |data: &[u8]| data_encoding::HEXUPPER.encode(data);
-        write!(f, "{}/{}", convert(&self.account), convert(&self.device))
-    }
 }
 
 impl FromStr for Address {
@@ -174,13 +168,10 @@ impl FromStr for Address {
     }
 }
 
+/// If failed to parse an `Address` from a string.
+#[derive(Display)]
+#[display(fmt = "Failed to parse address: {}", _0)]
 pub struct AddressFromStrError(&'static str);
-
-impl Display for AddressFromStrError {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "Failed to parse address: {}", self.0)
-    }
-}
 
 /// Low-level operations for accessing a profile stored in a database.
 pub trait RawDatabase {
@@ -316,5 +307,16 @@ trait IntoBytes {
 impl IntoBytes for Option<IVec> {
     fn into(self) -> Option<Vec<u8>> {
         self.map(|raw| (*raw).into())
+    }
+}
+
+/// The unified way of displaying an ID byte string, which is uppercase Hex.
+pub(crate) trait DisplayableId {
+    fn display(&self) -> String;
+}
+
+impl DisplayableId for [u8] {
+    fn display(&self) -> String {
+        data_encoding::HEXUPPER_PERMISSIVE.encode(&self)
     }
 }
