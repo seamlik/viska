@@ -16,7 +16,9 @@ use crate::database::Vcard;
 use crate::database::DEFAULT_MIME;
 use crate::pki::Certificate;
 use crate::pki::CertificateId;
-use fake::faker::Chrono;
+use chrono::DateTime;
+use chrono::Utc;
+use fake::dummy::Dummy;
 use fake::faker::Faker;
 use fake::faker::Internet;
 use fake::faker::Lorem;
@@ -160,7 +162,7 @@ fn random_vcard(ids: Option<HashSet<Vec<u8>>>) -> Vcard {
         description: crate::utils::join_strings(Faker::sentences(2).into_iter()),
         devices,
         name: Faker::name(),
-        time_updated: Faker::datetime(None).parse().unwrap(),
+        time_updated: DateTime::<Utc>::dummy(),
     }
 }
 
@@ -200,7 +202,7 @@ fn random_message<'a>(participants: &HashMap<&'a CertificateId, &'a Vcard>) -> (
     let head = Message {
         mime: DEFAULT_MIME.clone(),
         sender: Address { account, device },
-        time: Faker::datetime(None).parse().unwrap(),
+        time: DateTime::<Utc>::dummy(),
     };
 
     let body = match rng.gen_range(1, 6) {
