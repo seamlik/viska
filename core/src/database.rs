@@ -294,7 +294,7 @@ impl RawDatabase for Db {
         chatroom_id: &ChatroomId,
     ) -> Result<()> {
         if chatroom_id.is_empty() {
-            warn!("Message is being sent to an empty chatroom, ignoring.");
+            log::warn!("Message is being sent to an empty chatroom, ignoring.");
             return Ok(())
         }
 

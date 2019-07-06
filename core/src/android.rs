@@ -6,5 +6,5 @@ use log::Level;
 pub fn initialize() {
     let config = Config::default().with_min_level(Level::max());
     android_logger::init_once(config);
-    error!("Holy cow!");
+    log::error!("Holy cow!");
 }

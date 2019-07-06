@@ -48,7 +48,7 @@ pub fn new_mock_profile(dst: &Path) {
     let database = Db::start_default(&db_path).unwrap();
     let mut rng = rand::thread_rng();
 
-    info!("Issuing account certificate...");
+    log::info!("Issuing account certificate...");
     let (account_cert, account_key) = crate::pki::new_certificate_account().unwrap();
     database
         .set_account_certificate(&account_cert.to_der().unwrap())
@@ -57,7 +57,7 @@ pub fn new_mock_profile(dst: &Path) {
         .set_account_key(&account_key.private_key_to_der().unwrap())
         .unwrap();
 
-    info!("Issuing device certificates...");
+    log::info!("Issuing device certificates...");
     let mut device_ids = HashSet::default();
     for _ in 0..num_devices {
         let (device_cert, device_key) =
@@ -74,18 +74,18 @@ pub fn new_mock_profile(dst: &Path) {
         .add_vcard(&account_cert.id(), &random_vcard(Some(device_ids)))
         .unwrap();
 
-    info!("Generating blacklist...");
+    log::info!("Generating blacklist...");
     write_vcard_list(&database, PeerList::Blacklist, num_blacklist);
 
-    info!("Generating imaginary friends...");
+    log::info!("Generating imaginary friends...");
     let whitelist = write_vcard_list(&database, PeerList::Whitelist, num_whitelist);
 
-    info!("Arranging chatrooms...");
+    log::info!("Arranging chatrooms...");
     let chatroom_candidates = whitelist.keys().map(Vec::as_slice).collect();
     for chatroom in random_chatroom(&chatroom_candidates, num_chatrooms) {
         database.add_chatroom(&chatroom).unwrap();
 
-        info!(
+        log::info!(
             "Generating messages for chatroom {}...",
             crate::utils::display_id(chatroom.id().as_slice()),
         );
