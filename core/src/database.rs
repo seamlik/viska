@@ -5,6 +5,7 @@
 //! their summaries.
 
 use crate::pki::CertificateId;
+use crate::utils::ResultOption;
 use crate::Result;
 use blake2::Blake2b;
 use blake2::Digest;
@@ -195,6 +196,7 @@ pub(crate) trait RawDatabase {
     fn set_device_certificate(&self, cert: &Certificate) -> Result<()>;
     fn set_device_key(&self, key: &CryptoKey) -> Result<()>;
     fn set_whitelist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<()>;
+    fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>>;
     fn whitelist(&self) -> Result<HashSet<Vec<u8>>>;
 }
 
@@ -297,6 +299,12 @@ impl RawDatabase for Db {
         self.open_tree(TABLE_BLOBS)?.set(blob_key, body)?;
 
         Ok(())
+    }
+    fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>> {
+        self.open_tree(TABLE_VCARDS)?
+            .get(id)
+            .map_deep(|raw| serde_cbor::from_slice(raw.as_ref()).unwrap())
+            .map_err(Into::into)
     }
 }
 

@@ -113,5 +113,11 @@ impl Certificate for X509 {
     }
 }
 
+impl Certificate for crate::database::Certificate {
+    fn id(&self) -> Vec<u8> {
+        Blake2b::digest(&self).into_iter().collect()
+    }
+}
+
 /// [BLAKE2b](https://blake2.net)-512 digest of the entire certificate encoded in ASN.1 DER.
 pub type CertificateId = [u8];
