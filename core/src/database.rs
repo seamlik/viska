@@ -112,7 +112,6 @@ pub fn chatroom_id_from_members<'a>(
 /// Stored in table `vcards` with raw account ID as key.
 #[derive(Deserialize, Serialize)]
 pub struct Vcard {
-    pub description: String,
     /// Devices registered with this account.
     ///
     /// Key represents the device ID.

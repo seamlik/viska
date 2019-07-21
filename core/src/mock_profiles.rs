@@ -160,7 +160,6 @@ fn random_vcard(ids: Option<HashSet<Vec<u8>>>) -> Vcard {
         .collect();
 
     Vcard {
-        description: crate::utils::join_strings(Faker::sentences(2).into_iter()),
         devices,
         name: Faker::name(),
         time_updated: DateTime::<Utc>::dummy(),
