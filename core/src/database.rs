@@ -41,7 +41,7 @@ pub type Certificate = [u8];
 pub type CryptoKey = [u8];
 
 const TABLE_CHATROOMS: &str = "chatrooms";
-const TABLE_BLOBS: &str = "blobs";
+const TABLE_BODIES: &str = "bodies";
 const TABLE_PROFILE: &str = "profile";
 const TABLE_VCARDS: &str = "vcards";
 
@@ -110,9 +110,6 @@ pub fn chatroom_id_from_members<'a>(
 /// Public information of an account.
 ///
 /// Stored in table `vcards` with raw account ID as key.
-///
-/// Since an avatar is usually binary data in variable sizes, it is stored in the "blobs" table with
-/// key `avatar-{account ID}`.
 #[derive(Deserialize, Serialize)]
 pub struct Vcard {
     pub description: String,
@@ -294,9 +291,7 @@ impl RawDatabase for Db {
         let message_key: IVec = id.as_bytes().into();
         self.open_tree(table_messages(chatroom_id))?
             .set(message_key, serde_cbor::to_vec(&head)?)?;
-
-        let blob_key = format!("message-{}", id.to_hyphenated_ref());
-        self.open_tree(TABLE_BLOBS)?.set(blob_key, body)?;
+        self.open_tree(TABLE_BODIES)?.set(id.as_bytes(), body)?;
 
         Ok(())
     }
