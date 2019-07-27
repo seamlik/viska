@@ -19,7 +19,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 /// The simplest `Result` that supports polymorphism in error handling.
-pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
+pub(crate) type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 /// The protagonist.
 pub struct Client {
