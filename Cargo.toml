@@ -14,8 +14,8 @@ name = "integration-tests"
 path = "core/tests/tests.rs"
 
 [features]
-android = ["android_logger", "jni"]
-mock_profiles = ["rand"]
+android = ["android_logger"]
+mock_profiles = []
 
 [dependencies]
 android_logger = { version = "0.8.3", optional = true }
@@ -25,12 +25,12 @@ data-encoding = "2.1.2"
 derive_more = "0.15"
 fake = { version = "1.3.0", features = ["chrono"] }
 futures-preview = "0.3.0-alpha.17"
-jni = { version = "0.12", optional = true }
+jni = "0.13"
 log = { version = "0.4.6", features = ["max_level_debug", "release_max_level_warn"] }
 mime = "0.3.13"
 openssl = { version = "0.10", features = ["vendored"] }
 quinn = "0.3.0"
-rand = { version = "0.7", optional = true }
+rand = "0.7"
 serde = { version = "1.0.94", features = ["derive"] }
 serde_cbor = "0.9"
 serde_with = "1.3.1"
