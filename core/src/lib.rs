@@ -7,19 +7,16 @@ mod ffi;
 mod jni;
 mod utils;
 
-use crate::database::RawDatabase;
+use crate::database::IoError;
+use crate::database::RawOperations;
 use crate::database::Vcard;
 use crate::pki::Certificate;
 use crate::pki::CertificateId;
 use crate::utils::ResultOption;
 use futures::Stream;
 use sled::Db;
-use std::error::Error;
 use std::path::Path;
 use std::path::PathBuf;
-
-/// The simplest `Result` that supports polymorphism in error handling.
-pub(crate) type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 /// The protagonist.
 pub struct Client {
@@ -32,7 +29,7 @@ impl Client {
     ///
     /// No need to explicitly start running the client. Once it is created, everything is functional
     /// until the whole object is dropped.
-    pub fn new(profile_path: PathBuf) -> Result<Client> {
+    pub fn new(profile_path: PathBuf) -> Result<Client, sled::Error> {
         let mut database_path = profile_path.clone();
         database_path.push("database");
         let database = Db::start_default(&database_path)?;
@@ -48,12 +45,12 @@ impl Client {
     pub fn vcard(
         &self,
         account_id: Option<&CertificateId>,
-    ) -> impl Stream<Item = Result<Option<Vcard>>> {
+    ) -> impl Stream<Item = Result<Option<Vcard>, IoError>> {
         if let Some(id) = account_id {
             futures::stream::once(futures::future::ready(self.database.vcard(id)))
         } else {
             let vcard = match self.account_id() {
-                Err(e) => Err(e),
+                Err(e) => Err(e.into()),
                 Ok(None) => Ok(None),
                 Ok(Some(id)) => self.database.vcard(&id),
             };

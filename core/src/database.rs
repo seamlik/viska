@@ -6,7 +6,6 @@
 
 use crate::pki::CertificateId;
 use crate::utils::ResultOption;
-use crate::Result;
 use blake2::Blake2b;
 use blake2::Digest;
 use chrono::offset::Utc;
@@ -19,7 +18,9 @@ use sled::Db;
 use sled::IVec;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::error::Error;
 use std::iter::ExactSizeIterator;
+use std::result::Result;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -171,75 +172,71 @@ impl FromStr for Address {
 pub struct AddressFromStrError(&'static str);
 
 /// Low-level operations for accessing a profile stored in a database.
-pub(crate) trait RawDatabase {
-    fn account_certificate(&self) -> Result<Option<Vec<u8>>>;
-    fn account_key(&self) -> Result<Option<Vec<u8>>>;
-    fn add_chatroom(&self, chatroom: &Chatroom) -> Result<()>;
+pub(crate) trait RawOperations {
+    fn account_certificate(&self) -> Result<Option<Vec<u8>>, sled::Error>;
+    fn account_key(&self) -> Result<Option<Vec<u8>>, sled::Error>;
+    fn add_chatroom(&self, chatroom: &Chatroom) -> Result<(), IoError>;
     fn add_message(
         &self,
         id: &Uuid,
         head: Message,
         body: Vec<u8>,
         chatroom_id: &ChatroomId,
-    ) -> Result<()>;
-    fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<()>;
-    fn blacklist(&self) -> Result<HashSet<Vec<u8>>>;
-    fn device_certificate(&self) -> Result<Option<Vec<u8>>>;
-    fn device_key(&self) -> Result<Option<Vec<u8>>>;
-    fn set_account_certificate(&self, cert: &Certificate) -> Result<()>;
-    fn set_account_key(&self, key: &CryptoKey) -> Result<()>;
-    fn set_blacklist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<()>;
-    fn set_device_certificate(&self, cert: &Certificate) -> Result<()>;
-    fn set_device_key(&self, key: &CryptoKey) -> Result<()>;
-    fn set_whitelist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<()>;
-    fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>>;
-    fn whitelist(&self) -> Result<HashSet<Vec<u8>>>;
+    ) -> Result<(), IoError>;
+    fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<(), IoError>;
+    fn blacklist(&self) -> Result<HashSet<Vec<u8>>, IoError>;
+    fn device_certificate(&self) -> Result<Option<Vec<u8>>, sled::Error>;
+    fn device_key(&self) -> Result<Option<Vec<u8>>, sled::Error>;
+    fn set_account_certificate(&self, cert: &Certificate) -> Result<(), sled::Error>;
+    fn set_account_key(&self, key: &CryptoKey) -> Result<(), sled::Error>;
+    fn set_blacklist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<(), IoError>;
+    fn set_device_certificate(&self, cert: &Certificate) -> Result<(), sled::Error>;
+    fn set_device_key(&self, key: &CryptoKey) -> Result<(), sled::Error>;
+    fn set_whitelist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<(), IoError>;
+    fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>, IoError>;
+    fn whitelist(&self) -> Result<HashSet<Vec<u8>>, IoError>;
 }
 
-impl RawDatabase for Db {
-    fn set_account_certificate(&self, cert: &Certificate) -> Result<()> {
+impl RawOperations for Db {
+    fn set_account_certificate(&self, cert: &Certificate) -> Result<(), sled::Error> {
         self.open_tree(TABLE_PROFILE)?
             .set("account-certificate", cert)?;
         Ok(())
     }
-    fn set_account_key(&self, key: &CryptoKey) -> Result<()> {
+    fn set_account_key(&self, key: &CryptoKey) -> Result<(), sled::Error> {
         self.open_tree(TABLE_PROFILE)?.set("account-key", key)?;
         Ok(())
     }
-    fn set_device_certificate(&self, cert: &Certificate) -> Result<()> {
+    fn set_device_certificate(&self, cert: &Certificate) -> Result<(), sled::Error> {
         self.open_tree(TABLE_PROFILE)?
             .set("device-certificate", cert)?;
         Ok(())
     }
-    fn set_device_key(&self, key: &CryptoKey) -> Result<()> {
+    fn set_device_key(&self, key: &CryptoKey) -> Result<(), sled::Error> {
         self.open_tree(TABLE_PROFILE)?.set("device-key", key)?;
         Ok(())
     }
-    fn account_certificate(&self) -> Result<Option<Vec<u8>>> {
+    fn account_certificate(&self) -> Result<Option<Vec<u8>>, sled::Error> {
         self.open_tree(TABLE_PROFILE)?
             .get("account-certificate")
             .map(IntoBytes::into)
-            .map_err(|e| e.into())
     }
-    fn account_key(&self) -> Result<Option<Vec<u8>>> {
+    fn account_key(&self) -> Result<Option<Vec<u8>>, sled::Error> {
         self.open_tree(TABLE_PROFILE)?
             .get("account-key")
             .map(IntoBytes::into)
-            .map_err(|e| e.into())
     }
-    fn device_certificate(&self) -> Result<Option<Vec<u8>>> {
+    fn device_certificate(&self) -> Result<Option<Vec<u8>>, sled::Error> {
         self.open_tree(TABLE_PROFILE)?
             .get("device-certificate")
             .map(IntoBytes::into)
-            .map_err(|e| e.into())
     }
-    fn device_key(&self) -> Result<Option<Vec<u8>>> {
+    fn device_key(&self) -> Result<Option<Vec<u8>>, sled::Error> {
         self.open_tree(TABLE_PROFILE)?
             .get("device-key")
             .map(IntoBytes::into)
-            .map_err(|e| e.into())
     }
-    fn blacklist(&self) -> Result<HashSet<Vec<u8>>> {
+    fn blacklist(&self) -> Result<HashSet<Vec<u8>>, IoError> {
         let raw = self.open_tree(TABLE_PROFILE)?.get("blacklist")?;
         match raw {
             None => Ok(HashSet::default()),
@@ -247,12 +244,12 @@ impl RawDatabase for Db {
             Some(raw) => serde_cbor::from_slice(&raw).map_err(|e| e.into()),
         }
     }
-    fn set_blacklist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<()> {
-        let cbor = serde_cbor::to_vec(blacklist).unwrap();
+    fn set_blacklist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<(), IoError> {
+        let cbor = serde_cbor::to_vec(blacklist)?;
         self.open_tree(TABLE_PROFILE)?.set("blacklist", cbor)?;
         Ok(())
     }
-    fn whitelist(&self) -> Result<HashSet<Vec<u8>>> {
+    fn whitelist(&self) -> Result<HashSet<Vec<u8>>, IoError> {
         let raw = self.open_tree(TABLE_PROFILE)?.get("whitelist")?;
         match raw {
             None => Ok(HashSet::default()),
@@ -260,17 +257,17 @@ impl RawDatabase for Db {
             Some(raw) => serde_cbor::from_slice(&raw).map_err(|e| e.into()),
         }
     }
-    fn set_whitelist(&self, whitelist: &HashSet<Vec<u8>>) -> Result<()> {
-        let cbor = serde_cbor::to_vec(whitelist).unwrap();
+    fn set_whitelist(&self, whitelist: &HashSet<Vec<u8>>) -> Result<(), IoError> {
+        let cbor = serde_cbor::to_vec(whitelist)?;
         self.open_tree(TABLE_PROFILE)?.set("whitelist", cbor)?;
         Ok(())
     }
-    fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<()> {
+    fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<(), IoError> {
         self.open_tree(TABLE_VCARDS)?
             .set(id, serde_cbor::to_vec(vcard)?)?;
         Ok(())
     }
-    fn add_chatroom(&self, chatroom: &Chatroom) -> Result<()> {
+    fn add_chatroom(&self, chatroom: &Chatroom) -> Result<(), IoError> {
         self.open_tree(TABLE_CHATROOMS)?
             .set(chatroom.id(), serde_cbor::to_vec(chatroom)?)?;
         Ok(())
@@ -281,10 +278,10 @@ impl RawDatabase for Db {
         head: Message,
         body: Vec<u8>,
         chatroom_id: &ChatroomId,
-    ) -> Result<()> {
+    ) -> Result<(), IoError> {
         if chatroom_id.is_empty() {
             log::warn!("Message is being sent to an empty chatroom, ignoring.");
-            return Ok(())
+            return Ok(());
         }
 
         let message_key: IVec = id.as_bytes().into();
@@ -294,11 +291,40 @@ impl RawDatabase for Db {
 
         Ok(())
     }
-    fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>> {
+    fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>, IoError> {
         self.open_tree(TABLE_VCARDS)?
             .get(id)
             .map_deep(|raw| serde_cbor::from_slice(raw.as_ref()).unwrap())
             .map_err(Into::into)
+    }
+}
+
+/// When fail to perform a database access operation.
+#[derive(Display, Debug)]
+#[display(fmt = "Failed to perform a database access operation!")]
+pub enum IoError {
+    Database(sled::Error),
+    Serde(serde_cbor::error::Error),
+}
+
+impl Error for IoError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            IoError::Database(err) => Some(err),
+            IoError::Serde(err) => Some(err),
+        }
+    }
+}
+
+impl From<sled::Error> for IoError {
+    fn from(err: sled::Error) -> IoError {
+        IoError::Database(err)
+    }
+}
+
+impl From<serde_cbor::error::Error> for IoError {
+    fn from(err: serde_cbor::error::Error) -> IoError {
+        IoError::Serde(err)
     }
 }
 

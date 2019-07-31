@@ -12,7 +12,7 @@ use crate::database::Chatroom;
 use crate::database::Device;
 use crate::database::DisplayableId;
 use crate::database::Message;
-use crate::database::RawDatabase;
+use crate::database::RawOperations;
 use crate::database::Vcard;
 use crate::database::DEFAULT_MIME;
 use crate::pki::Certificate;
@@ -115,7 +115,7 @@ enum PeerList {
 ///
 /// Returns a map of `CertificateId`s to `Vcard`s.
 fn write_vcard_list(
-    database: &impl RawDatabase,
+    database: &impl RawOperations,
     list_type: PeerList,
     num: u8,
 ) -> HashMap<Vec<u8>, Vcard> {
