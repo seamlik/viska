@@ -143,21 +143,21 @@ pub struct Address {
 }
 
 impl FromStr for Address {
-    type Err = AddressFromStrError;
-    fn from_str(src: &str) -> std::result::Result<Self, Self::Err> {
+    type Err = AddressFromStringError;
+    fn from_str(src: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = src.split('/').collect();
         if parts.len() != 2 {
-            std::result::Result::Err(AddressFromStrError("Does not contain exctly 2 components."))
+            Result::Err(AddressFromStringError("Does not contain exctly 2 components."))
         } else {
             let encoding = &data_encoding::HEXUPPER_PERMISSIVE;
             let account = encoding.decode(parts.get(0).unwrap().as_ref());
             let device = encoding.decode(parts.get(1).unwrap().as_ref());
             if account.is_err() {
-                std::result::Result::Err(AddressFromStrError("Invalid account."))
+                Result::Err(AddressFromStringError("Invalid account."))
             } else if device.is_err() {
-                std::result::Result::Err(AddressFromStrError("Invalid device."))
+                Result::Err(AddressFromStringError("Invalid device."))
             } else {
-                std::result::Result::Ok(Address {
+                Result::Ok(Address {
                     account: account.unwrap(),
                     device: device.unwrap(),
                 })
@@ -166,10 +166,12 @@ impl FromStr for Address {
     }
 }
 
-/// If failed to parse an `Address` from a string.
-#[derive(Display)]
+/// When failed to parse an `Address` from a string.
+#[derive(Display, Debug)]
 #[display(fmt = "Failed to parse address: {}", _0)]
-pub struct AddressFromStrError(&'static str);
+pub struct AddressFromStringError(&'static str);
+
+impl Error for AddressFromStringError {}
 
 /// Low-level operations for accessing a profile stored in a database.
 pub(crate) trait RawOperations {
