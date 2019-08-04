@@ -35,6 +35,13 @@ android {
       include 'arm64-v8a', 'x86_64'
     }
   }
+  sourceSets {
+    main {
+      java {
+        srcDir 'src/main/riko'
+      }
+    }
+  }
 }
 
 dependencies {
