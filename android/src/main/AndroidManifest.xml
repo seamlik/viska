@@ -6,12 +6,13 @@
     android:label="@string/title_app"
     android:name=".Application"
     android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
-    <activity android:name=".main.Activity">
+    <activity android:name=".MainActivity">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
         <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
     </activity>
+    <activity android:name=".NewProfileActivity"/>
     <service android:name=".ViskaService"/>
   </application>
 </manifest>
