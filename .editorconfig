@@ -1,3 +1,7 @@
-[{*.groovy, *.java, *.xml}]
-# Google style defined in CheckStyle
+[*]
 indent_size = 2
+indent_style = space
+trim_trailing_whitespace = true
+
+[*.rs]
+indent_size = 4
