@@ -17,9 +17,11 @@ use crate::database::Vcard;
 use crate::database::DEFAULT_MIME;
 use crate::pki::Certificate;
 use crate::pki::CertificateId;
+use chrono::offset::LocalResult;
+use chrono::offset::TimeZone;
 use chrono::DateTime;
+use chrono::Duration;
 use chrono::Utc;
-use fake::dummy::Dummy;
 use fake::faker::Faker;
 use fake::faker::Internet;
 use fake::faker::Lorem;
@@ -162,7 +164,7 @@ fn random_vcard(ids: Option<HashSet<Vec<u8>>>) -> Vcard {
     Vcard {
         devices,
         name: Faker::name(),
-        time_updated: DateTime::<Utc>::dummy(),
+        time_updated: random_datetime(),
     }
 }
 
@@ -202,7 +204,7 @@ fn random_message<'a>(participants: &HashMap<&'a CertificateId, &'a Vcard>) -> (
     let head = Message {
         mime: DEFAULT_MIME.clone(),
         sender: Address { account, device },
-        time: DateTime::<Utc>::dummy(),
+        time: random_datetime(),
     };
 
     let body = match rng.gen_range(1, 6) {
@@ -212,4 +214,17 @@ fn random_message<'a>(participants: &HashMap<&'a CertificateId, &'a Vcard>) -> (
     };
 
     (head, body.into())
+}
+
+fn random_datetime() -> DateTime<Utc> {
+    let mut rng = rand::thread_rng();
+    let offset = Duration::days(365 * 100).num_seconds();
+    loop {
+        let time = rng.gen_range(-offset, offset);
+        let result = Utc.timestamp_opt(time, 0);
+        if let LocalResult::Single(datetime) = result {
+            break datetime;
+        }
+        log::warn!("Invalid time: {}", time)
+    }
 }
