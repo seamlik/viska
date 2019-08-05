@@ -1,12 +1,22 @@
 package viska.android;
 
+import androidx.lifecycle.MutableLiveData;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import viska.Crate;
 
 public class Application extends android.app.Application {
 
-  private final ApplicationViewModel viewModel = new ApplicationViewModel();
+  public static class ViewModel extends androidx.lifecycle.ViewModel {
+
+    public final MutableLiveData<Boolean> creatingAccount = new MutableLiveData<>();
+
+    public ViewModel() {
+      creatingAccount.setValue(false);
+    }
+  }
+
+  private final ViewModel viewModel = new ViewModel();
 
   @Override
   public void onCreate() {
@@ -23,7 +33,7 @@ public class Application extends android.app.Application {
     return Files.isDirectory(getProfileDatabasePath());
   }
 
-  public ApplicationViewModel getViewModel() {
+  public ViewModel getViewModel() {
     return viewModel;
   }
 }

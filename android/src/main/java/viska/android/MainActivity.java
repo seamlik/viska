@@ -7,11 +7,26 @@ import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModelProviders;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.navigation.NavigationView;
 
 public class MainActivity extends AppCompatActivity {
+
+  public static class MainViewModel extends androidx.lifecycle.ViewModel {
+
+    final MutableLiveData<Screen> screen = new MutableLiveData<>();
+
+    MainViewModel() {
+      screen.setValue(Screen.CHATROOMS);
+    }
+  }
+
+  public enum Screen {
+    CHATROOMS,
+    ROSTER
+  }
 
   private MainViewModel model;
   private DrawerLayout drawerLayout;
@@ -52,18 +67,18 @@ public class MainActivity extends AppCompatActivity {
     switch (item.getItemId()) {
       case R.id.chatrooms:
         item.setChecked(true);
-        model.screen.setValue(MainScreen.CHATROOMS);
+        model.screen.setValue(Screen.CHATROOMS);
         return true;
       case R.id.roster:
         item.setChecked(true);
-        model.screen.setValue(MainScreen.ROSTER);
+        model.screen.setValue(Screen.ROSTER);
         return true;
       default:
         return false;
     }
   }
 
-  private void changeScreen(final MainScreen screen) {
+  private void changeScreen(final Screen screen) {
     switch (screen) {
       case CHATROOMS:
         drawerMenuChatrooms.setChecked(true);
