@@ -1,1 +1,3 @@
-include ':android'
+include ':android', ':riko-runtime'
+
+project(':riko-runtime').projectDir = file('riko-runtime-java')

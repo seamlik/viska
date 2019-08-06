@@ -1,0 +1,4 @@
+apply plugin: 'java-library'
+
+group = 'riko'
+version = '0.0.1'

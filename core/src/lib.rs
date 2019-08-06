@@ -3,7 +3,6 @@ pub mod database;
 pub mod mock_profiles;
 pub mod pki;
 
-mod ffi;
 mod jni;
 mod utils;
 
@@ -14,6 +13,7 @@ use crate::pki::Certificate;
 use crate::pki::CertificateId;
 use crate::utils::ResultOption;
 use futures::Stream;
+use riko_runtime::HeapObject;
 use sled::Db;
 use std::path::Path;
 use std::path::PathBuf;
@@ -63,3 +63,5 @@ impl Client {
             .map_deep(|cert| cert.id())
     }
 }
+
+impl HeapObject for Client {} // TODO: derive

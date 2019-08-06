@@ -50,4 +50,6 @@ dependencies {
   implementation 'com.google.android.material:material:1.1.0-alpha07'
   implementation 'commons-io:commons-io:2.6'
   implementation 'io.reactivex.rxjava3:rxjava:3.0.0-RC0'
+  implementation 'org.checkerframework:checker-qual:2.10.0'
+  implementation project(':riko-runtime')
 }
