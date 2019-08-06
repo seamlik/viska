@@ -29,7 +29,7 @@ pub unsafe extern "C" fn Java_viska_android_Module_Rust_1initialize(_: JNIEnv, _
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_viska_Client_Rust_1drop(_: JNIEnv, _: JClass, handle: Handle) {
-    riko_runtime::heap::drop::<crate::Client>(handle);
+    riko_runtime::heap::drop::<crate::Client>(&crate::HEAP, &handle);
 }
 
 #[no_mangle]
@@ -49,9 +49,7 @@ pub unsafe extern "C" fn Java_viska_Client_Rust_1account_1id(
     class: JClass,
     handle: Handle,
 ) -> jbyteArray {
-    let mut obj: Box<Client> = riko_runtime::heap::deref::<Client>(handle);
-    let result = obj.account_id();
-    riko_runtime::heap::shelf(obj);
-
+    let action = |obj: &mut Client| obj.account_id();
+    let result = riko_runtime::heap::peek(&crate::HEAP, &handle, action);
     MarshaledAsByteArray::to_jni(&result, &env)
 }

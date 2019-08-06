@@ -9,3 +9,4 @@ version = "0.0.1"
 
 [dependencies]
 jni = "0.13"
+rand = "0.7"

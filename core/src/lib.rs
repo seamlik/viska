@@ -77,4 +77,23 @@ impl Client {
     }
 }
 
-impl HeapObject for Client {} // TODO: derive
+/* <TODO: derive> */
+impl HeapObject for Client {
+    fn into_handle_jni(self, _: &::jni::JNIEnv) -> riko_runtime::Handle {
+        let mut heap_guard = HEAP.write().expect("Failed to write-lock the heap!");
+        let mut rng = rand::thread_rng();
+        let handle = loop {
+            let candidate = ::rand::Rng::gen::<riko_runtime::Handle>(&mut rng);
+            if !heap_guard.contains_key(&candidate) {
+                break candidate;
+            }
+        };
+        heap_guard.insert(handle, ::std::sync::Arc::new(::std::sync::Mutex::new(self)));
+        handle
+    }
+}
+
+::lazy_static::lazy_static! {
+    pub(crate) static ref HEAP: ::riko_runtime::heap::Heap<Client> = Default::default();
+}
+/* <TODO: derive/> */

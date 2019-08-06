@@ -9,7 +9,7 @@ pub mod heap;
 pub mod jni;
 
 /// Opaque handle pointing to a heap-allocated object
-pub type Handle = isize;
+pub type Handle = i32;
 
 /// Marshaled as a byte array.
 pub trait MarshaledAsByteArray {
@@ -42,10 +42,7 @@ impl<T: MarshaledAsByteArray, E: Error> MarshaledAsByteArray for Result<Option<T
 /// target side. Target code must integrate the manual memory management into its own mechanism as
 /// those memory management strategy (usually garbage collection) is not aware of any native code.
 pub trait HeapObject: Sized {
-    fn into_handle_jni(self, _: &JNIEnv) -> Handle {
-        let obj = Box::new(self);
-        Box::into_raw(obj) as Handle
-    }
+    fn into_handle_jni(self, _: &JNIEnv) -> Handle;
 }
 
 impl<T: HeapObject, E: Error> HeapObject for Result<T, E> {
