@@ -94,7 +94,7 @@ pub fn chatroom_id_from_members<'a>(
     members: impl ExactSizeIterator<Item = &'a Vec<u8>>,
 ) -> Vec<u8> {
     if members.len() == 0 {
-       return Vec::default();
+        return Vec::default();
     }
     let mut members_sorted: Vec<&Vec<u8>> = members.collect();
     members_sorted.sort();
@@ -147,7 +147,9 @@ impl FromStr for Address {
     fn from_str(src: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = src.split('/').collect();
         if parts.len() != 2 {
-            Result::Err(AddressFromStringError("Does not contain exctly 2 components."))
+            Result::Err(AddressFromStringError(
+                "Does not contain exctly 2 components.",
+            ))
         } else {
             let encoding = &data_encoding::HEXUPPER_PERMISSIVE;
             let account = encoding.decode(parts.get(0).unwrap().as_ref());

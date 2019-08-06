@@ -6,8 +6,8 @@
   <string name="title_app">Viska</string>
   <string name="title_chatrooms">Chatrooms</string>
   <string name="title_exit">Exit</string>
+  <string name="title_new_account">Create a new account</string>
+  <string name="title_new_mock_profile">Generate a mock profile</string>
   <string name="title_roster">Roster</string>
   <string name="title_settings">Settings</string>
-  <string name="title_new_mock_profile">Generate a mock profile</string>
-  <string name="title_new_account">Create a new account</string>
 </resources>
