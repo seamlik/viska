@@ -1,13 +1,12 @@
 Nothing right now, come back later.
 
-Build
------
+Building
+--------
 
 ### Android
 
-1. Set `ANDROID_HOME` and `NDK_HOME`
-2. Run `android/build.sh`
-3. Run `./gradlew assemble`
+1. Run `android/build.sh`
+2. Run `./gradlew assemble`
 
 License
 -------

@@ -19,6 +19,13 @@ use std::path::Path;
 use std::path::PathBuf;
 
 /// The protagonist.
+///
+/// # Asynchronous getters
+///
+/// This struct includes a lot of asynchronous property getter methods (e.g. `vcard`). These let one
+/// subscribe to the changes to that property. Upon subscription, the current value is immediately
+/// returned. So in order to get the current value, one may take the first element of the `Stream`
+/// and blockingly wait for it.
 pub struct Client {
     database: Db,
     profile_path: PathBuf,
@@ -39,9 +46,13 @@ impl Client {
             profile_path,
         })
     }
+
+    /// Gets the path to the profile loaded.
     pub fn profile_path(&self) -> &Path {
         &self.profile_path
     }
+
+    // Subscribes to the `Vcard` of the current account.
     pub fn vcard(
         &self,
         account_id: Option<&CertificateId>,
@@ -54,9 +65,11 @@ impl Client {
                 Ok(None) => Ok(None),
                 Ok(Some(id)) => self.database.vcard(&id),
             };
-            futures::stream::once(futures::future::ready(vcard))
+            futures::stream::once(futures::future::ready(vcard)) // TODO: Subscription
         }
     }
+
+    // Gets the ID of the current account.
     pub fn account_id(&self) -> Result<Option<Vec<u8>>, sled::Error> {
         self.database
             .account_certificate()
