@@ -2,23 +2,15 @@
   android:layout_height="wrap_content"
   android:layout_width="match_parent"
   android:orientation="vertical"
-  android:paddingVertical="@dimen/padding"
-  android:paddingHorizontal="24dp"
+  android:paddingVertical="@dimen/padding_large"
+  android:paddingHorizontal="@dimen/padding_large"
   xmlns:android="http://schemas.android.com/apk/res/android">
-  
-  <ImageView
-    android:id="@+id/avatar"
-    android:layout_height="120dp"
-    android:layout_width="120dp"
-    android:scaleType="fitCenter"
-    android:src="@drawable/person"/>
   
   <TextView
     android:id="@+id/name"
     android:layout_height="wrap_content"
     android:layout_width="match_parent"
     android:text="@string/dummy_account_name"
-    android:textAlignment="center"
     android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"/>
 
   <TextView

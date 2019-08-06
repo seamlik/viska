@@ -1,4 +1,4 @@
 <resources>
   <dimen name="padding">8dp</dimen>
-  <dimen name="padding_fab">24dp</dimen>
+  <dimen name="padding_large">24dp</dimen>
 </resources>
