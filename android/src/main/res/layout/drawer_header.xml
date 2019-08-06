@@ -17,7 +17,6 @@
     android:id="@+id/description"
     android:layout_height="wrap_content"
     android:layout_width="match_parent"
-    android:text="@string/dummy_account_address"
     android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"/>
 
 </LinearLayout>

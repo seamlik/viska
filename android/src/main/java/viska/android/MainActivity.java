@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -11,6 +12,8 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModelProviders;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.navigation.NavigationView;
+import io.reactivex.disposables.Disposable;
+import viska.Utils;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -28,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
     ROSTER
   }
 
+  private final ViskaService.Connection viska = new ViskaService.Connection();
   private MainViewModel model;
   private DrawerLayout drawerLayout;
   private MenuItem drawerMenuChatrooms;
@@ -36,13 +40,16 @@ public class MainActivity extends AppCompatActivity {
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-
     final Application app = (Application) getApplication();
+
     if (!app.hasProfile()) {
       startActivity(new Intent(this, NewProfileActivity.class));
       finish();
       return;
     }
+    final Intent viskaIntent = new Intent(this, ViskaService.class);
+    startForegroundService(viskaIntent);
+    bindService(viskaIntent, viska, 0);
 
     setContentView(R.layout.main);
     model = ViewModelProviders.of(this).get(MainViewModel.class);
@@ -59,8 +66,22 @@ public class MainActivity extends AppCompatActivity {
     final View fab = findViewById(R.id.fab);
     fab.setOnClickListener(this::onFabClicked);
 
+    final TextView description = drawer.getHeaderView(0).findViewById(R.id.description);
+    final Disposable tokenAccountId = viska.getClient().subscribe(
+        client -> runOnUiThread(() -> description.setText(Utils.displayId(client.account_id())))
+    );
+    viska.putDisposable(tokenAccountId);
+
     model.screen.observe(this, this::changeScreen);
     drawer.setNavigationItemSelectedListener(this::onNavigationItemSelected);
+  }
+
+  @Override
+  protected void onDestroy() {
+    super.onDestroy();
+    if (viska.isConnected()) {
+      unbindService(viska);
+    }
   }
 
   private boolean onNavigationItemSelected(final MenuItem item) {
