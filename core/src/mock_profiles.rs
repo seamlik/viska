@@ -22,10 +22,11 @@ use chrono::offset::TimeZone;
 use chrono::DateTime;
 use chrono::Duration;
 use chrono::Utc;
-use fake::faker::Faker;
-use fake::faker::Internet;
-use fake::faker::Lorem;
-use fake::faker::Name;
+use fake::faker::internet::en::UserAgent;
+use fake::faker::lorem::en::Paragraphs;
+use fake::faker::lorem::en::Sentences;
+use fake::faker::name::en::Name;
+use fake::Fake;
 use rand::seq::IteratorRandom;
 use rand::Rng;
 use sled::Db;
@@ -156,14 +157,14 @@ fn random_vcard(ids: Option<HashSet<Vec<u8>>>) -> Vcard {
     let devices = ids_nonnull
         .into_iter()
         .map(|id| {
-            let name = Faker::user_agent().to_owned();
+            let name = UserAgent().fake();
             (id, Device { name })
         })
         .collect();
 
     Vcard {
         devices,
-        name: Faker::name(),
+        name: Name().fake(),
         time_updated: random_datetime(),
     }
 }
@@ -208,9 +209,9 @@ fn random_message<'a>(participants: &HashMap<&'a CertificateId, &'a Vcard>) -> (
     };
 
     let body = match rng.gen_range(1, 6) {
-        4 => crate::utils::join_strings(Faker::paragraphs(1).into_iter()),
-        5 => crate::utils::join_strings(Faker::paragraphs(2).into_iter()),
-        n => crate::utils::join_strings(Faker::sentences(n).into_iter()),
+        4 => crate::utils::join_strings(Paragraphs(1..2).fake::<Vec<String>>().into_iter()),
+        5 => crate::utils::join_strings(Paragraphs(2..3).fake::<Vec<String>>().into_iter()),
+        n => crate::utils::join_strings(Sentences(1..(n + 1)).fake::<Vec<String>>().into_iter()),
     };
 
     (head, body.into())
