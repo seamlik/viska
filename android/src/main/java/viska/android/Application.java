@@ -25,12 +25,12 @@ public class Application extends android.app.Application {
     Module.initialize();
   }
 
-  public Path getProfileDatabasePath() {
-    return getNoBackupFilesDir().toPath().resolve("profile").resolve("database");
+  public Path getProfilePath() {
+    return getNoBackupFilesDir().toPath().resolve("profile");
   }
 
   public boolean hasProfile() {
-    return Files.isDirectory(getProfileDatabasePath());
+    return Files.isDirectory(getProfilePath());
   }
 
   public ViewModel getViewModel() {

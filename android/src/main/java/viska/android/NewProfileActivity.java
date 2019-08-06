@@ -52,8 +52,8 @@ public class NewProfileActivity extends AppCompatActivity {
       if (tmpProfilePath.exists()) {
         FileUtils.forceDelete(tmpProfilePath);
       }
-      if (Files.exists(app.getProfileDatabasePath())) {
-        FileUtils.forceDelete(app.getProfileDatabasePath().toFile());
+      if (Files.exists(app.getProfilePath())) {
+        FileUtils.forceDelete(app.getProfilePath().toFile());
       }
       switch (view.getId()) {
         case R.id.new_mock_profile:
@@ -62,8 +62,8 @@ public class NewProfileActivity extends AppCompatActivity {
         default:
           break;
       }
-      Files.createDirectories(app.getProfileDatabasePath().getParent());
-      Files.move(tmpProfilePath.toPath(), app.getProfileDatabasePath());
+      Files.createDirectories(app.getProfilePath().getParent());
+      Files.move(tmpProfilePath.toPath(), app.getProfilePath());
       app.getViewModel().creatingAccount.postValue(false);
     }).subscribeOn(Schedulers.io()).subscribe();
   }
