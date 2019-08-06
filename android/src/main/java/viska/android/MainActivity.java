@@ -31,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
     ROSTER
   }
 
-  private final ViskaService.Connection viska = new ViskaService.Connection();
+  private ViskaService.Connection viska;
   private MainViewModel model;
   private DrawerLayout drawerLayout;
   private MenuItem drawerMenuChatrooms;
@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     }
     final Intent viskaIntent = new Intent(this, ViskaService.class);
     startForegroundService(viskaIntent);
+    viska = new ViskaService.Connection();
     bindService(viskaIntent, viska, 0);
 
     setContentView(R.layout.main);
@@ -79,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
   @Override
   protected void onDestroy() {
     super.onDestroy();
-    if (viska.isConnected()) {
+    if (viska != null) {
       unbindService(viska);
     }
   }

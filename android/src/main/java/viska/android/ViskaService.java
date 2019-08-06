@@ -35,10 +35,6 @@ public class ViskaService extends Service {
       return client;
     }
 
-    public boolean isConnected() {
-      return client.hasValue();
-    }
-
     public void putDisposable(final Disposable disposable) {
       bin.add(disposable);
     }
