@@ -5,7 +5,7 @@ use jni::objects::JClass;
 use jni::objects::JString;
 use jni::sys::jbyteArray;
 use jni::JNIEnv;
-use riko_runtime::Handle;
+use riko_runtime::heap::Handle;
 use riko_runtime::HeapObject;
 use riko_runtime::MarshaledAsByteArray;
 use std::path::Path;

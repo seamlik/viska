@@ -79,11 +79,11 @@ impl Client {
 
 /* <TODO: derive> */
 impl HeapObject for Client {
-    fn into_handle_jni(self, _: &::jni::JNIEnv) -> riko_runtime::Handle {
+    fn into_handle_jni(self, _: &::jni::JNIEnv) -> riko_runtime::heap::Handle {
         let mut heap_guard = HEAP.write().expect("Failed to write-lock the heap!");
         let mut rng = rand::thread_rng();
         let handle = loop {
-            let candidate = ::rand::Rng::gen::<riko_runtime::Handle>(&mut rng);
+            let candidate = ::rand::Rng::gen::<riko_runtime::heap::Handle>(&mut rng);
             if !heap_guard.contains_key(&candidate) {
                 break candidate;
             }

@@ -1,6 +1,4 @@
 //! Utilities for interfacing with JNI.
-//!
-//! These methods should only be used by generated wrapper code.
 
 use jni::JNIEnv;
 use std::error::Error;
