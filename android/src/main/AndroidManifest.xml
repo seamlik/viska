@@ -1,13 +1,18 @@
 <manifest
   package="viska.android"
   xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
   <application
     android:icon="@drawable/icon"
     android:label="@string/title_app"
     android:name=".Application"
     android:supportsRtl="true"
     android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
-    <activity android:name=".MainActivity">
+    <activity
+      android:launchMode="singleInstance"
+      android:name=".MainActivity">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
         <category android:name="android.intent.category.LAUNCHER"/>
