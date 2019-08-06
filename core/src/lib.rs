@@ -57,7 +57,7 @@ impl Client {
             futures::stream::once(futures::future::ready(vcard))
         }
     }
-    pub fn account_id(&self) -> Result<Option<Vec<u8>>> {
+    pub fn account_id(&self) -> Result<Option<Vec<u8>>, sled::Error> {
         self.database
             .account_certificate()
             .map_deep(|cert| cert.id())
