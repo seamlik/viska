@@ -1,5 +1,6 @@
 package viska.android;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
@@ -11,6 +12,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModelProviders;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
 import io.reactivex.disposables.Disposable;
 import viska.Utils;
@@ -32,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
   }
 
   private ViskaService.Connection viska;
+  private Intent viskaIntent;
   private MainViewModel model;
   private DrawerLayout drawerLayout;
   private MenuItem drawerMenuChatrooms;
@@ -41,13 +44,13 @@ public class MainActivity extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     final Application app = (Application) getApplication();
+    viskaIntent = new Intent(this, ViskaService.class);
 
     if (!app.hasProfile()) {
       startActivity(new Intent(this, NewProfileActivity.class));
       finish();
       return;
     }
-    final Intent viskaIntent = new Intent(this, ViskaService.class);
     startForegroundService(viskaIntent);
     viska = new ViskaService.Connection();
     bindService(viskaIntent, viska, 0);
@@ -95,6 +98,9 @@ public class MainActivity extends AppCompatActivity {
         item.setChecked(true);
         model.screen.setValue(Screen.ROSTER);
         return true;
+      case R.id.exit:
+        askExit();
+        return true;
       default:
         return false;
     }
@@ -116,6 +122,24 @@ public class MainActivity extends AppCompatActivity {
         return;
     }
     drawerLayout.closeDrawers();
+  }
+
+  private void askExit() {
+    final DialogInterface.OnClickListener listener = (dialog, which) -> {
+      if (which != DialogInterface.BUTTON_POSITIVE) {
+        return;
+      }
+      stopService(viskaIntent);
+      finish();
+    };
+
+    new MaterialAlertDialogBuilder(this)
+        .setTitle(R.string.dialog_exit_title)
+        .setMessage(R.string.dialog_exit_text)
+        .setPositiveButton(R.string.title_yes, listener)
+        .setNegativeButton(R.string.title_no, listener)
+        .create()
+        .show();
   }
 
   private void onFabClicked(final View view) {
