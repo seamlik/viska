@@ -1,0 +1,8 @@
+[package]
+authors = ["殷啟聰 | Kai-Chung Yan <seamlik@debian.org>"]
+edition = "2018"
+name = "riko_macros"
+version = "0.0.1"
+
+[lib]
+proc-macro = true

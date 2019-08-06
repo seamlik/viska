@@ -34,6 +34,7 @@ mime = "0.3.13"
 openssl = { version = "0.10", features = ["vendored"] }
 quinn = "0.3.0"
 rand = "0.7"
+riko_macros = { path = "riko-macros" }
 riko_runtime = { path = "riko-runtime-rust" }
 serde = { version = "1.0.94", features = ["derive"] }
 serde_cbor = "0.9"
