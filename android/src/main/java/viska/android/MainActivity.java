@@ -85,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
     super.onDestroy();
     if (viska != null) {
       unbindService(viska);
+      viska = null;
     }
   }
 
