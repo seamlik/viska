@@ -24,15 +24,23 @@ impl MarshaledAsByteArray for Vec<u8> {
     }
 }
 
-impl<T: MarshaledAsByteArray, E: Error> MarshaledAsByteArray for Result<Option<T>, E> {
+impl<T: MarshaledAsByteArray, E: Error> MarshaledAsByteArray for Result<T, E> {
     fn to_jni(&self, env: &JNIEnv) -> jbyteArray {
         match self {
-            Ok(None) => JObject::null().into_inner(),
-            Ok(Some(value)) => value.to_jni(env),
+            Ok(value) => value.to_jni(env),
             Err(err) => {
                 jni::throw(env, err);
                 JObject::null().into_inner()
             }
+        }
+    }
+}
+
+impl<T: MarshaledAsByteArray> MarshaledAsByteArray for Option<T> {
+    fn to_jni(&self, env: &JNIEnv) -> jbyteArray {
+        match self {
+            None => JObject::null().into_inner(),
+            Some(value) => value.to_jni(env),
         }
     }
 }
