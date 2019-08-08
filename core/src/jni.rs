@@ -7,7 +7,7 @@ use jni::sys::jbyteArray;
 use jni::JNIEnv;
 use riko_runtime::heap::Handle;
 use riko_runtime::HeapObject;
-use riko_runtime::MarshaledAsByteArray;
+use riko_runtime::MarshaledAsBytes;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -51,5 +51,5 @@ pub unsafe extern "C" fn Java_viska_Client_Rust_1account_1id(
 ) -> jbyteArray {
     let action = |obj: &mut Client| obj.account_id();
     let result = riko_runtime::heap::peek(&crate::HEAP, &handle, action);
-    MarshaledAsByteArray::to_jni(&result, &env)
+    MarshaledAsBytes::to_jni(&result, &env)
 }

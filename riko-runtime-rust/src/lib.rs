@@ -13,18 +13,18 @@ pub mod heap;
 pub mod jni;
 
 /// Marshaled as a byte array.
-pub trait MarshaledAsByteArray {
+pub trait MarshaledAsBytes {
     fn to_jni(&self, env: &JNIEnv) -> jbyteArray;
 }
 
-impl MarshaledAsByteArray for Vec<u8> {
+impl MarshaledAsBytes for Vec<u8> {
     fn to_jni(&self, env: &JNIEnv) -> jbyteArray {
         env.byte_array_from_slice(&self)
             .expect("Failed to marshal as a byte array!")
     }
 }
 
-impl<T: MarshaledAsByteArray, E: Error> MarshaledAsByteArray for Result<T, E> {
+impl<T: MarshaledAsBytes, E: Error> MarshaledAsBytes for Result<T, E> {
     fn to_jni(&self, env: &JNIEnv) -> jbyteArray {
         match self {
             Ok(value) => value.to_jni(env),
@@ -36,7 +36,7 @@ impl<T: MarshaledAsByteArray, E: Error> MarshaledAsByteArray for Result<T, E> {
     }
 }
 
-impl<T: MarshaledAsByteArray> MarshaledAsByteArray for Option<T> {
+impl<T: MarshaledAsBytes> MarshaledAsBytes for Option<T> {
     fn to_jni(&self, env: &JNIEnv) -> jbyteArray {
         match self {
             None => JObject::null().into_inner(),
