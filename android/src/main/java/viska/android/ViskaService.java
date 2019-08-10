@@ -72,7 +72,11 @@ public class ViskaService extends Service {
         .build();
     startForeground(R.id.notification_systray, notification);
 
-    client = Client._new(app.getProfilePath().toString());
+    try {
+      client = Client.create(app.getProfilePath().toString());
+    } catch (Exception err) {
+      throw new RuntimeException("Failed to create a Viska client.", err);
+    }
   }
 
   @Override

@@ -2,22 +2,27 @@ package viska.core;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import riko.DoubleFreeException;
+import riko.Marshaler;
+import riko.Returned;
 import riko.UseAfterFreeException;
+import riko.UserException;
 
 public class Client implements AutoCloseable {
 
-  private final long handle;
+  private final int handle;
   private boolean freed;
 
-  private Client(final long handle) {
+  private Client(final int handle) {
     this.handle = handle;
   }
 
-  public static Client _new(final String profile_path) {
-    final long handle = __riko_new(profile_path);
-    return new Client(handle);
+  public static Client create(final String profile_path) throws UserException {
+    final Returned<Integer> result = Marshaler.fromBytes(__riko_create(
+        Marshaler.toBytes(profile_path)
+    ));
+    return new Client(result.unwrap());
   }
-  private static native int __riko_new(String profile_path);
+  private static native byte[] __riko_create(byte[] arg_1);
 
   @Override
   public void close() {
@@ -28,7 +33,7 @@ public class Client implements AutoCloseable {
     __riko_drop(handle);
     freed = true;
   }
-  private native void __riko_drop(long handle);
+  private native void __riko_drop(int handle);
 
   public byte @Nullable [] account_id() {
     if (freed) {
@@ -37,7 +42,7 @@ public class Client implements AutoCloseable {
 
     return __riko_account_id(handle);
   }
-  private static native byte[] __riko_account_id(long handle);
+  private static native byte[] __riko_account_id(int handle);
 
   public boolean isFreed() {
     return freed;

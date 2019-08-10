@@ -13,7 +13,7 @@ use crate::pki::Certificate;
 use crate::pki::CertificateId;
 use crate::utils::ResultOption;
 use futures::Stream;
-use riko_runtime::HeapObject;
+use riko_runtime::Heap;
 use sled::Db;
 use std::path::Path;
 use std::path::PathBuf;
@@ -82,22 +82,16 @@ impl Client {
 }
 
 /* <TODO: derive> */
-impl HeapObject for Client {
-    fn into_handle_jni(self, _: &::jni::JNIEnv) -> riko_runtime::heap::Handle {
-        let mut heap_guard = HEAP.write().expect("Failed to write-lock the heap!");
-        let mut rng = rand::thread_rng();
-        let handle = loop {
-            let candidate = ::rand::Rng::gen::<riko_runtime::heap::Handle>(&mut rng);
-            if !heap_guard.contains_key(&candidate) {
-                break candidate;
-            }
-        };
-        heap_guard.insert(handle, ::std::sync::Arc::new(::std::sync::Mutex::new(self)));
-        handle
+impl Heap for Client {
+    fn into_handle(self) -> ::riko_runtime::returned::Returned<::riko_runtime::heap::Handle> {
+        let mut heap_guard = __RIKO_POOL_Client
+            .write()
+            .expect("Failed to write-lock the pool!");
+        ::riko_runtime::heap::store(&mut heap_guard, self).into()
     }
 }
 
 ::lazy_static::lazy_static! {
-    pub(crate) static ref HEAP: ::riko_runtime::heap::Heap<Client> = Default::default();
+    pub(crate) static ref __RIKO_POOL_Client: ::riko_runtime::heap::Pool<Client> = Default::default();
 }
 /* <TODO: derive/> */
