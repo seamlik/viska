@@ -1,6 +1,5 @@
 use chrono::Local;
 use log::LevelFilter;
-use std::path::Path;
 
 fn init() {
     env_logger::builder()
@@ -15,5 +14,5 @@ fn run() {
     init();
 
     let profile_path = format!("/tmp/viska-test/{}", Local::now().timestamp_millis());
-    viska::mock_profiles::new_mock_profile(&Path::new(&profile_path));
+    viska::mock_profiles::new_mock_profile(&profile_path);
 }

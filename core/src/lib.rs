@@ -47,6 +47,10 @@ impl Client {
         })
     }
 
+    fn new_ffi(profile_path: &String) -> Result<Client, sled::Error> {
+        Self::new(PathBuf::from(profile_path))
+    }
+
     /// Gets the path to the profile loaded.
     pub fn profile_path(&self) -> &Path {
         &self.profile_path

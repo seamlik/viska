@@ -5,7 +5,7 @@ import android.app.NotificationManager;
 import androidx.lifecycle.MutableLiveData;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import viska.Crate;
+import viska.core.__Riko_Module;
 
 public class Application extends android.app.Application {
 
@@ -25,8 +25,8 @@ public class Application extends android.app.Application {
   @Override
   public void onCreate() {
     super.onCreate();
-    Crate.loadLibrary();
-    Module.initialize();
+    System.loadLibrary("viska");
+    __Riko_Module.initialize();
     initializeNotifications();
   }
 

@@ -11,7 +11,7 @@ import io.reactivex.Single;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.subjects.SingleSubject;
-import viska.Client;
+import viska.core.Client;
 
 public class ViskaService extends Service {
 

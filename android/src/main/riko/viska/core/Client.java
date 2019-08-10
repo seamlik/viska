@@ -1,4 +1,4 @@
-package viska;
+package viska.core;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import riko.DoubleFreeException;
@@ -14,10 +14,10 @@ public class Client implements AutoCloseable {
   }
 
   public static Client _new(final String profile_path) {
-    final long handle = Rust_new(profile_path);
+    final long handle = __riko_new(profile_path);
     return new Client(handle);
   }
-  private static native int Rust_new(String profile_path);
+  private static native int __riko_new(String profile_path);
 
   @Override
   public void close() {
@@ -25,19 +25,19 @@ public class Client implements AutoCloseable {
       throw new DoubleFreeException();
     }
 
-    Rust_drop(handle);
+    __riko_drop(handle);
     freed = true;
   }
-  private native void Rust_drop(long handle);
+  private native void __riko_drop(long handle);
 
   public byte @Nullable [] account_id() {
     if (freed) {
       throw new UseAfterFreeException();
     }
 
-    return Rust_account_id(handle);
+    return __riko_account_id(handle);
   }
-  private static native byte[] Rust_account_id(long handle);
+  private static native byte[] __riko_account_id(long handle);
 
   public boolean isFreed() {
     return freed;

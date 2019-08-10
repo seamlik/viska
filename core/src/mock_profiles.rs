@@ -33,14 +33,13 @@ use sled::Db;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Deref;
-use std::path::Path;
 use std::path::PathBuf;
 use uuid::Uuid;
 
 /// Generates a mock profile.
 ///
 /// Beware that this is a time-consuming operation.
-pub fn new_mock_profile(dst: &Path) {
+pub fn new_mock_profile(dst: &String) {
     let num_blacklist = 10;
     let num_devices = 5;
     let num_whitelist = 10;

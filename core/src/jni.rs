@@ -1,6 +1,7 @@
 #![cfg(feature = "android")]
 
 use crate::Client;
+use crate::HEAP;
 use jni::objects::JClass;
 use jni::objects::JString;
 use jni::sys::jbyteArray;
@@ -8,48 +9,57 @@ use jni::JNIEnv;
 use riko_runtime::heap::Handle;
 use riko_runtime::HeapObject;
 use riko_runtime::MarshaledAsBytes;
-use std::path::Path;
-use std::path::PathBuf;
+use riko_runtime::MarshaledAsString;
 
 #[cfg(feature = "mock_profiles")]
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_mock_1profile_Module_Rust_1new_1mock_1profile(
-    env: JNIEnv,
-    _: JClass,
-    profile_path_java: JString,
+pub unsafe extern "C" fn Java_viska_core__1_1Riko_1Module__1_1riko_1new_1mock_1profile(
+    _env: JNIEnv,
+    _class: JClass,
+    arg_1_jni: JString,
 ) {
-    let profile_path: String = env.get_string(profile_path_java).unwrap().into();
-    crate::mock_profiles::new_mock_profile(&Path::new(&profile_path));
+    let arg_1_rust = MarshaledAsString::from_jni(&_env, arg_1_jni);
+
+    crate::mock_profiles::new_mock_profile(&arg_1_rust)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_android_Module_Rust_1initialize(_: JNIEnv, _: JClass) {
+pub unsafe extern "C" fn Java_viska_core__1_1Riko_1Module__1_1riko_1initialize(
+    _env: JNIEnv,
+    _class: JClass,
+) {
     crate::android::initialize()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_Client_Rust_1drop(_: JNIEnv, _: JClass, handle: Handle) {
-    riko_runtime::heap::drop::<crate::Client>(&crate::HEAP, &handle);
+pub unsafe extern "C" fn Java_viska_core_Client__1_1riko_1drop(
+    _env: JNIEnv,
+    _class: JClass,
+    handle: Handle,
+) {
+    ::riko_runtime::heap::drop::<Client>(&HEAP, &handle);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_Client_Rust_1new(
-    env: JNIEnv,
-    class: JClass,
-    profile_path: JString,
+pub unsafe extern "C" fn Java_viska_core_Client__1_1riko_1new(
+    _env: JNIEnv,
+    _class: JClass,
+    arg_1_jni: JString,
 ) -> Handle {
-    let profile_path_rust: String = env.get_string(profile_path).unwrap().into();
-    let result = crate::Client::new(PathBuf::from(profile_path_rust));
-    HeapObject::into_handle_jni(result, &env)
+    let arg_1_rust = MarshaledAsString::from_jni(&_env, arg_1_jni);
+
+    let result = Client::new_ffi(&arg_1_rust);
+    HeapObject::into_handle_jni(result, &_env)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_Client_Rust_1account_1id(
-    env: JNIEnv,
-    class: JClass,
+pub unsafe extern "C" fn Java_viska_core_Client__1_1riko_1account_1id(
+    _env: JNIEnv,
+    _class: JClass,
     handle: Handle,
 ) -> jbyteArray {
     let action = |obj: &mut Client| obj.account_id();
-    let result = riko_runtime::heap::peek(&crate::HEAP, &handle, action);
-    MarshaledAsBytes::to_jni(&result, &env)
+
+    let result = ::riko_runtime::heap::peek(&HEAP, &handle, action);
+    MarshaledAsBytes::to_jni(&result, &_env)
 }
