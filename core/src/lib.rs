@@ -24,7 +24,7 @@ use std::path::PathBuf;
 ///
 /// This struct includes a lot of asynchronous property getter methods (e.g. `vcard`). These let one
 /// subscribe to the changes to that property. Upon subscription, the current value is immediately
-/// returned. So in order to get the current value, one may take the first element of the `Stream`
+/// returned. So in order to get the current value, one may take the first element of the [Stream]
 /// and blockingly wait for it.
 pub struct Client {
     database: Db,
@@ -56,7 +56,7 @@ impl Client {
         &self.profile_path
     }
 
-    // Subscribes to the `Vcard` of the current account.
+    /// Subscribes to the [Vcard] of the current account.
     pub fn vcard(
         &self,
         account_id: Option<&CertificateId>,

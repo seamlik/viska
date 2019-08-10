@@ -13,7 +13,7 @@ public class __Riko_Module {
   private static native void __riko_new_mock_profile(byte[] arg_1);
   public static void new_mock_profile(final String dst) {
     __riko_new_mock_profile(
-      Marshaler.toBytes(dst)
+        Marshaler.toBytes(dst)
     );
   }
 }

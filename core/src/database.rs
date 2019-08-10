@@ -52,10 +52,10 @@ fn table_messages(chatroom_id: &ChatroomId) -> Vec<u8> {
 
 /// Meta-info of a message.
 ///
-/// Stored in table `messages-{chatroom ID}` with raw `MessageID` as key.
+/// Stored in table `messages-{chatroom ID}` with raw message ID (a UUID v4) as key.
 ///
 /// The body is stored in the "blobs" table. This is because a message body usually has a variable
-/// size and poses unstable overhead of querying `Message`s.
+/// size and poses unstable overhead when querying [Message]s.
 #[derive(Deserialize, Serialize)]
 pub struct Message {
     #[serde(default = "default_mime")]
@@ -72,7 +72,7 @@ pub struct Message {
 
 /// Meta-info of a chatroom.
 ///
-/// Stored in table `chatrooms` with raw `Uuid` as key.
+/// Stored in table `chatrooms` with raw [ChatroomId] as key.
 #[derive(Deserialize, Serialize)]
 pub struct Chatroom {
     /// Set of Certificate IDs.
@@ -85,7 +85,7 @@ impl Chatroom {
     }
 }
 
-/// Generates a Chatroom ID from its member IDs.
+/// Generates a [ChatroomId] from its member IDs.
 ///
 /// A chatroom's ID only depends on its members and nothing else, such that messages sent to the
 /// same set of accounts are always stored in the same chatroom. The ID generation is reproducible
@@ -123,7 +123,7 @@ pub struct Vcard {
 
 /// Meta-info of a device registered to an account.
 ///
-/// This is a sub-level structure and is stored within a `Vcard`.
+/// This is a sub-level structure and is stored within a [Vcard].
 #[derive(Deserialize, Serialize)]
 pub struct Device {
     pub name: String,

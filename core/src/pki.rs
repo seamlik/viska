@@ -38,7 +38,7 @@ const LENGTH_KEY: u32 = 4096;
 
 /// Specifies how long before a certificate expires.
 ///
-/// Current version of `libopenssl` crate can't construct an arbitrary `Asn1Time` from a string, so
+/// Current version of `openssl` crate can't construct an arbitrary `Asn1Time` from a string, so
 /// a thousand years should do for now.
 const DAYS_VALIDITY: u32 = 300_000;
 
