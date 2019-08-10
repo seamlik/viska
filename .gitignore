@@ -1,7 +1,10 @@
 *.bk
 *.iml
+.classpath
 .gradle/
 .idea/
+.project
+.settings
 /android/NDK_HOME
 /gradle/wrapper/
 /gradlew
