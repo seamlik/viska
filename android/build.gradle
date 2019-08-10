@@ -52,5 +52,5 @@ dependencies {
   implementation 'commons-io:commons-io:2.6'
   implementation 'io.reactivex.rxjava3:rxjava:3.0.0-RC0'
   implementation 'org.checkerframework:checker-qual:2.10.0'
-  implementation project(':riko-runtime')
+  implementation 'riko:riko-runtime:0.0.1'
 }

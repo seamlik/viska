@@ -35,8 +35,8 @@ mime = "0.3.13"
 openssl = { version = "0.10.24", features = ["vendored"] }
 quinn = "0.3.0"
 rand = "0.7"
-riko_macros = { path = "riko-macros" }
-riko_runtime = { path = "riko-runtime-rust" }
+riko = { git = "https://github.com/seamlik/riko.git" }
+riko_runtime = { git = "https://github.com/seamlik/riko.git" }
 serde = { version = "1.0.98", features = ["derive"] }
 serde_cbor = "0.10.1"
 serde_with = "1.3.1"
