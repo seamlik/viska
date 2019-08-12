@@ -35,14 +35,16 @@ public class Client implements AutoCloseable {
   }
   private native void __riko_drop(int handle);
 
-  public byte @Nullable [] account_id() {
+  public @Nullable String account_id_display() throws UserException {
     if (freed) {
       throw new UseAfterFreeException();
     }
 
-    return __riko_account_id(handle);
+    final Returned<String> result = Marshaler.fromBytes(__riko_account_id_display(handle));
+
+    return result.unwrap();
   }
-  private static native byte[] __riko_account_id(int handle);
+  private static native byte[] __riko_account_id_display(int handle);
 
   public boolean isFreed() {
     return freed;

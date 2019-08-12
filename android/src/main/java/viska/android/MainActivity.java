@@ -3,6 +3,7 @@ package viska.android;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
@@ -15,7 +16,6 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
 import io.reactivex.disposables.Disposable;
-import viska.Utils;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -72,7 +72,13 @@ public class MainActivity extends AppCompatActivity {
 
     final TextView description = drawer.getHeaderView(0).findViewById(R.id.description);
     final Disposable tokenAccountId = viska.getClient().subscribe(
-        client -> runOnUiThread(() -> description.setText(Utils.displayId(client.account_id())))
+        client -> runOnUiThread(() -> {
+          try {
+            description.setText(client.account_id_display());
+          } catch (Exception err) {
+            Log.e(getClass().getSimpleName(), "Failed to read from database.", err);
+          }
+        })
     );
     viska.putDisposable(tokenAccountId);
 

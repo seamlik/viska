@@ -6,6 +6,7 @@ pub mod pki;
 mod jni;
 mod utils;
 
+use crate::database::DisplayableId;
 use crate::database::IoError;
 use crate::database::RawOperations;
 use crate::database::Vcard;
@@ -64,20 +65,20 @@ impl Client {
         if let Some(id) = account_id {
             futures::stream::once(futures::future::ready(self.database.vcard(id)))
         } else {
-            let vcard = match self.account_id() {
+            let vcard = match self.database.account_certificate() {
                 Err(e) => Err(e.into()),
                 Ok(None) => Ok(None),
-                Ok(Some(id)) => self.database.vcard(&id),
+                Ok(Some(cert)) => self.database.vcard(&cert.id()),
             };
             futures::stream::once(futures::future::ready(vcard)) // TODO: Subscription
         }
     }
 
     // Gets the ID of the current account.
-    pub fn account_id(&self) -> Result<Option<Vec<u8>>, sled::Error> {
+    pub fn account_id_display(&self) -> Result<Option<String>, sled::Error> {
         self.database
             .account_certificate()
-            .map_deep(|cert| cert.id())
+            .map_deep(|cert| cert.id().display())
     }
 }
 
