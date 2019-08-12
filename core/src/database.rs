@@ -5,6 +5,7 @@
 //! their summaries.
 
 use crate::pki::CertificateId;
+use crate::utils::GenericIterator;
 use crate::utils::ResultOption;
 use blake2::Blake2b;
 use blake2::Digest;
@@ -23,6 +24,8 @@ use std::iter::ExactSizeIterator;
 use std::result::Result;
 use std::str::FromStr;
 use uuid::Uuid;
+
+pub(crate) const ERROR_UNSUPPORTED_MERGE: &str = "Merge operation not supported.";
 
 pub const DEFAULT_MIME: &Mime = &mime::TEXT_PLAIN_UTF_8;
 fn default_mime() -> Mime {
@@ -198,6 +201,7 @@ pub(crate) trait RawOperations {
     fn set_device_key(&self, key: &CryptoKey) -> Result<(), sled::Error>;
     fn set_whitelist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<(), IoError>;
     fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>, IoError>;
+    fn watch_vcard(&self, id: &CertificateId) -> Result<GenericIterator<Result<Option<Vcard>, IoError>>, IoError>;
     fn whitelist(&self) -> Result<HashSet<Vec<u8>>, IoError>;
 }
 
@@ -300,6 +304,17 @@ impl RawOperations for Db {
             .get(id)
             .map_deep(|raw| serde_cbor::from_slice(raw.as_ref()).unwrap())
             .map_err(Into::into)
+    }
+    fn watch_vcard(&self, id: &CertificateId) -> Result<GenericIterator<Result<Option<Vcard>, IoError>>, IoError> {
+        let result = self
+            .open_tree(TABLE_VCARDS)?
+            .watch_prefix(id.to_vec())
+            .map(|event| match event {
+                sled::Event::Set(_, raw) => serde_cbor::from_slice(&raw).map_err(Into::into),
+                sled::Event::Del(_) => Ok(None),
+                _ => panic!(ERROR_UNSUPPORTED_MERGE),
+            });
+        Ok(GenericIterator::new(Box::new(result)))
     }
 }
 
