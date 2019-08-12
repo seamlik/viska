@@ -12,7 +12,7 @@ use riko_runtime::Marshaled;
 
 #[cfg(feature = "mock_profiles")]
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_core__1_1Riko_1Module__1_1riko_1new_1mock_1profile(
+pub extern "C" fn Java_viska_core__1_1Riko_1Module__1_1riko_1new_1mock_1profile(
     _env: JNIEnv,
     _class: JClass,
     arg_1_jni: jbyteArray,
@@ -21,7 +21,7 @@ pub unsafe extern "C" fn Java_viska_core__1_1Riko_1Module__1_1riko_1new_1mock_1p
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_core__1_1Riko_1Module__1_1riko_1initialize(
+pub extern "C" fn Java_viska_core__1_1Riko_1Module__1_1riko_1initialize(
     _env: JNIEnv,
     _class: JClass,
 ) {
@@ -29,7 +29,7 @@ pub unsafe extern "C" fn Java_viska_core__1_1Riko_1Module__1_1riko_1initialize(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_core_Client__1_1riko_1drop(
+pub extern "C" fn Java_viska_core_Client__1_1riko_1drop(
     _env: JNIEnv,
     _class: JClass,
     handle: Handle,
@@ -38,7 +38,7 @@ pub unsafe extern "C" fn Java_viska_core_Client__1_1riko_1drop(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_core_Client__1_1riko_1create(
+pub extern "C" fn Java_viska_core_Client__1_1riko_1create(
     _env: JNIEnv,
     _class: JClass,
     arg_1_jni: jbyteArray,
@@ -48,7 +48,7 @@ pub unsafe extern "C" fn Java_viska_core_Client__1_1riko_1create(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_viska_core_Client__1_1riko_1account_1id(
+pub extern "C" fn Java_viska_core_Client__1_1riko_1account_1id(
     _env: JNIEnv,
     _class: JClass,
     handle: Handle,
