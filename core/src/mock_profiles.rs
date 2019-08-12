@@ -65,16 +65,23 @@ pub fn new_mock_profile(dst: &String) {
 
     log::info!("Issuing device certificates...");
     let mut device_ids = HashSet::default();
-    for _ in 0..num_devices {
-        let (device_cert, device_key) =
+
+    // This device
+    let (device_cert, device_key) =
+        crate::pki::new_certificate_device(&account_cert, &account_key).unwrap();
+    device_ids.insert(device_cert.id());
+    database
+        .set_device_certificate(&device_cert.to_der().unwrap())
+        .unwrap();
+    database
+        .set_device_key(&device_key.private_key_to_der().unwrap())
+        .unwrap();
+
+    // Other linked devices
+    for _ in 0..(num_devices - 1) {
+        let (device_cert, _) =
             crate::pki::new_certificate_device(&account_cert, &account_key).unwrap();
         device_ids.insert(device_cert.id());
-        database
-            .set_device_certificate(&device_cert.to_der().unwrap())
-            .unwrap();
-        database
-            .set_device_key(&device_key.private_key_to_der().unwrap())
-            .unwrap();
     }
     database
         .add_vcard(&account_cert.id(), &random_vcard(Some(device_ids)))
