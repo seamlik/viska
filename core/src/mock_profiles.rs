@@ -61,6 +61,7 @@ pub fn new_mock_profile(dst: &String) {
     database
         .set_account_key(&account_key.private_key_to_der().unwrap())
         .unwrap();
+    log::info!("Created account ID: {}", account_cert.id().display());
 
     log::info!("Issuing device certificates...");
     let mut device_ids = HashSet::default();
