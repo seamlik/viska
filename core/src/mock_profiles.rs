@@ -27,6 +27,7 @@ use fake::faker::lorem::en::Paragraphs;
 use fake::faker::lorem::en::Sentences;
 use fake::faker::name::en::Name;
 use fake::Fake;
+use itertools::Itertools;
 use rand::seq::IteratorRandom;
 use rand::Rng;
 use sled::Db;
@@ -216,9 +217,12 @@ fn random_message<'a>(participants: &HashMap<&'a CertificateId, &'a Vcard>) -> (
     };
 
     let body = match rng.gen_range(1, 6) {
-        4 => crate::utils::join_strings(Paragraphs(1..2).fake::<Vec<String>>().into_iter()),
-        5 => crate::utils::join_strings(Paragraphs(2..3).fake::<Vec<String>>().into_iter()),
-        n => crate::utils::join_strings(Sentences(1..(n + 1)).fake::<Vec<String>>().into_iter()),
+        4 => Paragraphs(1..2).fake::<Vec<String>>().into_iter().join(" "),
+        5 => Paragraphs(2..3).fake::<Vec<String>>().into_iter().join(" "),
+        n => Sentences(1..(n + 1))
+            .fake::<Vec<String>>()
+            .into_iter()
+            .join(" "),
     };
 
     (head, body.into())
