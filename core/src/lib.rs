@@ -91,10 +91,7 @@ impl Client {
 /* <TODO: derive> */
 impl Heap for Client {
     fn into_handle(self) -> ::riko_runtime::returned::Returned<::riko_runtime::heap::Handle> {
-        let mut heap_guard = __RIKO_POOL_Client
-            .write()
-            .expect("Failed to write-lock the pool!");
-        ::riko_runtime::heap::store(&mut heap_guard, self).into()
+        ::riko_runtime::heap::store(&__RIKO_POOL_Client, self).into()
     }
 }
 
