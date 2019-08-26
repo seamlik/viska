@@ -150,33 +150,43 @@ impl FromStr for Address {
     fn from_str(src: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = src.split('/').collect();
         if parts.len() != 2 {
-            Result::Err(AddressFromStringError(
-                "Does not contain exctly 2 components.",
-            ))
+            Err(AddressFromStringError::InvalidSyntax)
         } else {
             let encoding = &data_encoding::HEXUPPER_PERMISSIVE;
-            let account = encoding.decode(parts.get(0).unwrap().as_ref());
-            let device = encoding.decode(parts.get(1).unwrap().as_ref());
-            if account.is_err() {
-                Result::Err(AddressFromStringError("Invalid account."))
-            } else if device.is_err() {
-                Result::Err(AddressFromStringError("Invalid device."))
-            } else {
-                Result::Ok(Address {
-                    account: account.unwrap(),
-                    device: device.unwrap(),
-                })
-            }
+            let account = encoding.decode(parts.get(0).unwrap().as_ref())?;
+            let device = encoding.decode(parts.get(1).unwrap().as_ref())?;
+            Ok(Address { account, device })
         }
     }
 }
 
 /// When failed to parse an `Address` from a string.
 #[derive(Display, Debug)]
-#[display(fmt = "Failed to parse address: {}", _0)]
-pub struct AddressFromStringError(&'static str);
+pub enum AddressFromStringError {
+    /// The string data is not in the correct form.
+    #[display(fmt = "Invalid syntax.")]
+    InvalidSyntax,
 
-impl Error for AddressFromStringError {}
+    /// The account part or the device part contains invalid base16 data.
+    #[display(fmt = "Failed to decode the payload.")]
+    InvalidPayload(data_encoding::DecodeError),
+}
+
+impl From<data_encoding::DecodeError> for AddressFromStringError {
+    fn from(src: data_encoding::DecodeError) -> Self {
+        AddressFromStringError::InvalidPayload(src)
+    }
+}
+
+impl Error for AddressFromStringError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        if let Self::InvalidPayload(err) = self {
+            Some(err)
+        } else {
+            None
+        }
+    }
+}
 
 /// Low-level operations for accessing a profile stored in a database.
 pub(crate) trait RawOperations {
