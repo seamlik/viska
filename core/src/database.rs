@@ -5,7 +5,6 @@
 //! their summaries.
 
 use crate::pki::CertificateId;
-use crate::utils::GenericIterator;
 use crate::utils::ResultOption;
 use blake2::Blake2b;
 use blake2::Digest;
@@ -209,7 +208,10 @@ pub(crate) trait RawOperations {
     fn set_device_key(&self, key: &CryptoKey) -> Result<(), sled::Error>;
     fn set_whitelist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<(), IoError>;
     fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>, IoError>;
-    fn watch_vcard(&self, id: &CertificateId) -> Result<GenericIterator<Result<Option<Vcard>, IoError>>, IoError>;
+    fn watch_vcard(
+        &self,
+        id: &CertificateId,
+    ) -> Result<Box<dyn Iterator<Item = Result<Option<Vcard>, IoError>> + Send>, IoError>;
     fn whitelist(&self) -> Result<HashSet<Vec<u8>>, IoError>;
 }
 
@@ -313,15 +315,18 @@ impl RawOperations for Db {
             .map_deep(|raw| serde_cbor::from_slice(raw.as_ref()).unwrap())
             .map_err(Into::into)
     }
-    fn watch_vcard(&self, id: &CertificateId) -> Result<GenericIterator<Result<Option<Vcard>, IoError>>, IoError> {
-        let result = self
-            .open_tree(TABLE_VCARDS)?
-            .watch_prefix(id.to_vec())
-            .map(|event| match event {
-                sled::Event::Set(_, raw) => serde_cbor::from_slice(&raw).map_err(Into::into),
-                sled::Event::Del(_) => Ok(None),
-            });
-        Ok(GenericIterator::new(Box::new(result)))
+    fn watch_vcard(
+        &self,
+        id: &CertificateId,
+    ) -> Result<Box<dyn Iterator<Item = Result<Option<Vcard>, IoError>> + Send>, IoError> {
+        let result =
+            self.open_tree(TABLE_VCARDS)?
+                .watch_prefix(id.to_vec())
+                .map(|event| match event {
+                    sled::Event::Set(_, raw) => serde_cbor::from_slice(&raw).map_err(Into::into),
+                    sled::Event::Del(_) => Ok(None),
+                });
+        Ok(Box::new(result))
     }
 }
 
