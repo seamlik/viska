@@ -25,8 +25,6 @@ use std::result::Result;
 use std::str::FromStr;
 use uuid::Uuid;
 
-pub(crate) const ERROR_UNSUPPORTED_MERGE: &str = "Merge operation not supported.";
-
 pub const DEFAULT_MIME: &Mime = &mime::TEXT_PLAIN_UTF_8;
 fn default_mime() -> Mime {
     DEFAULT_MIME.clone()
@@ -218,20 +216,20 @@ pub(crate) trait RawOperations {
 impl RawOperations for Db {
     fn set_account_certificate(&self, cert: &Certificate) -> Result<(), sled::Error> {
         self.open_tree(TABLE_PROFILE)?
-            .set("account-certificate", cert)?;
+            .insert("account-certificate", cert)?;
         Ok(())
     }
     fn set_account_key(&self, key: &CryptoKey) -> Result<(), sled::Error> {
-        self.open_tree(TABLE_PROFILE)?.set("account-key", key)?;
+        self.open_tree(TABLE_PROFILE)?.insert("account-key", key)?;
         Ok(())
     }
     fn set_device_certificate(&self, cert: &Certificate) -> Result<(), sled::Error> {
         self.open_tree(TABLE_PROFILE)?
-            .set("device-certificate", cert)?;
+            .insert("device-certificate", cert)?;
         Ok(())
     }
     fn set_device_key(&self, key: &CryptoKey) -> Result<(), sled::Error> {
-        self.open_tree(TABLE_PROFILE)?.set("device-key", key)?;
+        self.open_tree(TABLE_PROFILE)?.insert("device-key", key)?;
         Ok(())
     }
     fn account_certificate(&self) -> Result<Option<Vec<u8>>, sled::Error> {
@@ -264,7 +262,7 @@ impl RawOperations for Db {
     }
     fn set_blacklist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<(), IoError> {
         let cbor = serde_cbor::to_vec(blacklist)?;
-        self.open_tree(TABLE_PROFILE)?.set("blacklist", cbor)?;
+        self.open_tree(TABLE_PROFILE)?.insert("blacklist", cbor)?;
         Ok(())
     }
     fn whitelist(&self) -> Result<HashSet<Vec<u8>>, IoError> {
@@ -277,17 +275,17 @@ impl RawOperations for Db {
     }
     fn set_whitelist(&self, whitelist: &HashSet<Vec<u8>>) -> Result<(), IoError> {
         let cbor = serde_cbor::to_vec(whitelist)?;
-        self.open_tree(TABLE_PROFILE)?.set("whitelist", cbor)?;
+        self.open_tree(TABLE_PROFILE)?.insert("whitelist", cbor)?;
         Ok(())
     }
     fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<(), IoError> {
         self.open_tree(TABLE_VCARDS)?
-            .set(id, serde_cbor::to_vec(vcard)?)?;
+            .insert(id, serde_cbor::to_vec(vcard)?)?;
         Ok(())
     }
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<(), IoError> {
         self.open_tree(TABLE_CHATROOMS)?
-            .set(chatroom.id(), serde_cbor::to_vec(chatroom)?)?;
+            .insert(chatroom.id(), serde_cbor::to_vec(chatroom)?)?;
         Ok(())
     }
     fn add_message(
@@ -304,8 +302,8 @@ impl RawOperations for Db {
 
         let message_key: IVec = id.as_bytes().into();
         self.open_tree(table_messages(chatroom_id))?
-            .set(message_key, serde_cbor::to_vec(&head)?)?;
-        self.open_tree(TABLE_BODIES)?.set(id.as_bytes(), body)?;
+            .insert(message_key, serde_cbor::to_vec(&head)?)?;
+        self.open_tree(TABLE_BODIES)?.insert(id.as_bytes(), body)?;
 
         Ok(())
     }
@@ -322,7 +320,6 @@ impl RawOperations for Db {
             .map(|event| match event {
                 sled::Event::Set(_, raw) => serde_cbor::from_slice(&raw).map_err(Into::into),
                 sled::Event::Del(_) => Ok(None),
-                _ => panic!(ERROR_UNSUPPORTED_MERGE),
             });
         Ok(GenericIterator::new(Box::new(result)))
     }

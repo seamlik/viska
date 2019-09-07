@@ -41,7 +41,7 @@ impl Client {
     pub fn new(profile_path: PathBuf) -> Result<Client, sled::Error> {
         let mut database_path = profile_path.clone();
         database_path.push("database");
-        let database = Db::start_default(&database_path)?;
+        let database = Db::open(&database_path)?;
 
         Ok(Client {
             database,

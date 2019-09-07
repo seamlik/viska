@@ -4,7 +4,7 @@ buildscript {
     google()
   }
   dependencies {
-    classpath 'com.android.tools.build:gradle:3.4.2'
+    classpath 'com.android.tools.build:gradle:3.5.0'
   }
 }
 
@@ -49,7 +49,7 @@ dependencies {
   implementation 'androidx.lifecycle:lifecycle-extensions:2.0.0'
   implementation 'com.google.android.material:material:1.1.0-alpha09'
   implementation 'commons-io:commons-io:2.6'
-  implementation 'io.reactivex.rxjava3:rxjava:3.0.0-RC0'
-  implementation 'org.checkerframework:checker-qual:2.10.0'
+  implementation 'io.reactivex.rxjava3:rxjava:3.0.0-RC2'
+  implementation 'org.checkerframework:checker-qual:2.11.0'
   implementation 'riko:riko-runtime:0.0.1'
 }

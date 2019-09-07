@@ -51,7 +51,7 @@ pub fn new_mock_profile(dst: &String) {
     let mut db_path = PathBuf::from(dst);
     db_path.push("database");
 
-    let database = Db::start_default(&db_path).unwrap();
+    let database = Db::open(&db_path).unwrap();
     let mut rng = rand::thread_rng();
 
     log::info!("Issuing account certificate...");
