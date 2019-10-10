@@ -11,7 +11,7 @@ use crate::database::Address;
 use crate::database::Chatroom;
 use crate::database::Device;
 use crate::database::DisplayableId;
-use crate::database::Message;
+use crate::database::MessageHead;
 use crate::database::RawOperations;
 use crate::database::Vcard;
 use crate::database::DEFAULT_MIME;
@@ -110,9 +110,7 @@ pub fn new_mock_profile(dst: &String) {
             .collect();
         for _ in 0..=rng.gen_range(num_messages_min, num_messages_max) {
             let (head, body) = random_message(&members_map);
-            database
-                .add_message(&Uuid::new_v4(), head, body, &chatroom.id())
-                .unwrap();
+            database.add_message(&Uuid::new_v4(), head, body).unwrap();
         }
     }
 }
@@ -192,7 +190,9 @@ fn random_chatroom<'a>(candidates: &HashSet<&'a CertificateId>, num: usize) -> V
         .collect()
 }
 
-fn random_message<'a>(participants: &HashMap<&'a CertificateId, &'a Vcard>) -> (Message, Vec<u8>) {
+fn random_message<'a>(
+    participants: &HashMap<&'a CertificateId, &'a Vcard>,
+) -> (MessageHead, Vec<u8>) {
     let mut rng = rand::thread_rng();
 
     let account: Vec<u8> = participants
@@ -209,9 +209,11 @@ fn random_message<'a>(participants: &HashMap<&'a CertificateId, &'a Vcard>) -> (
         .choose(&mut rng)
         .expect("Chosen account has no device!")
         .to_owned();
+    let recipients: HashSet<Vec<u8>> = participants.keys().map(|it| it.deref().into()).collect();
 
-    let head = Message {
+    let head = MessageHead {
         mime: DEFAULT_MIME.clone(),
+        recipients,
         sender: Address { account, device },
         time: random_datetime(),
     };

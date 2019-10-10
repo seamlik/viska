@@ -42,26 +42,26 @@ pub type Certificate = [u8];
 pub type CryptoKey = [u8];
 
 const TABLE_CHATROOMS: &str = "chatrooms";
-const TABLE_BODIES: &str = "bodies";
+const TABLE_MESSAGE_BODY: &str = "message-body";
+const TABLE_MESSAGE_HEAD: &str = "message-head";
 const TABLE_PROFILE: &str = "profile";
 const TABLE_VCARDS: &str = "vcards";
-
-fn table_messages(chatroom_id: &ChatroomId) -> Vec<u8> {
-    format!("messages-{}", chatroom_id.display()).into()
-}
 
 /// Meta-info of a message.
 ///
 /// Stored in table `messages-{chatroom ID}` with raw message ID (a UUID v4) as key.
 ///
 /// The body is stored in the "blobs" table. This is because a message body usually has a variable
-/// size and poses unstable overhead when querying [Message]s.
+/// size and poses unstable overhead when querying [MessageHead]s.
 #[derive(Deserialize, Serialize)]
-pub struct Message {
+pub struct MessageHead {
     #[serde(default = "default_mime")]
     #[serde(skip_serializing_if = "is_default_mime")]
     #[serde(with = "serde_with::rust::display_fromstr")]
     pub mime: Mime,
+
+    /// Set of certificate IDs.
+    pub recipients: HashSet<Vec<u8>>,
 
     #[serde(with = "serde_with::rust::display_fromstr")]
     pub sender: Address,
@@ -190,13 +190,7 @@ pub(crate) trait RawOperations {
     fn account_certificate(&self) -> Result<Option<Vec<u8>>, sled::Error>;
     fn account_key(&self) -> Result<Option<Vec<u8>>, sled::Error>;
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<(), IoError>;
-    fn add_message(
-        &self,
-        id: &Uuid,
-        head: Message,
-        body: Vec<u8>,
-        chatroom_id: &ChatroomId,
-    ) -> Result<(), IoError>;
+    fn add_message(&self, id: &Uuid, head: MessageHead, body: Vec<u8>) -> Result<(), IoError>;
     fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<(), IoError>;
     fn blacklist(&self) -> Result<HashSet<Vec<u8>>, IoError>;
     fn device_certificate(&self) -> Result<Option<Vec<u8>>, sled::Error>;
@@ -290,22 +284,12 @@ impl RawOperations for Db {
             .insert(chatroom.id(), serde_cbor::to_vec(chatroom)?)?;
         Ok(())
     }
-    fn add_message(
-        &self,
-        id: &Uuid,
-        head: Message,
-        body: Vec<u8>,
-        chatroom_id: &ChatroomId,
-    ) -> Result<(), IoError> {
-        if chatroom_id.is_empty() {
-            log::warn!("Message is being sent to an empty chatroom, ignoring.");
-            return Ok(());
-        }
-
+    fn add_message(&self, id: &Uuid, head: MessageHead, body: Vec<u8>) -> Result<(), IoError> {
         let message_key: IVec = id.as_bytes().into();
-        self.open_tree(table_messages(chatroom_id))?
+        self.open_tree(TABLE_MESSAGE_HEAD)?
             .insert(message_key, serde_cbor::to_vec(&head)?)?;
-        self.open_tree(TABLE_BODIES)?.insert(id.as_bytes(), body)?;
+        self.open_tree(TABLE_MESSAGE_BODY)?
+            .insert(id.as_bytes(), body)?;
 
         Ok(())
     }
