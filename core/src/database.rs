@@ -307,8 +307,8 @@ impl RawOperations for Db {
             self.open_tree(TABLE_VCARDS)?
                 .watch_prefix(id.to_vec())
                 .map(|event| match event {
-                    sled::Event::Set(_, raw) => serde_cbor::from_slice(&raw).map_err(Into::into),
-                    sled::Event::Del(_) => Ok(None),
+                    sled::Event::Insert(_, raw) => serde_cbor::from_slice(&raw).map_err(Into::into),
+                    sled::Event::Remove(_) => Ok(None),
                 });
         Ok(Box::new(result))
     }
