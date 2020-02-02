@@ -30,7 +30,6 @@ use fake::Fake;
 use itertools::Itertools;
 use rand::seq::IteratorRandom;
 use rand::Rng;
-use sled::Db;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Deref;
@@ -51,7 +50,7 @@ pub fn new_mock_profile(dst: &String) {
     let mut db_path = PathBuf::from(dst);
     db_path.push("database");
 
-    let database = Db::open(&db_path).unwrap();
+    let database = sled::open(&db_path).unwrap();
     let mut rng = rand::thread_rng();
 
     log::info!("Issuing account certificate...");

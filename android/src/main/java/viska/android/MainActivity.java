@@ -11,7 +11,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModelProviders;
+import androidx.lifecycle.ViewModelProvider;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
@@ -23,7 +23,7 @@ public class MainActivity extends AppCompatActivity {
 
     final MutableLiveData<Screen> screen = new MutableLiveData<>();
 
-    MainViewModel() {
+    public MainViewModel() {
       screen.setValue(Screen.CHATROOMS);
     }
   }
@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
     bindService(viskaIntent, viska, 0);
 
     setContentView(R.layout.main);
-    model = ViewModelProviders.of(this).get(MainViewModel.class);
+    model = new ViewModelProvider(this).get(MainViewModel.class);
     drawerLayout = findViewById(R.id.drawer_layout);
 
     final NavigationView drawer = findViewById(R.id.drawer);
