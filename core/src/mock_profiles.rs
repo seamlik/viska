@@ -39,6 +39,7 @@ use uuid::Uuid;
 /// Generates a mock profile.
 ///
 /// Beware that this is a time-consuming operation.
+#[riko::fun]
 pub fn new_mock_profile(dst: &String) {
     let num_blacklist = 10;
     let num_devices = 5;

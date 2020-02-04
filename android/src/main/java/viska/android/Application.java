@@ -5,7 +5,6 @@ import android.app.NotificationManager;
 import androidx.lifecycle.MutableLiveData;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import viska.core.__Riko_Module;
 
 public class Application extends android.app.Application {
 
@@ -26,7 +25,7 @@ public class Application extends android.app.Application {
   public void onCreate() {
     super.onCreate();
     System.loadLibrary("viska");
-    __Riko_Module.initialize();
+    viska.android.Module.initialize();
     initializeNotifications();
   }
 

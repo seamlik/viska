@@ -12,7 +12,6 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.File;
 import java.nio.file.Files;
 import org.apache.commons.io.FileUtils;
-import viska.core.__Riko_Module;
 
 public class NewProfileActivity extends AppCompatActivity {
 
@@ -58,7 +57,7 @@ public class NewProfileActivity extends AppCompatActivity {
       }
       switch (view.getId()) {
         case R.id.new_mock_profile:
-          __Riko_Module.new_mock_profile(tmpProfilePath.toString());
+          viska.mock_profiles.Module.new_mock_profile(tmpProfilePath.toString());
           break;
         default:
           break;

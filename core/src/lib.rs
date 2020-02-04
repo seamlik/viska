@@ -1,9 +1,11 @@
+#[path = "../../target/riko/jni/bridge.rs"]
+mod bridge;
+
 pub mod android;
 pub mod database;
+mod jni;
 pub mod mock_profiles;
 pub mod pki;
-
-mod jni;
 mod utils;
 
 use crate::database::DisplayableId;
@@ -13,7 +15,7 @@ use crate::database::Vcard;
 use crate::pki::Certificate;
 use crate::pki::CertificateId;
 use crate::utils::ResultOption;
-use riko_runtime::Heap;
+use riko::Heaped;
 use sled::Db;
 use std::path::Path;
 use std::path::PathBuf;
@@ -28,6 +30,7 @@ use std::path::PathBuf;
 ///
 /// [Iterator]s are used instead of `Streams` from the `futures` crate because Sled does not support
 /// `Streams` natively.
+#[derive(Heaped)]
 pub struct Client {
     database: Db,
     profile_path: PathBuf,
@@ -87,15 +90,3 @@ impl Client {
             .map_deep(|cert| cert.id().display())
     }
 }
-
-/* <TODO: derive> */
-impl Heap for Client {
-    fn into_handle(self) -> ::riko_runtime::returned::Returned<::riko_runtime::heap::Handle> {
-        ::riko_runtime::heap::store(&__RIKO_POOL_Client, self).into()
-    }
-}
-
-::lazy_static::lazy_static! {
-    pub(crate) static ref __RIKO_POOL_Client: ::riko_runtime::heap::Pool<Client> = Default::default();
-}
-/* <TODO: derive/> */

@@ -39,6 +39,7 @@ android {
     main {
       java {
         srcDir 'src/main/riko'
+        srcDir '../target/riko/jni'
       }
     }
   }
@@ -51,5 +52,5 @@ dependencies {
   implementation 'commons-io:commons-io:2.6'
   implementation 'io.reactivex.rxjava3:rxjava:3.0.0-RC2'
   implementation 'org.checkerframework:checker-qual:2.11.0'
-  implementation 'riko:riko-runtime:0.0.1'
+  implementation 'riko:riko-runtime-jni:0.0.1'
 }

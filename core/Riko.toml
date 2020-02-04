@@ -1,5 +1,0 @@
-enabled = true
-module = "viska::core"
-
-[jni]
-enabled = true
