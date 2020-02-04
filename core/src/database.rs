@@ -16,7 +16,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use sled::Db;
 use sled::IVec;
-use std::collections::HashMap;
+use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::error::Error;
 use std::iter::ExactSizeIterator;
@@ -61,10 +61,9 @@ pub struct MessageHead {
     pub mime: Mime,
 
     /// Set of certificate IDs.
-    pub recipients: HashSet<Vec<u8>>,
+    pub recipients: BTreeSet<CertificateId>,
 
-    #[serde(with = "serde_with::rust::display_fromstr")]
-    pub sender: Address,
+    pub sender: CertificateId,
 
     #[serde(with = "chrono::serde::ts_seconds")]
     pub time: DateTime<Utc>,
@@ -113,93 +112,21 @@ pub fn chatroom_id_from_members<'a>(
 /// Stored in table `vcards` with raw account ID as key.
 #[derive(Deserialize, Serialize)]
 pub struct Vcard {
-    /// Devices registered with this account.
-    ///
-    /// Key represents the device ID.
-    pub devices: HashMap<Vec<u8>, Device>,
     pub name: String,
     pub time_updated: DateTime<Utc>,
 }
 
-/// Meta-info of a device registered to an account.
-///
-/// This is a sub-level structure and is stored within a [Vcard].
-#[derive(Deserialize, Serialize)]
-pub struct Device {
-    pub name: String,
-}
-
-/// Combination of an account ID and a device ID.
-///
-/// It is used to identify an entity a client can interact with. For example, specifying the
-/// destination of a message.
-///
-/// Components are separated by a `/`. For example: `1A2B/3D4C`.
-#[derive(Display)]
-#[display(fmt = "{}/{}", "account.display()", "device.display()")]
-pub struct Address {
-    pub account: Vec<u8>,
-    pub device: Vec<u8>,
-}
-
-impl FromStr for Address {
-    type Err = AddressFromStringError;
-    fn from_str(src: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = src.split('/').collect();
-        if parts.len() != 2 {
-            Err(AddressFromStringError::InvalidSyntax)
-        } else {
-            let encoding = &data_encoding::HEXUPPER_PERMISSIVE;
-            let account = encoding.decode(parts.get(0).unwrap().as_ref())?;
-            let device = encoding.decode(parts.get(1).unwrap().as_ref())?;
-            Ok(Address { account, device })
-        }
-    }
-}
-
-/// When failed to parse an `Address` from a string.
-#[derive(Display, Debug)]
-pub enum AddressFromStringError {
-    /// The string data is not in the correct form.
-    #[display(fmt = "Invalid syntax.")]
-    InvalidSyntax,
-
-    /// The account part or the device part contains invalid base16 data.
-    #[display(fmt = "Failed to decode the payload.")]
-    InvalidPayload(data_encoding::DecodeError),
-}
-
-impl From<data_encoding::DecodeError> for AddressFromStringError {
-    fn from(src: data_encoding::DecodeError) -> Self {
-        AddressFromStringError::InvalidPayload(src)
-    }
-}
-
-impl Error for AddressFromStringError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        if let Self::InvalidPayload(err) = self {
-            Some(err)
-        } else {
-            None
-        }
-    }
-}
-
 /// Low-level operations for accessing a profile stored in a database.
 pub(crate) trait RawOperations {
-    fn account_certificate(&self) -> Result<Option<Vec<u8>>, sled::Error>;
-    fn account_key(&self) -> Result<Option<Vec<u8>>, sled::Error>;
+    fn certificate(&self) -> Result<Option<Vec<u8>>, sled::Error>;
+    fn key(&self) -> Result<Option<Vec<u8>>, sled::Error>;
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<(), IoError>;
     fn add_message(&self, id: &Uuid, head: MessageHead, body: Vec<u8>) -> Result<(), IoError>;
     fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<(), IoError>;
     fn blacklist(&self) -> Result<HashSet<Vec<u8>>, IoError>;
-    fn device_certificate(&self) -> Result<Option<Vec<u8>>, sled::Error>;
-    fn device_key(&self) -> Result<Option<Vec<u8>>, sled::Error>;
-    fn set_account_certificate(&self, cert: &Certificate) -> Result<(), sled::Error>;
-    fn set_account_key(&self, key: &CryptoKey) -> Result<(), sled::Error>;
+    fn set_certificate(&self, cert: &Certificate) -> Result<(), sled::Error>;
+    fn set_key(&self, key: &CryptoKey) -> Result<(), sled::Error>;
     fn set_blacklist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<(), IoError>;
-    fn set_device_certificate(&self, cert: &Certificate) -> Result<(), sled::Error>;
-    fn set_device_key(&self, key: &CryptoKey) -> Result<(), sled::Error>;
     fn set_whitelist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<(), IoError>;
     fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>, IoError>;
     fn watch_vcard(
@@ -210,42 +137,22 @@ pub(crate) trait RawOperations {
 }
 
 impl RawOperations for Db {
-    fn set_account_certificate(&self, cert: &Certificate) -> Result<(), sled::Error> {
+    fn set_certificate(&self, cert: &Certificate) -> Result<(), sled::Error> {
+        self.open_tree(TABLE_PROFILE)?.insert("certificate", cert)?;
+        Ok(())
+    }
+    fn set_key(&self, key: &CryptoKey) -> Result<(), sled::Error> {
+        self.open_tree(TABLE_PROFILE)?.insert("key", key)?;
+        Ok(())
+    }
+    fn certificate(&self) -> Result<Option<Vec<u8>>, sled::Error> {
         self.open_tree(TABLE_PROFILE)?
-            .insert("account-certificate", cert)?;
-        Ok(())
-    }
-    fn set_account_key(&self, key: &CryptoKey) -> Result<(), sled::Error> {
-        self.open_tree(TABLE_PROFILE)?.insert("account-key", key)?;
-        Ok(())
-    }
-    fn set_device_certificate(&self, cert: &Certificate) -> Result<(), sled::Error> {
-        self.open_tree(TABLE_PROFILE)?
-            .insert("device-certificate", cert)?;
-        Ok(())
-    }
-    fn set_device_key(&self, key: &CryptoKey) -> Result<(), sled::Error> {
-        self.open_tree(TABLE_PROFILE)?.insert("device-key", key)?;
-        Ok(())
-    }
-    fn account_certificate(&self) -> Result<Option<Vec<u8>>, sled::Error> {
-        self.open_tree(TABLE_PROFILE)?
-            .get("account-certificate")
+            .get("certificate")
             .map(IntoBytes::into)
     }
-    fn account_key(&self) -> Result<Option<Vec<u8>>, sled::Error> {
+    fn key(&self) -> Result<Option<Vec<u8>>, sled::Error> {
         self.open_tree(TABLE_PROFILE)?
-            .get("account-key")
-            .map(IntoBytes::into)
-    }
-    fn device_certificate(&self) -> Result<Option<Vec<u8>>, sled::Error> {
-        self.open_tree(TABLE_PROFILE)?
-            .get("device-certificate")
-            .map(IntoBytes::into)
-    }
-    fn device_key(&self) -> Result<Option<Vec<u8>>, sled::Error> {
-        self.open_tree(TABLE_PROFILE)?
-            .get("device-key")
+            .get("key")
             .map(IntoBytes::into)
     }
     fn blacklist(&self) -> Result<HashSet<Vec<u8>>, IoError> {

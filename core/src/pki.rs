@@ -1,14 +1,14 @@
 //! Public key infrastructure for managing certificates of accounts and devices.
 //!
-//! A user account is essentially an X.509 certificate combined with its private key. Such
-//! certificate may issue multiple device certificates. These certificates are used in TLS sessions
-//! between clients, thus providing end-to-end encryption and authentication.
+//! A user account is essentially an X.509 certificate combined with its private key. These
+//! certificates are used in TLS sessions between clients, thus providing end-to-end encryption and
+//! authentication.
 //!
 //! # Format
 //!
 //! The format of a certificate are defined by the X.509 version 3 standards with the following specializations:
 //!
-//! * `subject`: `CN` = `Viska Account` or `Viska Device`
+//! * `subject`: `CN` = `Viska Account`
 //! * `validity`: Never expire.
 //!
 //! All decisions on crytographic algorithms in this section are only advisory during certificate creation. A client
@@ -17,86 +17,32 @@
 
 use blake2::Blake2b;
 use blake2::Digest;
-use openssl::asn1::Asn1Time;
-use openssl::bn::BigNum;
-use openssl::error::ErrorStack;
-use openssl::hash::MessageDigest;
-use openssl::nid::Nid;
-use openssl::pkey::HasPrivate;
-use openssl::pkey::PKey;
-use openssl::pkey::PKeyRef;
-use openssl::pkey::Private;
-use openssl::rsa::Rsa;
-use openssl::x509::X509Builder;
-use openssl::x509::X509Name;
-use openssl::x509::X509NameBuilder;
-use openssl::x509::X509Ref;
-use openssl::x509::X509;
-use uuid::Uuid;
+use rcgen::CertificateParams;
+use rcgen::DistinguishedName;
+use rcgen::DnType;
 
-const LENGTH_KEY: u32 = 4096;
-
-/// Specifies how long before a certificate expires.
-///
-/// Current version of `openssl` crate can't construct an arbitrary `Asn1Time` from a string, so
-/// a thousand years should do for now.
-const DAYS_VALIDITY: u32 = 300_000;
-
-/// Version 3 of X.509 specification, zero-indexed.
-const VERSION_X509: i32 = 2;
-
-fn new_digest_for_certificate_signatures() -> MessageDigest {
-    MessageDigest::sha256()
-}
-
-fn new_x509name_with_one_entry(key: Nid, value: &str) -> Result<X509Name, ErrorStack> {
-    let mut builder = X509NameBuilder::new()?;
-    builder.append_entry_by_nid(key, value)?;
-    Ok(builder.build())
-}
-
-fn prepare_new_certificate() -> Result<(X509Builder, PKey<Private>), ErrorStack> {
-    let mut builder = X509Builder::new()?;
-
-    let key = PKey::from_rsa(Rsa::generate(LENGTH_KEY)?)?;
-    let not_after = Asn1Time::days_from_now(DAYS_VALIDITY)?;
-    let not_before = Asn1Time::days_from_now(0)?;
-    let serial = BigNum::from_slice(Uuid::new_v4().as_bytes())?.to_asn1_integer()?;
-
-    builder.set_not_after(&not_after)?;
-    builder.set_not_before(&not_before)?;
-    builder.set_pubkey(&key)?;
-    builder.set_serial_number(&serial)?;
-    builder.set_version(VERSION_X509)?;
-
-    Ok((builder, key))
+pub struct CertificateBundle {
+    pub certificate: Vec<u8>,
+    pub keypair: Vec<u8>,
 }
 
 /// Generates a certificate for an account.
-pub fn new_certificate_account() -> Result<(X509, PKey<Private>), ErrorStack> {
-    let (mut builder, key) = prepare_new_certificate()?;
-    let subject = new_x509name_with_one_entry(Nid::COMMONNAME, "Viska Account")?;
+pub fn new_certificate() -> CertificateBundle {
+    let mut dn = DistinguishedName::new();
+    dn.push(DnType::CommonName, "Viska Account");
 
-    builder.set_issuer_name(&subject)?;
-    builder.set_subject_name(&subject)?;
+    let mut params = CertificateParams::default();
+    params.alg = &rcgen::PKCS_ED25519;
+    params.distinguished_name = dn;
 
-    builder.sign(&key, new_digest_for_certificate_signatures())?;
-    Ok((builder.build(), key))
-}
-
-/// Issues a device certificate.
-pub fn new_certificate_device<T: HasPrivate>(
-    account_cert: &X509Ref,
-    account_key: &PKeyRef<T>,
-) -> Result<(X509, PKey<Private>), ErrorStack> {
-    let (mut builder, key) = prepare_new_certificate()?;
-    let subject = new_x509name_with_one_entry(Nid::COMMONNAME, "Viska Device")?;
-
-    builder.set_issuer_name(&account_cert.subject_name())?;
-    builder.set_subject_name(&subject)?;
-
-    builder.sign(&account_key, new_digest_for_certificate_signatures())?;
-    Ok((builder.build(), key))
+    let cert = rcgen::Certificate::from_params(params).expect("Failed to generate certificate");
+    let keypair = cert.get_key_pair().serialize_der();
+    CertificateBundle {
+        certificate: cert
+            .serialize_der()
+            .expect("Failed to serialize certificate into DER"),
+        keypair,
+    }
 }
 
 /// X.509 certificate with extra features.
@@ -105,15 +51,7 @@ pub trait Certificate {
     fn id(&self) -> Vec<u8>;
 }
 
-impl Certificate for X509 {
-    fn id(&self) -> Vec<u8> {
-        Blake2b::digest(&self.to_der().unwrap())
-            .into_iter()
-            .collect()
-    }
-}
-
-impl Certificate for crate::database::Certificate {
+impl Certificate for Vec<u8> {
     fn id(&self) -> Vec<u8> {
         Blake2b::digest(&self).into_iter().collect()
     }

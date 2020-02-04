@@ -7,9 +7,7 @@
 
 #![cfg(feature = "mock_profiles")]
 
-use crate::database::Address;
 use crate::database::Chatroom;
-use crate::database::Device;
 use crate::database::DisplayableId;
 use crate::database::MessageHead;
 use crate::database::RawOperations;
@@ -22,7 +20,6 @@ use chrono::offset::TimeZone;
 use chrono::DateTime;
 use chrono::Duration;
 use chrono::Utc;
-use fake::faker::internet::en::UserAgent;
 use fake::faker::lorem::en::Paragraphs;
 use fake::faker::lorem::en::Sentences;
 use fake::faker::name::en::Name;
@@ -42,7 +39,6 @@ use uuid::Uuid;
 #[riko::fun]
 pub fn new_mock_profile(dst: &String) {
     let num_blacklist = 10;
-    let num_devices = 5;
     let num_whitelist = 10;
     let num_chatrooms = 5;
     let num_messages_min = 20;
@@ -54,39 +50,15 @@ pub fn new_mock_profile(dst: &String) {
     let database = sled::open(&db_path).unwrap();
     let mut rng = rand::thread_rng();
 
-    log::info!("Issuing account certificate...");
-    let (account_cert, account_key) = crate::pki::new_certificate_account().unwrap();
-    database
-        .set_account_certificate(&account_cert.to_der().unwrap())
-        .unwrap();
-    database
-        .set_account_key(&account_key.private_key_to_der().unwrap())
-        .unwrap();
-    log::info!("Created account ID: {}", account_cert.id().display());
+    log::info!("Generating account certificate...");
+    let bundle = crate::pki::new_certificate();
+    database.set_certificate(&bundle.certificate).unwrap();
+    database.set_key(&bundle.keypair).unwrap();
 
-    log::info!("Issuing device certificates...");
-    let mut device_ids = HashSet::default();
+    let id = bundle.certificate.id();
+    log::info!("Created account ID: {}", id.display());
 
-    // This device
-    let (device_cert, device_key) =
-        crate::pki::new_certificate_device(&account_cert, &account_key).unwrap();
-    device_ids.insert(device_cert.id());
-    database
-        .set_device_certificate(&device_cert.to_der().unwrap())
-        .unwrap();
-    database
-        .set_device_key(&device_key.private_key_to_der().unwrap())
-        .unwrap();
-
-    // Other linked devices
-    for _ in 0..(num_devices - 1) {
-        let (device_cert, _) =
-            crate::pki::new_certificate_device(&account_cert, &account_key).unwrap();
-        device_ids.insert(device_cert.id());
-    }
-    database
-        .add_vcard(&account_cert.id(), &random_vcard(Some(device_ids)))
-        .unwrap();
+    database.add_vcard(&id, &random_vcard()).unwrap();
 
     log::info!("Generating blacklist...");
     write_vcard_list(&database, PeerList::Blacklist, num_blacklist);
@@ -143,33 +115,17 @@ fn write_vcard_list(
     // Generating `Vcard`s and return the whole map
     accounts
         .into_iter()
-        .map(|id| (id, random_vcard(Option::None)))
+        .map(|id| (id, random_vcard()))
         .inspect(|(id, vcard)| database.add_vcard(&id, &vcard).unwrap())
         .collect()
 }
 
 fn random_certificate_id() -> Vec<u8> {
-    crate::pki::new_certificate_account().unwrap().0.id()
+    crate::pki::new_certificate().certificate.id()
 }
 
-fn random_vcard(ids: Option<HashSet<Vec<u8>>>) -> Vcard {
-    let num_devices_default = 2;
-    let ids_nonnull = match ids {
-        None => (0..num_devices_default)
-            .map(|_| random_certificate_id())
-            .collect(),
-        Some(it) => it,
-    };
-    let devices = ids_nonnull
-        .into_iter()
-        .map(|id| {
-            let name = UserAgent().fake();
-            (id, Device { name })
-        })
-        .collect();
-
+fn random_vcard() -> Vcard {
     Vcard {
-        devices,
         name: Name().fake(),
         time_updated: random_datetime(),
     }
@@ -195,26 +151,19 @@ fn random_message<'a>(
 ) -> (MessageHead, Vec<u8>) {
     let mut rng = rand::thread_rng();
 
-    let account: Vec<u8> = participants
+    let account: CertificateId = **participants
         .keys()
         .choose(&mut rng)
-        .expect("Empty `participants`!")
-        .deref()
-        .into();
-    let device: Vec<u8> = participants
-        .get(&account.as_slice())
-        .unwrap()
-        .devices
+        .expect("Empty `participants`!");
+    let recipients = participants
         .keys()
-        .choose(&mut rng)
-        .expect("Chosen account has no device!")
-        .to_owned();
-    let recipients: HashSet<Vec<u8>> = participants.keys().map(|it| it.deref().into()).collect();
+        .map(|it| **it)
+        .collect::<BTreeSet<CertificateId>>();
 
     let head = MessageHead {
         mime: DEFAULT_MIME.clone(),
         recipients,
-        sender: Address { account, device },
+        sender: account,
         time: random_datetime(),
     };
 

@@ -74,7 +74,7 @@ impl Client {
             Some(id) => id.to_vec(),
             None => self
                 .database
-                .account_certificate()?
+                .certificate()?
                 .expect("No account found in the database.")
                 .id(),
         };
@@ -86,7 +86,7 @@ impl Client {
     // Gets the ID of the current account.
     pub fn account_id_display(&self) -> Result<Option<String>, sled::Error> {
         self.database
-            .account_certificate()
+            .certificate()
             .map_deep(|cert| cert.id().display())
     }
 }

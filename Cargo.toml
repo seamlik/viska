@@ -31,8 +31,8 @@ itertools = "0"
 log = { version = "0.4.8", features = ["max_level_debug", "release_max_level_warn"] }
 mime = "0"
 once_cell = "1"
-openssl = { version = "0", features = ["vendored"] }
 rand = "0.7"
+rcgen = "0"
 riko = { git = "https://github.com/seamlik/riko.git" }
 riko_runtime = { git = "https://github.com/seamlik/riko.git" }
 serde = { version = "1", features = ["derive"] }
