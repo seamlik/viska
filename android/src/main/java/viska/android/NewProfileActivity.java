@@ -24,7 +24,7 @@ public class NewProfileActivity extends AppCompatActivity {
     final Button newAccountButton = findViewById(R.id.new_account);
 
     final Button newMockProfileButton = findViewById(R.id.new_mock_profile);
-    newMockProfileButton.setOnClickListener(this::onNewMockProfile);
+    newMockProfileButton.setOnClickListener(view -> onNewMockProfile());
 
     app.getViewModel().creatingAccount.observe(this, running -> {
       if (running) {
@@ -43,27 +43,19 @@ public class NewProfileActivity extends AppCompatActivity {
     });
   }
 
-  private void onNewMockProfile(final View view) {
+  private void onNewMockProfile() {
     final Application app = (Application) getApplication();
-    final File tmpProfilePath = new File(getNoBackupFilesDir(), "tmp-profile");
-
     app.getViewModel().creatingAccount.setValue(true);
     Completable.fromAction(() -> {
-      if (tmpProfilePath.exists()) {
-        FileUtils.forceDelete(tmpProfilePath);
+      final File profile = app.getDatabaseProfilePath().toFile();
+      if (profile.exists()) {
+        FileUtils.forceDelete(profile);
       }
-      if (Files.exists(app.getProfilePath())) {
-        FileUtils.forceDelete(app.getProfilePath().toFile());
+      final File cache = app.getDatabaseCachePath().toFile();
+      if (cache.exists()) {
+        FileUtils.forceDelete(cache);
       }
-      switch (view.getId()) {
-        case R.id.new_mock_profile:
-          viska.mock_profiles.Module.new_mock_profile(tmpProfilePath.toString());
-          break;
-        default:
-          break;
-      }
-      Files.createDirectories(app.getProfilePath().getParent());
-      Files.move(tmpProfilePath.toPath(), app.getProfilePath());
+      viska.mock_profiles.Module.new_mock_profile(profile.toString(), cache.toString());
       app.getViewModel().creatingAccount.postValue(false);
     }).subscribeOn(Schedulers.io()).subscribe();
   }

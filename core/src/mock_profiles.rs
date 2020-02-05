@@ -7,14 +7,16 @@
 
 #![cfg(feature = "mock_profiles")]
 
+use crate::database::Cache;
 use crate::database::Chatroom;
 use crate::database::DisplayableId;
 use crate::database::MessageHead;
-use crate::database::RawOperations;
+use crate::database::Profile;
 use crate::database::Vcard;
 use crate::database::DEFAULT_MIME;
 use crate::pki::Certificate;
 use crate::pki::CertificateId;
+use crate::Database;
 use chrono::offset::LocalResult;
 use chrono::offset::TimeZone;
 use chrono::DateTime;
@@ -30,35 +32,26 @@ use rand::Rng;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::Path;
 use uuid::Uuid;
 
 /// Generates a mock profile.
 ///
 /// Beware that this is a time-consuming operation.
 #[riko::fun]
-pub fn new_mock_profile(dst: &String) {
+pub fn new_mock_profile(profile_path: &String, cache_path: &String) {
     let num_blacklist = 10;
     let num_whitelist = 10;
     let num_chatrooms = 5;
     let num_messages_min = 20;
     let num_messages_max = 50;
 
-    let mut db_path = PathBuf::from(dst);
-    db_path.push("database");
-
-    let database = sled::open(&db_path).unwrap();
+    let database = Database::open(Path::new(profile_path), Path::new(cache_path)).unwrap();
     let mut rng = rand::thread_rng();
 
-    log::info!("Generating account certificate...");
-    let bundle = crate::pki::new_certificate();
-    database.set_certificate(&bundle.certificate).unwrap();
-    database.set_key(&bundle.keypair).unwrap();
-
-    let id: CertificateId = bundle.certificate.id().into();
-    log::info!("Created account ID: {}", id.display());
-
-    database.add_vcard(&id, &random_vcard()).unwrap();
+    log::info!("Initializing database...");
+    database.initialize();
+    database.profile.set_vcard(&random_vcard()).unwrap();
 
     log::info!("Generating blacklist...");
     write_vcard_list(&database, PeerList::Blacklist, num_blacklist);
@@ -69,7 +62,7 @@ pub fn new_mock_profile(dst: &String) {
     log::info!("Arranging chatrooms...");
     let chatroom_candidates = whitelist.keys().collect();
     for chatroom in random_chatroom(&chatroom_candidates, num_chatrooms) {
-        database.add_chatroom(&chatroom).unwrap();
+        database.profile.add_chatroom(&chatroom).unwrap();
 
         log::info!(
             "Generating messages for chatroom {}...",
@@ -82,7 +75,10 @@ pub fn new_mock_profile(dst: &String) {
             .collect();
         for _ in 0..=rng.gen_range(num_messages_min, num_messages_max) {
             let (head, body) = random_message(&members_map);
-            database.add_message(&Uuid::new_v4(), head, body).unwrap();
+            database
+                .profile
+                .add_message(&Uuid::new_v4(), head, body)
+                .unwrap();
         }
     }
 }
@@ -96,7 +92,7 @@ enum PeerList {
 ///
 /// Returns a map of `CertificateId`s to `Vcard`s.
 fn write_vcard_list(
-    database: &impl RawOperations,
+    database: &Database,
     list_type: PeerList,
     num: u8,
 ) -> HashMap<CertificateId, Vcard> {
@@ -105,10 +101,10 @@ fn write_vcard_list(
     // Set whitelist or blacklist
     match list_type {
         PeerList::Blacklist => {
-            database.set_blacklist(&accounts).unwrap();
+            database.profile.set_blacklist(&accounts).unwrap();
         }
         PeerList::Whitelist => {
-            database.set_whitelist(&accounts).unwrap();
+            database.profile.set_whitelist(&accounts).unwrap();
         }
     }
 
@@ -116,7 +112,7 @@ fn write_vcard_list(
     accounts
         .into_iter()
         .map(|id| (id, random_vcard()))
-        .inspect(|(id, vcard)| database.add_vcard(&id, &vcard).unwrap())
+        .inspect(|(id, vcard)| database.cache.add_vcard(&id, &vcard).unwrap())
         .collect()
 }
 

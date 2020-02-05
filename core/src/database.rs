@@ -39,11 +39,14 @@ pub type Certificate = [u8];
 /// RFC 5958 PKCS #8 encoded in ASN.1 DER.
 pub type CryptoKey = [u8];
 
+/* Tables for profile */
 const TABLE_CHATROOMS: &str = "chatrooms";
 const TABLE_MESSAGE_BODY: &str = "message-body";
 const TABLE_MESSAGE_HEAD: &str = "message-head";
 const TABLE_PROFILE: &str = "profile";
-const TABLE_VCARDS: &str = "vcards";
+
+/* Tables for cache */
+const TABLE_VCARD: &str = "vcard";
 
 /// Meta-info of a message.
 ///
@@ -100,26 +103,25 @@ pub struct Vcard {
 }
 
 /// Low-level operations for accessing a profile stored in a database.
-pub(crate) trait RawOperations {
+pub(crate) trait Profile {
     fn certificate(&self) -> Result<Option<Vec<u8>>, sled::Error>;
     fn key(&self) -> Result<Option<Vec<u8>>, sled::Error>;
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<(), IoError>;
     fn add_message(&self, id: &Uuid, head: MessageHead, body: Vec<u8>) -> Result<(), IoError>;
-    fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<(), IoError>;
     fn blacklist(&self) -> Result<HashSet<Vec<u8>>, IoError>;
     fn set_certificate(&self, cert: &Certificate) -> Result<(), sled::Error>;
     fn set_key(&self, key: &CryptoKey) -> Result<(), sled::Error>;
     fn set_blacklist(&self, blacklist: &HashSet<CertificateId>) -> Result<(), IoError>;
     fn set_whitelist(&self, blacklist: &HashSet<CertificateId>) -> Result<(), IoError>;
-    fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>, IoError>;
+    fn vcard(&self) -> Result<Option<Vcard>, IoError>;
+    fn set_vcard(&self, vcard: &Vcard) -> Result<(), IoError>;
     fn watch_vcard(
         &self,
-        id: &CertificateId,
     ) -> Result<Box<dyn Iterator<Item = Result<Option<Vcard>, IoError>> + Send>, IoError>;
     fn whitelist(&self) -> Result<HashSet<Vec<u8>>, IoError>;
 }
 
-impl RawOperations for Db {
+impl Profile for Db {
     fn set_certificate(&self, cert: &Certificate) -> Result<(), sled::Error> {
         self.open_tree(TABLE_PROFILE)?.insert("certificate", cert)?;
         Ok(())
@@ -164,11 +166,6 @@ impl RawOperations for Db {
         self.open_tree(TABLE_PROFILE)?.insert("whitelist", cbor)?;
         Ok(())
     }
-    fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<(), IoError> {
-        self.open_tree(TABLE_VCARDS)?
-            .insert(id, serde_cbor::to_vec(vcard)?)?;
-        Ok(())
-    }
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<(), IoError> {
         self.open_tree(TABLE_CHATROOMS)?
             .insert(chatroom.id().as_bytes(), serde_cbor::to_vec(chatroom)?)?;
@@ -183,8 +180,48 @@ impl RawOperations for Db {
 
         Ok(())
     }
+    fn vcard(&self) -> Result<Option<Vcard>, IoError> {
+        self.open_tree(TABLE_PROFILE)?
+            .get("vcard")
+            .map_deep(|raw| serde_cbor::from_slice(raw.as_ref()).unwrap())
+            .map_err(Into::into)
+    }
+    fn watch_vcard(
+        &self,
+    ) -> Result<Box<dyn Iterator<Item = Result<Option<Vcard>, IoError>> + Send>, IoError> {
+        let result =
+            self.open_tree(TABLE_PROFILE)?
+                .watch_prefix("vcard")
+                .map(|event| match event {
+                    sled::Event::Insert(_, raw) => serde_cbor::from_slice(&raw).map_err(Into::into),
+                    sled::Event::Remove(_) => Ok(None),
+                });
+        Ok(Box::new(result))
+    }
+    fn set_vcard(&self, vcard: &Vcard) -> Result<(), IoError> {
+        self.open_tree(TABLE_PROFILE)?
+            .insert("vcard", serde_cbor::to_vec(&vcard)?)?;
+        Ok(())
+    }
+}
+
+pub(crate) trait Cache {
+    fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<(), IoError>;
+    fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>, IoError>;
+    fn watch_vcard(
+        &self,
+        id: &CertificateId,
+    ) -> Result<Box<dyn Iterator<Item = Result<Option<Vcard>, IoError>> + Send>, IoError>;
+}
+
+impl Cache for Db {
+    fn add_vcard(&self, id: &CertificateId, vcard: &Vcard) -> Result<(), IoError> {
+        self.open_tree(TABLE_VCARD)?
+            .insert(id, serde_cbor::to_vec(vcard)?)?;
+        Ok(())
+    }
     fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>, IoError> {
-        self.open_tree(TABLE_VCARDS)?
+        self.open_tree(TABLE_VCARD)?
             .get(id)
             .map_deep(|raw| serde_cbor::from_slice(raw.as_ref()).unwrap())
             .map_err(Into::into)
@@ -193,13 +230,13 @@ impl RawOperations for Db {
         &self,
         id: &CertificateId,
     ) -> Result<Box<dyn Iterator<Item = Result<Option<Vcard>, IoError>> + Send>, IoError> {
-        let result =
-            self.open_tree(TABLE_VCARDS)?
-                .watch_prefix(id.to_vec())
-                .map(|event| match event {
-                    sled::Event::Insert(_, raw) => serde_cbor::from_slice(&raw).map_err(Into::into),
-                    sled::Event::Remove(_) => Ok(None),
-                });
+        let result = self
+            .open_tree(TABLE_VCARD)?
+            .watch_prefix(id)
+            .map(|event| match event {
+                sled::Event::Insert(_, raw) => serde_cbor::from_slice(&raw).map_err(Into::into),
+                sled::Event::Remove(_) => Ok(None),
+            });
         Ok(Box::new(result))
     }
 }

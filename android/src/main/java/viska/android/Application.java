@@ -29,12 +29,22 @@ public class Application extends android.app.Application {
     initializeNotifications();
   }
 
-  public Path getProfilePath() {
+  /**
+   * Profile section of Viska database.
+   */
+  public Path getDatabaseProfilePath() {
     return getNoBackupFilesDir().toPath().resolve("profile");
   }
 
+  /**
+   * Cache section of Viska database.
+   */
+  public Path getDatabaseCachePath() {
+    return getCacheDir().toPath().resolve("profile");
+  }
+
   public boolean hasProfile() {
-    return Files.isDirectory(getProfilePath());
+    return Files.isDirectory(getDatabaseProfilePath());
   }
 
   public ViewModel getViewModel() {

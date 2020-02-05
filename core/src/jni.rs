@@ -26,7 +26,10 @@ pub extern "C" fn Java_viska_core_Client__1_1riko_1create(
     _class: JClass,
     arg_1_jni: jbyteArray,
 ) -> jbyteArray {
-    let result = Client::new_ffi(&Marshaled::from_jni(&_env, arg_1_jni));
+    let result = Client::create_ffi(
+        &Marshaled::from_jni(&_env, arg_1_jni),
+        &Marshaled::from_jni(&_env, arg_1_jni),
+    );
     Marshaled::to_jni(&Heaped::into_handle(result), &_env)
 }
 
