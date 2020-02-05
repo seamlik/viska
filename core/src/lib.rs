@@ -71,12 +71,13 @@ impl Client {
         account_id: Option<&CertificateId>,
     ) -> Result<impl Iterator<Item = Result<Option<Vcard>, IoError>>, IoError> {
         let account_id_nonnull = match account_id {
-            Some(id) => id.to_vec(),
+            Some(id) => *id,
             None => self
                 .database
                 .certificate()?
                 .expect("No account found in the database.")
-                .id(),
+                .id()
+                .into(),
         };
         let current = std::iter::once(self.database.vcard(&account_id_nonnull));
         let futures = self.database.watch_vcard(&account_id_nonnull)?;
@@ -87,6 +88,6 @@ impl Client {
     pub fn account_id_display(&self) -> Result<Option<String>, sled::Error> {
         self.database
             .certificate()
-            .map_deep(|cert| cert.id().display())
+            .map_deep(|cert| cert.id().as_bytes().display())
     }
 }

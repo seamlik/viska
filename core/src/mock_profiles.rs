@@ -27,9 +27,9 @@ use fake::Fake;
 use itertools::Itertools;
 use rand::seq::IteratorRandom;
 use rand::Rng;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::ops::Deref;
 use std::path::PathBuf;
 use uuid::Uuid;
 
@@ -55,7 +55,7 @@ pub fn new_mock_profile(dst: &String) {
     database.set_certificate(&bundle.certificate).unwrap();
     database.set_key(&bundle.keypair).unwrap();
 
-    let id = bundle.certificate.id();
+    let id: CertificateId = bundle.certificate.id().into();
     log::info!("Created account ID: {}", id.display());
 
     database.add_vcard(&id, &random_vcard()).unwrap();
@@ -67,18 +67,18 @@ pub fn new_mock_profile(dst: &String) {
     let whitelist = write_vcard_list(&database, PeerList::Whitelist, num_whitelist);
 
     log::info!("Arranging chatrooms...");
-    let chatroom_candidates = whitelist.keys().map(Vec::as_slice).collect();
+    let chatroom_candidates = whitelist.keys().collect();
     for chatroom in random_chatroom(&chatroom_candidates, num_chatrooms) {
         database.add_chatroom(&chatroom).unwrap();
 
         log::info!(
             "Generating messages for chatroom {}...",
-            chatroom.id().display(),
+            chatroom.id().as_bytes().display(),
         );
         let members_map: HashMap<&CertificateId, &Vcard> = whitelist
             .iter()
             .filter(|&(id, _)| chatroom.members.contains(id))
-            .map(|(id, vcard)| (id.as_slice(), vcard))
+            .map(|(id, vcard)| (id, vcard))
             .collect();
         for _ in 0..=rng.gen_range(num_messages_min, num_messages_max) {
             let (head, body) = random_message(&members_map);
@@ -99,7 +99,7 @@ fn write_vcard_list(
     database: &impl RawOperations,
     list_type: PeerList,
     num: u8,
-) -> HashMap<Vec<u8>, Vcard> {
+) -> HashMap<CertificateId, Vcard> {
     let accounts = (0..num).map(|_| random_certificate_id()).collect();
 
     // Set whitelist or blacklist
@@ -120,8 +120,8 @@ fn write_vcard_list(
         .collect()
 }
 
-fn random_certificate_id() -> Vec<u8> {
-    crate::pki::new_certificate().certificate.id()
+fn random_certificate_id() -> CertificateId {
+    crate::pki::new_certificate().certificate.id().into()
 }
 
 fn random_vcard() -> Vcard {
@@ -139,7 +139,7 @@ fn random_chatroom<'a>(candidates: &HashSet<&'a CertificateId>, num: usize) -> V
             let members = candidates
                 .iter()
                 .filter(|_| rng.gen_bool(0.5))
-                .map(|it| it.deref().into())
+                .map(|it| **it)
                 .collect();
             Chatroom { members }
         })

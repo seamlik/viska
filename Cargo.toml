@@ -21,7 +21,7 @@ mock_profiles = []
 
 [dependencies]
 android_logger = { version = "0", optional = true }
-blake2 = "0.8.1"
+blake3 = "0"
 chrono = { version = "0", features = ["serde"] }
 data-encoding = "2.1.2"
 derive_more = "0"

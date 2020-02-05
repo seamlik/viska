@@ -15,8 +15,7 @@
 //! should be able perform verification based on the built-in information. If a legacy client does not support some of
 //! the algorithms, it must notify the user and urge for an immediate update on software.
 
-use blake2::Blake2b;
-use blake2::Digest;
+use blake3::Hash;
 use rcgen::CertificateParams;
 use rcgen::DistinguishedName;
 use rcgen::DnType;
@@ -47,15 +46,19 @@ pub fn new_certificate() -> CertificateBundle {
 
 /// X.509 certificate with extra features.
 pub trait Certificate {
-    /// Calculates the ID.
-    fn id(&self) -> Vec<u8>;
+    /// Calculates its ID.
+    ///
+    /// # See
+    ///
+    /// * [CertificateId]
+    fn id(&self) -> Hash;
 }
 
 impl Certificate for Vec<u8> {
-    fn id(&self) -> Vec<u8> {
-        Blake2b::digest(&self).into_iter().collect()
+    fn id(&self) -> Hash {
+        blake3::hash(self)
     }
 }
 
-/// [BLAKE2b](https://blake2.net)-512 digest of the entire certificate encoded in ASN.1 DER.
-pub type CertificateId = [u8];
+/// BLAKE3 digest of the entire certificate encoded in ASN.1 DER.
+pub type CertificateId = [u8; 32];

@@ -6,8 +6,8 @@
 
 use crate::pki::CertificateId;
 use crate::utils::ResultOption;
-use blake2::Blake2b;
-use blake2::Digest;
+use blake3::Hash;
+use blake3::Hasher;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use derive_more::Display;
@@ -19,9 +19,7 @@ use sled::IVec;
 use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::error::Error;
-use std::iter::ExactSizeIterator;
 use std::result::Result;
-use std::str::FromStr;
 use uuid::Uuid;
 
 pub const DEFAULT_MIME: &Mime = &mime::TEXT_PLAIN_UTF_8;
@@ -32,8 +30,8 @@ fn is_default_mime(value: &Mime) -> bool {
     value == DEFAULT_MIME
 }
 
-/// Blake2b-512
-pub type ChatroomId = [u8];
+/// BLAKE3
+pub type ChatroomId = [u8; 32];
 
 /// X.509 certificate encoded in ASN.1 DER.
 pub type Certificate = [u8];
@@ -75,36 +73,21 @@ pub struct MessageHead {
 #[derive(Deserialize, Serialize)]
 pub struct Chatroom {
     /// Set of Certificate IDs.
-    pub members: HashSet<Vec<u8>>,
+    pub members: BTreeSet<CertificateId>,
 }
 
 impl Chatroom {
-    pub fn id(&self) -> Vec<u8> {
-        chatroom_id_from_members(self.members.iter())
+    /// Calculates its ID which is the BLAKE3 hash of the certificate IDs of all of its members.
+    /// A chatroom's ID only depends on its members and nothing else, such that messages sent to
+    /// the same set of accounts are always stored in the same chatroom. The ID generation is
+    /// reproducible and not affected by the order of the members.
+    pub fn id(&self) -> Hash {
+        let mut hasher = Hasher::default();
+        for m in self.members.iter() {
+            hasher.update(m);
+        }
+        hasher.finalize()
     }
-}
-
-/// Generates a [ChatroomId] from its member IDs.
-///
-/// A chatroom's ID only depends on its members and nothing else, such that messages sent to the
-/// same set of accounts are always stored in the same chatroom. The ID generation is reproducible
-/// and not affected by the order of the members.
-pub fn chatroom_id_from_members<'a>(
-    members: impl ExactSizeIterator<Item = &'a Vec<u8>>,
-) -> Vec<u8> {
-    if members.len() == 0 {
-        return Vec::default();
-    }
-    let mut members_sorted: Vec<&Vec<u8>> = members.collect();
-    members_sorted.sort();
-    members_sorted.dedup();
-
-    let mut digest = Blake2b::default();
-    for it in members_sorted {
-        digest.input(&it);
-    }
-
-    digest.result().into_iter().collect()
 }
 
 /// Public information of an account.
@@ -126,8 +109,8 @@ pub(crate) trait RawOperations {
     fn blacklist(&self) -> Result<HashSet<Vec<u8>>, IoError>;
     fn set_certificate(&self, cert: &Certificate) -> Result<(), sled::Error>;
     fn set_key(&self, key: &CryptoKey) -> Result<(), sled::Error>;
-    fn set_blacklist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<(), IoError>;
-    fn set_whitelist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<(), IoError>;
+    fn set_blacklist(&self, blacklist: &HashSet<CertificateId>) -> Result<(), IoError>;
+    fn set_whitelist(&self, blacklist: &HashSet<CertificateId>) -> Result<(), IoError>;
     fn vcard(&self, id: &CertificateId) -> Result<Option<Vcard>, IoError>;
     fn watch_vcard(
         &self,
@@ -163,7 +146,7 @@ impl RawOperations for Db {
             Some(raw) => serde_cbor::from_slice(&raw).map_err(|e| e.into()),
         }
     }
-    fn set_blacklist(&self, blacklist: &HashSet<Vec<u8>>) -> Result<(), IoError> {
+    fn set_blacklist(&self, blacklist: &HashSet<CertificateId>) -> Result<(), IoError> {
         let cbor = serde_cbor::to_vec(blacklist)?;
         self.open_tree(TABLE_PROFILE)?.insert("blacklist", cbor)?;
         Ok(())
@@ -176,7 +159,7 @@ impl RawOperations for Db {
             Some(raw) => serde_cbor::from_slice(&raw).map_err(|e| e.into()),
         }
     }
-    fn set_whitelist(&self, whitelist: &HashSet<Vec<u8>>) -> Result<(), IoError> {
+    fn set_whitelist(&self, whitelist: &HashSet<CertificateId>) -> Result<(), IoError> {
         let cbor = serde_cbor::to_vec(whitelist)?;
         self.open_tree(TABLE_PROFILE)?.insert("whitelist", cbor)?;
         Ok(())
@@ -188,7 +171,7 @@ impl RawOperations for Db {
     }
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<(), IoError> {
         self.open_tree(TABLE_CHATROOMS)?
-            .insert(chatroom.id(), serde_cbor::to_vec(chatroom)?)?;
+            .insert(chatroom.id().as_bytes(), serde_cbor::to_vec(chatroom)?)?;
         Ok(())
     }
     fn add_message(&self, id: &Uuid, head: MessageHead, body: Vec<u8>) -> Result<(), IoError> {
