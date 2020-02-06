@@ -1,6 +1,5 @@
 package viska.core;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import riko.Heaped;
 import riko.Marshaler;
 import riko.Returned;
@@ -25,10 +24,10 @@ public class Client extends Heaped {
   }
   private native void __riko_drop(int handle);
 
-  public @Nullable String account_id_display() {
+  public byte[] account_id() {
     assertAlive();
-    final Returned<String> result = Marshaler.fromBytes(__riko_account_id_display(handle));
+    final Returned<byte[]> result = Marshaler.fromBytes(__riko_account_id(handle));
     return result.unwrap();
   }
-  private static native byte[] __riko_account_id_display(int handle);
+  private static native byte[] __riko_account_id(int handle);
 }

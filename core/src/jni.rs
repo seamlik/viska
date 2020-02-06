@@ -34,12 +34,12 @@ pub extern "C" fn Java_viska_core_Client__1_1riko_1create(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_viska_core_Client__1_1riko_1account_1id_1display(
+pub extern "C" fn Java_viska_core_Client__1_1riko_1account_1id(
     _env: JNIEnv,
     _class: JClass,
     handle: Handle,
 ) -> jbyteArray {
-    let action = |obj: &mut Client| obj.account_id_display();
-    let result: Returned<String> = __riko_POOL_Client.peek(handle, action).into();
+    let action = |obj: &mut Client| obj.account_id();
+    let result: Returned<::serde_bytes::ByteBuf> = __riko_POOL_Client.peek(handle, action).into();
     Marshaled::to_jni(&result, &_env)
 }

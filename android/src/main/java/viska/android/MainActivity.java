@@ -16,6 +16,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
 import io.reactivex.rxjava3.disposables.Disposable;
+import org.apache.commons.codec.binary.Hex;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -74,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
     final Disposable tokenAccountId = viska.getClient().subscribe(
         client -> runOnUiThread(() -> {
           try {
-            description.setText(client.account_id_display());
+            description.setText(Hex.encodeHexString(client.account_id()));
           } catch (Exception err) {
             Log.e(getClass().getSimpleName(), "Failed to read from database.", err);
           }

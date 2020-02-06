@@ -9,7 +9,6 @@
 
 use crate::database::Cache;
 use crate::database::Chatroom;
-use crate::database::DisplayableId;
 use crate::database::MessageHead;
 use crate::database::Profile;
 use crate::database::Timestamp;
@@ -17,6 +16,7 @@ use crate::database::Vcard;
 use crate::database::DEFAULT_MIME;
 use crate::pki::Certificate;
 use crate::pki::CertificateId;
+use crate::util::DisplayableId;
 use crate::Database;
 use chrono::offset::LocalResult;
 use chrono::offset::TimeZone;

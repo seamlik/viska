@@ -288,17 +288,6 @@ impl From<serde_cbor::error::Error> for IoError {
     }
 }
 
-/// The unified way of displaying an ID byte string, which is uppercase Hex.
-pub(crate) trait DisplayableId {
-    fn display(&self) -> String;
-}
-
-impl DisplayableId for [u8] {
-    fn display(&self) -> String {
-        data_encoding::HEXUPPER_PERMISSIVE.encode(&self)
-    }
-}
-
 /// Timestamp that serializes into [f64].
 pub trait Timestamp {
     fn serialize(&self) -> f64;

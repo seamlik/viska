@@ -38,6 +38,7 @@ rcgen = "0"
 riko = { git = "https://github.com/seamlik/riko.git" }
 riko_runtime = { git = "https://github.com/seamlik/riko.git" }
 serde = { version = "1", features = ["derive"] }
+serde_bytes = "0"
 serde_cbor = "0"
 serde_with = "1"
 sled = "0"

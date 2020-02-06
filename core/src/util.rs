@@ -35,3 +35,14 @@ where
         }
     }
 }
+
+/// The unified way of displaying an ID byte string
+pub(crate) trait DisplayableId {
+    fn display(&self) -> String;
+}
+
+impl DisplayableId for [u8] {
+    fn display(&self) -> String {
+        data_encoding::HEXLOWER.encode(&self)
+    }
+}
