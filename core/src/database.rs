@@ -23,6 +23,7 @@ use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::error::Error;
 use std::result::Result;
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub const DEFAULT_MIME: &Mime = &mime::TEXT_PLAIN_UTF_8;
@@ -114,8 +115,8 @@ impl Default for Vcard {
 
 /// Low-level operations for accessing a profile stored in a database.
 pub(crate) trait Profile {
-    fn certificate(&self) -> Result<Option<Vec<u8>>, sled::Error>;
-    fn key(&self) -> Result<Option<Vec<u8>>, sled::Error>;
+    fn certificate(&self) -> Result<Arc<Certificate>, sled::Error>;
+    fn key(&self) -> Result<Arc<CryptoKey>, sled::Error>;
     fn add_chatroom(&self, chatroom: &Chatroom) -> Result<(), IoError>;
     fn add_message(&self, id: &Uuid, head: MessageHead, body: Vec<u8>) -> Result<(), IoError>;
     fn blacklist(&self) -> Result<HashSet<Vec<u8>>, IoError>;
@@ -138,15 +139,15 @@ impl Profile for Db {
         self.open_tree(TABLE_PROFILE)?.insert("key", key)?;
         Ok(())
     }
-    fn certificate(&self) -> Result<Option<Vec<u8>>, sled::Error> {
+    fn certificate(&self) -> Result<Arc<Certificate>, sled::Error> {
         self.open_tree(TABLE_PROFILE)?
             .get("certificate")
-            .map(IntoBytes::into)
+            .map(|raw| raw.unwrap_or_default().into())
     }
-    fn key(&self) -> Result<Option<Vec<u8>>, sled::Error> {
+    fn key(&self) -> Result<Arc<CryptoKey>, sled::Error> {
         self.open_tree(TABLE_PROFILE)?
             .get("key")
-            .map(IntoBytes::into)
+            .map(|raw| raw.unwrap_or_default().into())
     }
     fn blacklist(&self) -> Result<HashSet<Vec<u8>>, IoError> {
         let raw = self.open_tree(TABLE_PROFILE)?.get("blacklist")?;
@@ -284,16 +285,6 @@ impl From<sled::Error> for IoError {
 impl From<serde_cbor::error::Error> for IoError {
     fn from(err: serde_cbor::error::Error) -> IoError {
         IoError::Serde(err)
-    }
-}
-
-trait IntoBytes {
-    fn into(self) -> Option<Vec<u8>>;
-}
-
-impl IntoBytes for Option<IVec> {
-    fn into(self) -> Option<Vec<u8>> {
-        self.map(|raw| (*raw).into())
     }
 }
 

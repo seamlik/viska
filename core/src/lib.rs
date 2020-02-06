@@ -14,7 +14,6 @@ use crate::database::Profile;
 use crate::database::Vcard;
 use crate::pki::Certificate;
 use crate::pki::CertificateId;
-use crate::util::ResultOption;
 use futures::prelude::*;
 use riko::Heaped;
 use sled::Db;
@@ -55,11 +54,11 @@ impl Client {
     }
 
     // Gets the ID of the current account.
-    pub fn account_id_display(&self) -> Result<Option<String>, sled::Error> {
+    pub fn account_id_display(&self) -> Result<String, sled::Error> {
         self.database
             .profile
             .certificate()
-            .map_deep(|cert| cert.id().as_bytes().display())
+            .map(|cert| (*cert).id().as_bytes().display())
     }
 }
 

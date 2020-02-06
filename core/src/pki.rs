@@ -60,5 +60,11 @@ impl Certificate for Vec<u8> {
     }
 }
 
+impl Certificate for [u8] {
+    fn id(&self) -> Hash {
+        blake3::hash(self)
+    }
+}
+
 /// BLAKE3 digest of the entire certificate encoded in ASN.1 DER.
 pub type CertificateId = [u8; 32];
