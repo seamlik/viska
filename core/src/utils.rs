@@ -14,3 +14,21 @@ impl<T, E> ResultOption<T, E> for Result<Option<T>, E> {
         }
     }
 }
+
+pub trait ResultIterator<SrcIter, E, I> {
+    fn unpack(self) -> Box<dyn Iterator<Item = Result<I, E>>>;
+}
+
+impl<SrcIter, E, I> ResultIterator<SrcIter, E, I> for Result<SrcIter, E>
+where
+    SrcIter: Iterator<Item = Result<I, E>> + 'static,
+    E: 'static,
+    I: 'static,
+{
+    fn unpack(self) -> Box<dyn Iterator<Item = Result<I, E>>> {
+        match self {
+            Err(err) => Box::new(std::iter::once(Err(err))),
+            Ok(iter) => Box::new(iter),
+        }
+    }
+}

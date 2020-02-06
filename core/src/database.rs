@@ -5,12 +5,14 @@
 //! their summaries.
 
 use crate::pki::CertificateId;
+use crate::utils::ResultIterator;
 use crate::utils::ResultOption;
 use blake3::Hash;
 use blake3::Hasher;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use derive_more::Display;
+use futures::prelude::*;
 use mime::Mime;
 use num::FromPrimitive;
 use serde::Deserialize;
@@ -121,11 +123,9 @@ pub(crate) trait Profile {
     fn set_key(&self, key: &CryptoKey) -> Result<(), sled::Error>;
     fn set_blacklist(&self, blacklist: &HashSet<CertificateId>) -> Result<(), IoError>;
     fn set_whitelist(&self, blacklist: &HashSet<CertificateId>) -> Result<(), IoError>;
-    fn vcard(&self) -> Result<Option<Vcard>, IoError>;
+    fn vcard(&self) -> Result<Vcard, IoError>;
     fn set_vcard(&self, vcard: &Vcard) -> Result<(), IoError>;
-    fn watch_vcard(
-        &self,
-    ) -> Result<Box<dyn Iterator<Item = Result<Option<Vcard>, IoError>> + Send>, IoError>;
+    fn watch_vcard(&self) -> Box<dyn Stream<Item = Result<Vcard, IoError>> + Unpin>;
     fn whitelist(&self) -> Result<HashSet<Vec<u8>>, IoError>;
 }
 
@@ -188,23 +188,27 @@ impl Profile for Db {
 
         Ok(())
     }
-    fn vcard(&self) -> Result<Option<Vcard>, IoError> {
+    fn vcard(&self) -> Result<Vcard, IoError> {
         self.open_tree(TABLE_PROFILE)?
             .get("vcard")
-            .map_deep(|raw| serde_cbor::from_slice(raw.as_ref()).unwrap())
+            .map(Option::unwrap_or_default)
+            .map(|raw| serde_cbor::from_slice(raw.as_ref()).unwrap())
             .map_err(Into::into)
     }
-    fn watch_vcard(
-        &self,
-    ) -> Result<Box<dyn Iterator<Item = Result<Option<Vcard>, IoError>> + Send>, IoError> {
-        let result =
-            self.open_tree(TABLE_PROFILE)?
-                .watch_prefix("vcard")
-                .map(|event| match event {
-                    sled::Event::Insert(_, raw) => serde_cbor::from_slice(&raw).map_err(Into::into),
-                    sled::Event::Remove(_) => Ok(None),
-                });
-        Ok(Box::new(result))
+    fn watch_vcard(&self) -> Box<dyn Stream<Item = Result<Vcard, IoError>> + Unpin> {
+        let iter = self
+            .open_tree(TABLE_PROFILE)
+            .map_err(IoError::from)
+            .and_then(|t| {
+                Ok(t.watch_prefix("vcard").map(|event| match event {
+                    sled::Event::Insert(_, raw) => {
+                        serde_cbor::from_slice(&raw).map_err(IoError::from)
+                    }
+                    sled::Event::Remove(_) => Ok(Vcard::default()),
+                }))
+            })
+            .unpack();
+        Box::new(futures::stream::iter(iter))
     }
     fn set_vcard(&self, vcard: &Vcard) -> Result<(), IoError> {
         self.open_tree(TABLE_PROFILE)?
@@ -219,7 +223,7 @@ pub(crate) trait Cache {
     fn watch_vcard(
         &self,
         id: &CertificateId,
-    ) -> Result<Box<dyn Iterator<Item = Result<Option<Vcard>, IoError>> + Send>, IoError>;
+    ) -> Box<dyn Stream<Item = Result<Vcard, IoError>> + Unpin>;
 }
 
 impl Cache for Db {
@@ -237,15 +241,20 @@ impl Cache for Db {
     fn watch_vcard(
         &self,
         id: &CertificateId,
-    ) -> Result<Box<dyn Iterator<Item = Result<Option<Vcard>, IoError>> + Send>, IoError> {
-        let result = self
-            .open_tree(TABLE_VCARD)?
-            .watch_prefix(id)
-            .map(|event| match event {
-                sled::Event::Insert(_, raw) => serde_cbor::from_slice(&raw).map_err(Into::into),
-                sled::Event::Remove(_) => Ok(None),
-            });
-        Ok(Box::new(result))
+    ) -> Box<dyn Stream<Item = Result<Vcard, IoError>> + Unpin> {
+        let iter = self
+            .open_tree(TABLE_VCARD)
+            .map_err(IoError::from)
+            .and_then(|t| {
+                Ok(t.watch_prefix(id).map(|event| match event {
+                    sled::Event::Insert(_, raw) => {
+                        serde_cbor::from_slice(&raw).map_err(IoError::from)
+                    }
+                    sled::Event::Remove(_) => Ok(Vcard::default()),
+                }))
+            })
+            .unpack();
+        Box::new(futures::stream::iter(iter))
     }
 }
 

@@ -15,21 +15,19 @@ use crate::database::Vcard;
 use crate::pki::Certificate;
 use crate::pki::CertificateId;
 use crate::utils::ResultOption;
+use futures::prelude::*;
 use riko::Heaped;
 use sled::Db;
 use std::path::Path;
 
 /// The protagonist.
 ///
-/// # Asynchronous getters
+/// # Asynchronous Getters
 ///
-/// A lot of property getter methods (e.g. [account_vcard()](Client::account_vcard)) return an
-/// [Iterator]. These let one subscribe to
+/// Many of the property getter methods (e.g. [account_vcard()](Client::account_vcard)) return a
+/// [Stream]. These let one subscribe to
 /// the changes to that property. The current value of the property is immediately returned as the
 /// first value.
-///
-/// [Iterator]s are used instead of `Streams` from the `futures` crate because Sled does not support
-/// `Streams` natively.
 #[derive(Heaped)]
 pub struct Client {
     database: Database,
@@ -50,12 +48,10 @@ impl Client {
     }
 
     /// Subscribes to the [Vcard] of the current account.
-    pub fn account_vcard(
-        &self,
-    ) -> Result<impl Iterator<Item = Result<Option<Vcard>, IoError>>, IoError> {
-        let current = std::iter::once(self.database.profile.vcard());
-        let futures = self.database.profile.watch_vcard()?;
-        Ok(current.chain(futures))
+    pub fn account_vcard(&self) -> Box<dyn Stream<Item = Result<Vcard, IoError>>> {
+        let current = futures::future::ready(self.database.profile.vcard()).into_stream();
+        let futures = self.database.profile.watch_vcard();
+        Box::new(current.chain(futures))
     }
 
     // Gets the ID of the current account.
