@@ -5,8 +5,8 @@
 //! their summaries.
 
 use crate::pki::CertificateId;
-use crate::utils::ResultIterator;
-use crate::utils::ResultOption;
+use crate::util::ResultIterator;
+use crate::util::ResultOption;
 use blake3::Hash;
 use blake3::Hasher;
 use chrono::offset::Utc;

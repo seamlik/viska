@@ -1,5 +1,6 @@
 //! ‎Miscellaneous utilities that make our lives easier.
 
+/// `Result<Option, Error>`
 pub trait ResultOption<T, E> {
     /// Maps on the inner value `x` in `Ok(Some(x))`.
     fn map_deep<U, F: FnOnce(T) -> U>(self, op: F) -> Result<Option<U>, E>;
@@ -15,7 +16,9 @@ impl<T, E> ResultOption<T, E> for Result<Option<T>, E> {
     }
 }
 
+/// `Result<Iterator<Item = Result<X, Error>>, Error>`
 pub trait ResultIterator<SrcIter, E, I> {
+    /// Unpacks into `Iterator<Item = Result<X, Error>>`
     fn unpack(self) -> Box<dyn Iterator<Item = Result<I, E>>>;
 }
 

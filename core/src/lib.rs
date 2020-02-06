@@ -6,7 +6,7 @@ pub mod database;
 mod jni;
 pub mod mock_profiles;
 pub mod pki;
-mod utils;
+pub(crate) mod util;
 
 use crate::database::DisplayableId;
 use crate::database::IoError;
@@ -14,7 +14,7 @@ use crate::database::Profile;
 use crate::database::Vcard;
 use crate::pki::Certificate;
 use crate::pki::CertificateId;
-use crate::utils::ResultOption;
+use crate::util::ResultOption;
 use futures::prelude::*;
 use riko::Heaped;
 use sled::Db;
