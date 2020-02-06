@@ -12,6 +12,7 @@ use chrono::offset::Utc;
 use chrono::DateTime;
 use derive_more::Display;
 use mime::Mime;
+use num::FromPrimitive;
 use serde::Deserialize;
 use serde::Serialize;
 use sled::Db;
@@ -65,9 +66,7 @@ pub struct MessageHead {
     pub recipients: BTreeSet<CertificateId>,
 
     pub sender: CertificateId,
-
-    #[serde(with = "chrono::serde::ts_seconds")]
-    pub time: DateTime<Utc>,
+    pub time: f64,
 }
 
 /// Meta-info of a chatroom.
@@ -99,7 +98,16 @@ impl Chatroom {
 #[derive(Deserialize, Serialize)]
 pub struct Vcard {
     pub name: String,
-    pub time_updated: DateTime<Utc>,
+    pub time_updated: f64,
+}
+
+impl Default for Vcard {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            time_updated: std::f64::NEG_INFINITY,
+        }
+    }
 }
 
 /// Low-level operations for accessing a profile stored in a database.
@@ -288,5 +296,18 @@ pub(crate) trait DisplayableId {
 impl DisplayableId for [u8] {
     fn display(&self) -> String {
         data_encoding::HEXUPPER_PERMISSIVE.encode(&self)
+    }
+}
+
+/// Timestamp that serializes into [f64].
+pub trait Timestamp {
+    fn serialize(&self) -> f64;
+}
+
+impl Timestamp for DateTime<Utc> {
+    fn serialize(&self) -> f64 {
+        let integral = self.timestamp();
+        let decimal = self.timestamp_subsec_nanos();
+        f64::from_i64(integral).expect("Timestamp overflow") + f64::from(decimal) / 1_000_000_000.0
     }
 }

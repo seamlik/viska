@@ -12,6 +12,7 @@ use crate::database::Chatroom;
 use crate::database::DisplayableId;
 use crate::database::MessageHead;
 use crate::database::Profile;
+use crate::database::Timestamp;
 use crate::database::Vcard;
 use crate::database::DEFAULT_MIME;
 use crate::pki::Certificate;
@@ -123,7 +124,7 @@ fn random_certificate_id() -> CertificateId {
 fn random_vcard() -> Vcard {
     Vcard {
         name: Name().fake(),
-        time_updated: random_datetime(),
+        time_updated: random_datetime().serialize(),
     }
 }
 
@@ -160,7 +161,7 @@ fn random_message<'a>(
         mime: DEFAULT_MIME.clone(),
         recipients,
         sender: account,
-        time: random_datetime(),
+        time: random_datetime().serialize(),
     };
 
     let body = match rng.gen_range(1, 6) {
