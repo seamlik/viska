@@ -188,3 +188,15 @@ fn random_datetime() -> DateTime<Utc> {
         log::warn!("Invalid time: {}", time)
     }
 }
+
+mod test {
+    #[test]
+    fn new_mock_profile() {
+        let profile = tempfile::tempdir().unwrap();
+        let cache = tempfile::tempdir().unwrap();
+        super::new_mock_profile(
+            &profile.path().to_str().unwrap().into(),
+            &cache.path().to_str().unwrap().into(),
+        )
+    }
+}
