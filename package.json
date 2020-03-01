@@ -1,0 +1,13 @@
+{
+  "name": "root",
+  "version": "0.0.0",
+  "private": true,
+  "devDependencies": {
+    "eslint": "",
+    "eslint-config-standard": "",
+    "eslint-plugin-import": "",
+    "eslint-plugin-node": "",
+    "eslint-plugin-promise": "",
+    "eslint-plugin-standard": ""
+  }
+}

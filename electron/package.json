@@ -1,0 +1,19 @@
+{
+  "name": "viska",
+  "version": "0.0.0",
+  "private": true,
+  "engines": {
+    "node": "^10"
+  },
+  "dependencies": {
+    "blake3": "^2",
+    "random": "^2",
+    "realm": "^3",
+    "uuid": "^7"
+  },
+  "devDependencies": {
+    "faker": "^4",
+    "mime": "^2",
+    "yargs": "^15"
+  }
+}
