@@ -3,11 +3,9 @@ package viska.android;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.MutableLiveData;
@@ -15,10 +13,11 @@ import androidx.lifecycle.ViewModelProvider;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
-import io.reactivex.rxjava3.disposables.Disposable;
-import org.apache.commons.codec.binary.Hex;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
+import viska.database.Database;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
   public static class MainViewModel extends androidx.lifecycle.ViewModel {
 
@@ -36,63 +35,80 @@ public class MainActivity extends AppCompatActivity {
 
   private ViskaService.Connection viska;
   private Intent viskaIntent;
+  private Database db;
   private MainViewModel model;
-  private DrawerLayout drawerLayout;
-  private MenuItem drawerMenuChatrooms;
-  private MenuItem drawerMenuRoster;
+  private CompositeDisposable subscriptions;
+  private Disposable vcardSubscription;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    final Application app = (Application) getApplication();
-    viskaIntent = new Intent(this, ViskaService.class);
-
-    if (!app.hasProfile()) {
-      startActivity(new Intent(this, NewProfileActivity.class));
-      finish();
-      return;
-    }
-    startForegroundService(viskaIntent);
-    viska = new ViskaService.Connection();
-    bindService(viskaIntent, viska, 0);
 
     setContentView(R.layout.main);
     model = new ViewModelProvider(this).get(MainViewModel.class);
-    drawerLayout = findViewById(R.id.drawer_layout);
-
-    final NavigationView drawer = findViewById(R.id.drawer);
-    drawerMenuChatrooms = drawer.getMenu().findItem(R.id.chatrooms);
-    drawerMenuRoster = drawer.getMenu().findItem(R.id.roster);
+    viskaIntent = new Intent(this, ViskaService.class);
 
     final MaterialToolbar actionBar = findViewById(R.id.action_bar);
+    final DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
     setSupportActionBar(actionBar);
     actionBar.setNavigationOnClickListener(it -> drawerLayout.openDrawer(GravityCompat.START));
 
     final View fab = findViewById(R.id.fab);
     fab.setOnClickListener(this::onFabClicked);
 
-    final TextView description = drawer.getHeaderView(0).findViewById(R.id.description);
-    final Disposable tokenAccountId = viska.getClient().subscribe(
-        client -> runOnUiThread(() -> {
-          try {
-            description.setText(Hex.encodeHexString(client.account_id()));
-          } catch (Exception err) {
-            Log.e(getClass().getSimpleName(), "Failed to read from database.", err);
-          }
-        })
-    );
-    viska.putDisposable(tokenAccountId);
+    final NavigationView drawer = findViewById(R.id.drawer);
+    drawer.setNavigationItemSelectedListener(this::onNavigationItemSelected);
 
     model.screen.observe(this, this::changeScreen);
-    drawer.setNavigationItemSelectedListener(this::onNavigationItemSelected);
   }
 
   @Override
-  protected void onDestroy() {
-    super.onDestroy();
+  protected void onStart() {
+    super.onStart();
+
+    db = ((Application) getApplication()).getDatabase();
+    if (db.isEmpty()) {
+      startActivity(new Intent(this, NewProfileActivity.class));
+      finish();
+      return;
+    }
+
+    startForegroundService(viskaIntent);
+    viska = new ViskaService.Connection();
+    bindService(viskaIntent, viska, 0);
+
+    subscriptions = new CompositeDisposable();
+
+    final NavigationView drawer = findViewById(R.id.drawer);
+
+    final TextView description = drawer.getHeaderView(0).findViewById(R.id.description);
+    final TextView name = drawer.getHeaderView(0).findViewById(R.id.name);
+    subscriptions.add(db.getAccountId().forEach(id -> {
+      description.setText(id);
+
+      if (vcardSubscription != null) {
+        subscriptions.remove(vcardSubscription);
+      }
+      final Disposable newVcardSubscription = db.getVcard(id).forEach(vcard -> name.setText(vcard.name));
+      subscriptions.add(newVcardSubscription);
+      vcardSubscription = newVcardSubscription;
+    }));
+
+
+  }
+
+  @Override
+  protected void onStop() {
+    super.onStop();
     if (viska != null) {
       unbindService(viska);
       viska = null;
+    }
+    if (db != null) {
+      db.close();
+    }
+    if (subscriptions != null) {
+      subscriptions.dispose();
     }
   }
 
@@ -115,6 +131,9 @@ public class MainActivity extends AppCompatActivity {
   }
 
   private void changeScreen(final Screen screen) {
+    final NavigationView drawer = findViewById(R.id.drawer);
+    final MenuItem drawerMenuChatrooms = drawer.getMenu().findItem(R.id.chatrooms);
+    final MenuItem drawerMenuRoster = drawer.getMenu().findItem(R.id.roster);
     switch (screen) {
       case CHATROOMS:
         drawerMenuChatrooms.setChecked(true);
@@ -129,6 +148,8 @@ public class MainActivity extends AppCompatActivity {
       default:
         return;
     }
+
+    final DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
     drawerLayout.closeDrawers();
   }
 

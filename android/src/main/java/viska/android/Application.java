@@ -3,8 +3,10 @@ package viska.android;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import androidx.lifecycle.MutableLiveData;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import io.realm.Realm;
+import io.realm.RealmConfiguration;
+import lombok.Getter;
+import viska.database.Database;
 
 public class Application extends android.app.Application {
 
@@ -19,6 +21,7 @@ public class Application extends android.app.Application {
 
   public static final String NOTIFICATION_CHANNEL_SYSTRAY = "systray";
 
+  @Getter
   private final ViewModel viewModel = new ViewModel();
 
   @Override
@@ -27,28 +30,7 @@ public class Application extends android.app.Application {
     System.loadLibrary("viska");
     viska.android.Module.initialize();
     initializeNotifications();
-  }
-
-  /**
-   * Profile section of Viska database.
-   */
-  public Path getDatabaseProfilePath() {
-    return getNoBackupFilesDir().toPath().resolve("profile");
-  }
-
-  /**
-   * Cache section of Viska database.
-   */
-  public Path getDatabaseCachePath() {
-    return getCacheDir().toPath().resolve("profile");
-  }
-
-  public boolean hasProfile() {
-    return Files.isDirectory(getDatabaseProfilePath());
-  }
-
-  public ViewModel getViewModel() {
-    return viewModel;
+    Realm.init(this);
   }
 
   /**
@@ -63,5 +45,12 @@ public class Application extends android.app.Application {
     );
     channelSystray.setShowBadge(false);
     manager.createNotificationChannel(channelSystray);
+  }
+
+  public Database getDatabase() {
+    final RealmConfiguration config = new RealmConfiguration.Builder()
+        .name("database.realm")
+        .build();
+    return new Database(Realm.getInstance(config));
   }
 }

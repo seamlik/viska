@@ -6,36 +6,36 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.Completable;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 import java.io.File;
-import java.nio.file.Files;
-import org.apache.commons.io.FileUtils;
+import java.io.FileOutputStream;
+import org.apache.commons.io.IOUtils;
+import viska.database.Database;
 
-public class NewProfileActivity extends AppCompatActivity {
+public class NewProfileActivity extends Activity {
+
+  private final CompositeDisposable subscriptions = new CompositeDisposable();
 
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.new_profile);
-    final Application app = (Application) getApplication();
-    final ProgressBar progressBar = findViewById(R.id.progress);
-    final Button newAccountButton = findViewById(R.id.new_account);
 
     final Button newMockProfileButton = findViewById(R.id.new_mock_profile);
     newMockProfileButton.setOnClickListener(view -> onNewMockProfile());
 
+    final Application app = (Application) getApplication();
+    final ProgressBar progressBar = findViewById(R.id.progress);
+    final Button newAccountButton = findViewById(R.id.new_account);
     app.getViewModel().creatingAccount.observe(this, running -> {
       if (running) {
         progressBar.setVisibility(View.VISIBLE);
         newAccountButton.setVisibility(View.GONE);
         newMockProfileButton.setVisibility(View.GONE);
       } else {
-        if (app.hasProfile()) {
-          startActivity(new Intent(this, MainActivity.class));
-          finish();
-        }
         progressBar.setVisibility(View.GONE);
         newAccountButton.setVisibility(View.VISIBLE);
         newMockProfileButton.setVisibility(BuildConfig.DEBUG ? View.VISIBLE : View.GONE);
@@ -46,17 +46,25 @@ public class NewProfileActivity extends AppCompatActivity {
   private void onNewMockProfile() {
     final Application app = (Application) getApplication();
     app.getViewModel().creatingAccount.setValue(true);
-    Completable.fromAction(() -> {
-      final File profile = app.getDatabaseProfilePath().toFile();
-      if (profile.exists()) {
-        FileUtils.forceDelete(profile);
-      }
-      final File cache = app.getDatabaseCachePath().toFile();
-      if (cache.exists()) {
-        FileUtils.forceDelete(cache);
-      }
-      viska.mock_profiles.Module.new_mock_profile(profile.toString(), cache.toString());
-      app.getViewModel().creatingAccount.postValue(false);
-    }).subscribeOn(Schedulers.io()).subscribe();
+    Disposable sub = Completable
+        .fromAction(() -> {
+          final Database db = app.getDatabase();
+          final String dbPath = db.path();
+          db.close();
+
+          IOUtils.copy(
+              getResources().getAssets().open("demo.realm"),
+              new FileOutputStream(new File(dbPath))
+          );
+
+          app.getViewModel().creatingAccount.postValue(false);
+        })
+        .observeOn(Schedulers.io())
+        .subscribeOn(Schedulers.from(getMainExecutor()))
+        .subscribe(() -> {
+          startActivity(new Intent(this, MainActivity.class));
+          finish();
+        });
+    subscriptions.add(sub);
   }
 }
