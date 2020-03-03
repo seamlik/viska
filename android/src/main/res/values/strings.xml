@@ -1,6 +1,5 @@
 <resources>
-  <string name="dialog_exit_text">All connections to your peers will be cut and you will no longer receive messages.</string>
-  <string name="dialog_exit_title">Are you sure to exit?</string>
+  <string name="description_exit">All connections to your peers will be cut and you will no longer receive messages.</string>
   <string name="notification_systray_name">Status icon</string>
   <string name="notification_systray_title">Viska is running</string>
   <string name="title_about">About</string>
@@ -9,8 +8,6 @@
   <string name="title_exit">Exit</string>
   <string name="title_new_account">Create a new account</string>
   <string name="title_new_mock_profile">Use a mocked database</string>
-  <string name="title_no">No</string>
   <string name="title_roster">Roster</string>
   <string name="title_settings">Settings</string>
-  <string name="title_yes">Yes</string>
 </resources>

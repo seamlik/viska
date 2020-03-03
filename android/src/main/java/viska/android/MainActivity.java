@@ -163,10 +163,10 @@ public class MainActivity extends Activity {
     };
 
     new MaterialAlertDialogBuilder(this)
-        .setTitle(R.string.dialog_exit_title)
-        .setMessage(R.string.dialog_exit_text)
-        .setPositiveButton(R.string.title_yes, listener)
-        .setNegativeButton(R.string.title_no, listener)
+        .setTitle(R.string.title_exit)
+        .setMessage(R.string.description_exit)
+        .setPositiveButton(android.R.string.ok, listener)
+        .setNegativeButton(android.R.string.cancel, listener)
         .create()
         .show();
   }
