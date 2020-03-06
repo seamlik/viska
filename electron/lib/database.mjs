@@ -15,7 +15,8 @@ const MessageSchema = {
     id: 'string',
     participants: 'string[]',
     sender: 'string',
-    time: { type: 'date', indexed: true }
+    time: { type: 'date', indexed: true },
+    unread: { type: 'bool?' }
   }
 }
 SCHEMAS.push(MessageSchema)

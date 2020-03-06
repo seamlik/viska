@@ -23,4 +23,6 @@ public class Message extends RealmObject {
 
   @Required
   public RealmList<String> participants;
+
+  public Boolean unread;
 }
