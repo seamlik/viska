@@ -27,7 +27,8 @@ const ChatroomSchema = {
   properties: {
     id: 'string',
     members: 'string[]',
-    messages: 'Message[]'
+    messages: 'Message[]',
+    name: 'string?'
   }
 }
 SCHEMAS.push(ChatroomSchema)

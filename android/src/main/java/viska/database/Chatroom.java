@@ -14,4 +14,5 @@ public class Chatroom extends RealmObject {
   public RealmList<String> members;
 
   public RealmList<Message> messages;
+  public String name;
 }
