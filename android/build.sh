@@ -7,7 +7,7 @@
 
 set -e
 
-if [ -z "ANDROID_HOME" ]
+if [ -z "$ANDROID_HOME" ]
 then
   echo "Must set \$ANDROID_HOME!"
   exit 1
@@ -25,8 +25,8 @@ TARGETS=(
 )
 for target in "${TARGETS[@]}"
 do
-  export AR=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}-ar
-  export CC=${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}${ANDROID_MINSDK}-clang
+  export AR=${ANDROID_HOME}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}-ar
+  export CC=${ANDROID_HOME}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}${SDK_VERSION}-clang
   cargo build --target $target --features "android" $@
   cargo build --target $target --features "android" --release $@
 done
