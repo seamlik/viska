@@ -25,7 +25,7 @@ android {
     targetCompatibility sourceCompatibility
   }
   defaultConfig {
-    applicationId 'chat.viska'
+    applicationId 'viska.android'
     minSdkVersion 28
     targetSdkVersion 29
     versionName '0'
