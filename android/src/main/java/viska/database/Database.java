@@ -2,6 +2,7 @@ package viska.database;
 
 import io.reactivex.Flowable;
 import io.realm.Realm;
+import io.realm.RealmResults;
 import java.nio.charset.StandardCharsets;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
@@ -18,13 +19,16 @@ public class Database implements AutoCloseable {
     realm.close();
   }
 
-  public Flowable<String> getAccountId() {
-    return realm
+  public String getAccountId() {
+    final Profile raw = realm
         .where(Profile.class)
         .equalTo("name", PROFILE_ID)
-        .findFirst()
-        .<Profile>asFlowable()
-        .map(nv -> new String(nv.value, StandardCharsets.UTF_8));
+        .findFirst();
+    if (raw == null) {
+      return "";
+    } else {
+      return new String(raw.value, StandardCharsets.UTF_8);
+    }
   }
 
   public Flowable<Vcard> getVcard(final String id) {
@@ -39,7 +43,15 @@ public class Database implements AutoCloseable {
     return realm.isEmpty();
   }
 
-  public String path() {
+  public String getPath() {
     return realm.getPath();
+  }
+
+  public RealmResults<Peer> getRoster() {
+    return realm.where(Peer.class).greaterThanOrEqualTo("role", 0).findAll();
+  }
+
+  public RealmResults<Chatroom> getChatrooms() {
+    return realm.where(Chatroom.class).findAll();
   }
 }

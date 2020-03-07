@@ -10,11 +10,14 @@ import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.flexbox.FlexboxLayoutManager;
+import com.google.android.flexbox.JustifyContent;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
 import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.disposables.Disposable;
 import viska.database.Database;
 
 public class MainActivity extends Activity {
@@ -30,7 +33,7 @@ public class MainActivity extends Activity {
 
   public enum Screen {
     CHATROOMS,
-    ROSTER
+    ROSTER,
   }
 
   private ViskaService.Connection viska;
@@ -38,7 +41,8 @@ public class MainActivity extends Activity {
   private Database db;
   private MainViewModel model;
   private CompositeDisposable subscriptions;
-  private Disposable vcardSubscription;
+  private FlexboxLayoutManager flexboxLayoutManager;
+  private LinearLayoutManager linearLayoutManager;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +62,10 @@ public class MainActivity extends Activity {
 
     final NavigationView drawer = findViewById(R.id.drawer);
     drawer.setNavigationItemSelectedListener(this::onNavigationItemSelected);
+
+    flexboxLayoutManager = new FlexboxLayoutManager(this);
+    flexboxLayoutManager.setJustifyContent(JustifyContent.CENTER);
+    linearLayoutManager = new LinearLayoutManager(this);
 
     model.screen.observe(this, this::changeScreen);
   }
@@ -81,20 +89,12 @@ public class MainActivity extends Activity {
 
     final NavigationView drawer = findViewById(R.id.drawer);
 
+    final String accountId = db.getAccountId();
     final TextView description = drawer.getHeaderView(0).findViewById(R.id.description);
+    description.setText(accountId);
+
     final TextView name = drawer.getHeaderView(0).findViewById(R.id.name);
-    subscriptions.add(db.getAccountId().forEach(id -> {
-      description.setText(id);
-
-      if (vcardSubscription != null) {
-        subscriptions.remove(vcardSubscription);
-      }
-      final Disposable newVcardSubscription = db.getVcard(id).forEach(vcard -> name.setText(vcard.name));
-      subscriptions.add(newVcardSubscription);
-      vcardSubscription = newVcardSubscription;
-    }));
-
-
+    subscriptions.add(db.getVcard(accountId).subscribe(vcard -> name.setText(vcard.name)));
   }
 
   @Override
@@ -134,16 +134,23 @@ public class MainActivity extends Activity {
     final NavigationView drawer = findViewById(R.id.drawer);
     final MenuItem drawerMenuChatrooms = drawer.getMenu().findItem(R.id.chatrooms);
     final MenuItem drawerMenuRoster = drawer.getMenu().findItem(R.id.roster);
+    final RecyclerView list = findViewById(R.id.list);
     switch (screen) {
       case CHATROOMS:
         drawerMenuChatrooms.setChecked(true);
         getSupportActionBar().setTitle(R.string.title_chatrooms);
-        // Change list adapter
+        if (!(list.getAdapter() instanceof ChatroomListAdapter)) {
+          list.setLayoutManager(linearLayoutManager);
+          list.setAdapter(new ChatroomListAdapter(db.getChatrooms()));
+        }
         break;
       case ROSTER:
         drawerMenuRoster.setChecked(true);
         getSupportActionBar().setTitle(R.string.title_roster);
-        // Change list adapter
+        if (!(list.getAdapter() instanceof RosterListAdapter)) {
+          list.setLayoutManager(flexboxLayoutManager);
+          list.setAdapter(new RosterListAdapter(db.getRoster()));
+        }
         break;
       default:
         return;

@@ -49,7 +49,7 @@ public class NewProfileActivity extends Activity {
     Disposable sub = Completable
         .fromAction(() -> {
           final Database db = app.getDatabase();
-          final String dbPath = db.path();
+          final String dbPath = db.getPath();
           db.close();
 
           IOUtils.copy(

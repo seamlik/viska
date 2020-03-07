@@ -2,8 +2,11 @@ package viska.database;
 
 import io.realm.RealmList;
 import io.realm.RealmObject;
+import io.realm.Sort;
 import io.realm.annotations.PrimaryKey;
 import io.realm.annotations.Required;
+import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class Chatroom extends RealmObject {
   @PrimaryKey
@@ -15,4 +18,20 @@ public class Chatroom extends RealmObject {
 
   public RealmList<Message> messages;
   public String name;
+
+  public String getDisplayName() {
+    if (name == null) {
+      return members
+          .stream()
+          .map(member -> Vcard.getById(getRealm(), member).name)
+          .collect(Collectors.joining(", "));
+    } else {
+      return name;
+    }
+  }
+
+  @Nullable
+  public Message getLatestMessage() {
+    return messages.sort("time", Sort.DESCENDING).first();
+  }
 }

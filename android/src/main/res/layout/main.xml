@@ -27,7 +27,8 @@
     <androidx.recyclerview.widget.RecyclerView
       android:id="@+id/list"
       android:layout_height="match_parent"
-      android:layout_width="match_parent">
+      android:layout_width="match_parent"
+      app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
 
     </androidx.recyclerview.widget.RecyclerView>
 
@@ -37,7 +38,8 @@
       android:layout_height="wrap_content"
       android:layout_margin="@dimen/padding_large"
       android:layout_width="wrap_content"
-      android:src="@drawable/add"/>
+      android:src="@drawable/add"
+      app:layout_behavior="com.google.android.material.floatingactionbutton.FloatingActionButton$Behavior"/>
 
   </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
