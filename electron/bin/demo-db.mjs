@@ -19,13 +19,12 @@ async function main () {
   }
   const db = await Database.open(realmLocation)
 
-  // Create account
   const accountVcard = randomVcard()
   accountVcard.avatar = await readProjectLogoAsAvatar()
   db.createAccount(accountVcard)
-  console.info(`Created account with ID ${accountVcard.id}`)
+  console.debug(`Created account with ID ${accountVcard.id}`)
 
-  // Blacklist
+  console.debug('Generating blacklsit…')
   for (let i = 0; i < 10; ++i) {
     const peer = randomPeer()
     peer.role = -1
@@ -33,27 +32,26 @@ async function main () {
     db.putVcard(randomVcard(peer.id))
   }
 
-  // Whitelist
+  console.debug('Generating whitelsit…')
   const whitelist = []
-  console.info('Generated whitelist:')
   for (let i = 0; i < 10; ++i) {
     const peer = randomPeer()
     db.putPeer(peer)
     db.putVcard(randomVcard(peer.id))
     whitelist.push(peer)
-    console.info(`  ${peer.id}`)
   }
 
   // Chatroom and messages
   for (let i = 0; i < 5; ++i) {
     const members = [whitelist[i].id, whitelist[i + 5].id]
     const chatroom = db.getChatroom(members)
-    console.info(`Generating messages for chatroom ${chatroom.id}...`)
+    console.debug(`Generating messages for chatroom ${chatroom.id}…`)
     for (let j = 0; j < 10; ++j) {
       db.putMessage(randomMessage(members))
     }
   }
 
+  console.debug('Closing database…')
   db.close()
 }
 
