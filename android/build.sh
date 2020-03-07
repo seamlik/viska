@@ -3,18 +3,22 @@
 # Configure cross-compilation toolchains and build the crate for all supported Android targets.
 # This script accepts additional parameters and redirects them to Cargo.
 
+# Must be run under the root directory.
+
 set -e
 
-if [ -z "$NDK_HOME" ]
+if [ -z "ANDROID_HOME" ]
 then
-  echo "Must set \$NDK_HOME!"
+  echo "Must set \$ANDROID_HOME!"
   exit 1
 fi
 
-# For `.cargo/config` which does not support environment variables
-ln --symbolic --force "${NDK_HOME}" android/NDK_HOME
+SDK_VERSION=29
+NDK_VERSION=21.0.6113669
 
-ANDROID_MINSDK=28
+# For `.cargo/config` which does not support environment variables
+ln --symbolic --force "${ANDROID_HOME}/ndk/${NDK_VERSION}" android/NDK_HOME
+
 TARGETS=(
   aarch64-linux-android
   x86_64-linux-android
