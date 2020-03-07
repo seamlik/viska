@@ -16,7 +16,7 @@ const MessageSchema = {
     participants: 'string[]',
     sender: 'string',
     time: { type: 'date', indexed: true },
-    unread: { type: 'bool?' }
+    read: { type: 'bool', default: true }
   }
 }
 SCHEMAS.push(MessageSchema)
@@ -39,7 +39,7 @@ const VcardSchema = {
   properties: {
     avatar: 'Blob?',
     id: 'string',
-    name: 'string?',
+    name: { type: 'string', default: '' },
     time_updated: 'date?'
   }
 }
@@ -60,7 +60,7 @@ const PeerSchema = {
   primaryKey: 'id',
   properties: {
     id: 'string',
-    role: 'int?'
+    role: {type: 'int', default: 0 }
   }
 }
 SCHEMAS.push(PeerSchema)

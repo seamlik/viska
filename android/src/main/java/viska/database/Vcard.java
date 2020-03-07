@@ -10,7 +10,9 @@ public class Vcard extends RealmObject {
   @Required
   public String id;
 
-  public String name;
+  @Required
+  public String name = "";
+
   public Date time_updated;
   public Blob avatar;
 }

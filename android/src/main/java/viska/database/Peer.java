@@ -9,5 +9,5 @@ public class Peer extends RealmObject {
   @Required
   public String id;
 
-  public Integer role;
+  public int role = 0;
 }
