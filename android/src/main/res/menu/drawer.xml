@@ -3,24 +3,24 @@
     <item
       android:icon="@drawable/forum"
       android:id="@+id/chatrooms"
-      android:title="@string/title_chatrooms"/>
+      android:title="@string/chatrooms"/>
     <item
       android:icon="@drawable/contacts"
       android:id="@+id/roster"
-      android:title="@string/title_roster"/>
+      android:title="@string/roster"/>
   </group>
   <group android:id="@+id/misc">
     <item
       android:icon="@drawable/settings"
       android:id="@+id/settings"
-      android:title="@string/title_settings"/>
+      android:title="@string/settings"/>
     <item
       android:icon="@drawable/info"
       android:id="@+id/about"
-      android:title="@string/title_about"/>
+      android:title="@string/about"/>
     <item
       android:icon="@drawable/exit_to_app"
       android:id="@+id/exit"
-      android:title="@string/title_exit"/>
+      android:title="@string/exit"/>
   </group>
 </menu>

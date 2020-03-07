@@ -6,7 +6,7 @@
 
   <application
     android:icon="@drawable/icon"
-    android:label="@string/title_app"
+    android:label="@string/app"
     android:name=".Application"
     android:supportsRtl="true"
     android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">

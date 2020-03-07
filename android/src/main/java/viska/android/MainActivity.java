@@ -138,7 +138,7 @@ public class MainActivity extends Activity {
     switch (screen) {
       case CHATROOMS:
         drawerMenuChatrooms.setChecked(true);
-        getSupportActionBar().setTitle(R.string.title_chatrooms);
+        getSupportActionBar().setTitle(R.string.chatrooms);
         if (!(list.getAdapter() instanceof ChatroomListAdapter)) {
           list.setLayoutManager(linearLayoutManager);
           list.setAdapter(new ChatroomListAdapter(db.getChatrooms()));
@@ -146,7 +146,7 @@ public class MainActivity extends Activity {
         break;
       case ROSTER:
         drawerMenuRoster.setChecked(true);
-        getSupportActionBar().setTitle(R.string.title_roster);
+        getSupportActionBar().setTitle(R.string.roster);
         if (!(list.getAdapter() instanceof RosterListAdapter)) {
           list.setLayoutManager(flexboxLayoutManager);
           list.setAdapter(new RosterListAdapter(db.getRoster()));
@@ -170,8 +170,8 @@ public class MainActivity extends Activity {
     };
 
     new MaterialAlertDialogBuilder(this)
-        .setTitle(R.string.title_exit)
-        .setMessage(R.string.description_exit)
+        .setTitle(R.string.exit)
+        .setMessage(R.string.dialog_description_exit)
         .setPositiveButton(android.R.string.ok, listener)
         .setNegativeButton(android.R.string.cancel, listener)
         .create()
