@@ -15,10 +15,6 @@
       android:id="@+id/settings"
       android:title="@string/settings"/>
     <item
-      android:icon="@drawable/info"
-      android:id="@+id/about"
-      android:title="@string/about"/>
-    <item
       android:icon="@drawable/exit_to_app"
       android:id="@+id/exit"
       android:title="@string/exit"/>
