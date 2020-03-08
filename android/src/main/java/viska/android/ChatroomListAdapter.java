@@ -46,5 +46,9 @@ public class ChatroomListAdapter extends RealmRecyclerViewAdapter<Chatroom, Chat
       description.setVisibility(View.VISIBLE);
       description.setText(latestMsg.getPreview(holder.itemView.getResources()));
     }
+
+    holder.itemView.setOnClickListener(
+        view -> ChatroomActivity.startActivity(holder.itemView.getContext(), chatroom.id)
+    );
   }
 }

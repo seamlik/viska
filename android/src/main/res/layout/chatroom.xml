@@ -1,0 +1,24 @@
+<androidx.constraintlayout.widget.ConstraintLayout
+  android:id="@+id/coordinator"
+  android:layout_height="match_parent"
+  android:layout_width="match_parent"
+  android:orientation="vertical"
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto">
+
+  <com.google.android.material.appbar.MaterialToolbar
+    android:id="@+id/action_bar"
+    android:layout_height="wrap_content"
+    android:layout_width="match_parent"
+    app:layout_constraintTop_toTopOf="parent"
+    app:titleTextColor="@android:color/white"/>
+
+  <androidx.recyclerview.widget.RecyclerView
+    android:id="@+id/list"
+    android:layout_height="0dp"
+    android:layout_width="match_parent"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/action_bar"
+    />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

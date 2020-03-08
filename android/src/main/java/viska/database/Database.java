@@ -6,6 +6,7 @@ import io.realm.RealmResults;
 import java.nio.charset.StandardCharsets;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @AllArgsConstructor
 public class Database implements AutoCloseable {
@@ -53,5 +54,10 @@ public class Database implements AutoCloseable {
 
   public RealmResults<Chatroom> getChatrooms() {
     return realm.where(Chatroom.class).findAll();
+  }
+
+  @Nullable
+  public Chatroom getChatroom(final String id) {
+    return realm.where(Chatroom.class).equalTo("id", id).findFirst();
   }
 }

@@ -2,6 +2,7 @@ package viska.database;
 
 import io.realm.RealmList;
 import io.realm.RealmObject;
+import io.realm.RealmResults;
 import io.realm.Sort;
 import io.realm.annotations.PrimaryKey;
 import io.realm.annotations.Required;
@@ -33,5 +34,9 @@ public class Chatroom extends RealmObject {
   @Nullable
   public Message getLatestMessage() {
     return messages.sort("time", Sort.DESCENDING).first();
+  }
+
+  public RealmResults<Message> getConversation() {
+    return messages.sort("time");
   }
 }
