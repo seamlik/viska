@@ -17,10 +17,8 @@ import com.google.android.flexbox.JustifyContent;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
-import io.reactivex.disposables.CompositeDisposable;
-import viska.database.Database;
 
-public class MainActivity extends Activity {
+public class MainActivity extends InstanceActivity {
 
   public static class MainViewModel extends androidx.lifecycle.ViewModel {
 
@@ -36,11 +34,7 @@ public class MainActivity extends Activity {
     ROSTER,
   }
 
-  private ViskaService.Connection viska;
-  private Intent viskaIntent;
-  private Database db;
   private MainViewModel model;
-  private CompositeDisposable subscriptions;
   private FlexboxLayoutManager flexboxLayoutManager;
   private LinearLayoutManager linearLayoutManager;
 
@@ -50,7 +44,6 @@ public class MainActivity extends Activity {
 
     setContentView(R.layout.main);
     model = new ViewModelProvider(this).get(MainViewModel.class);
-    viskaIntent = new Intent(this, ViskaService.class);
 
     final MaterialToolbar actionBar = findViewById(R.id.action_bar);
     final DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
@@ -74,18 +67,7 @@ public class MainActivity extends Activity {
   protected void onStart() {
     super.onStart();
 
-    db = ((Application) getApplication()).getDatabase();
-    if (db.isEmpty()) {
-      startActivity(new Intent(this, NewProfileActivity.class));
-      finish();
-      return;
-    }
-
-    startForegroundService(viskaIntent);
-    viska = new ViskaService.Connection();
-    bindService(viskaIntent, viska, 0);
-
-    subscriptions = new CompositeDisposable();
+    model.screen.setValue(model.screen.getValue());
 
     final NavigationView drawer = findViewById(R.id.drawer);
 
@@ -95,21 +77,6 @@ public class MainActivity extends Activity {
 
     final TextView name = drawer.getHeaderView(0).findViewById(R.id.name);
     subscriptions.add(db.getVcard(accountId).subscribe(vcard -> name.setText(vcard.name)));
-  }
-
-  @Override
-  protected void onStop() {
-    super.onStop();
-    if (viska != null) {
-      unbindService(viska);
-      viska = null;
-    }
-    if (db != null) {
-      db.close();
-    }
-    if (subscriptions != null) {
-      subscriptions.dispose();
-    }
   }
 
   private boolean onNavigationItemSelected(final MenuItem item) {
@@ -139,18 +106,14 @@ public class MainActivity extends Activity {
       case CHATROOMS:
         drawerMenuChatrooms.setChecked(true);
         getSupportActionBar().setTitle(R.string.chatrooms);
-        if (!(list.getAdapter() instanceof ChatroomListAdapter)) {
-          list.setLayoutManager(linearLayoutManager);
-          list.setAdapter(new ChatroomListAdapter(db.getChatrooms()));
-        }
+        list.setLayoutManager(linearLayoutManager);
+        list.setAdapter(new ChatroomListAdapter(db.getChatrooms()));
         break;
       case ROSTER:
         drawerMenuRoster.setChecked(true);
         getSupportActionBar().setTitle(R.string.roster);
-        if (!(list.getAdapter() instanceof RosterListAdapter)) {
-          list.setLayoutManager(flexboxLayoutManager);
-          list.setAdapter(new RosterListAdapter(db.getRoster()));
-        }
+        list.setLayoutManager(flexboxLayoutManager);
+        list.setAdapter(new RosterListAdapter(db.getRoster()));
         break;
       default:
         return;
@@ -165,7 +128,7 @@ public class MainActivity extends Activity {
       if (which != DialogInterface.BUTTON_POSITIVE) {
         return;
       }
-      stopService(viskaIntent);
+      stopService(new Intent(this, ViskaService.class));
       finish();
     };
 

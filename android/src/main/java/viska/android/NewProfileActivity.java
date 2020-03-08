@@ -6,6 +6,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import io.reactivex.Completable;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
@@ -15,7 +16,7 @@ import java.io.FileOutputStream;
 import org.apache.commons.io.IOUtils;
 import viska.database.Database;
 
-public class NewProfileActivity extends Activity {
+public class NewProfileActivity extends AppCompatActivity {
 
   private final CompositeDisposable subscriptions = new CompositeDisposable();
 
