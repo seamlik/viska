@@ -1,0 +1,13 @@
+apply plugin: 'checkstyle'
+
+checkstyle {
+  toolVersion = '8.30'
+}
+
+task checkStyle(type: Checkstyle) {
+  group = 'Verification'
+  source 'src'
+  include '**/*.java'
+  classpath = files()
+  maxWarnings 0
+}

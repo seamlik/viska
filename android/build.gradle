@@ -61,3 +61,5 @@ dependencies {
   implementation 'io.realm:android-adapters:2.1.1'
   implementation 'riko:riko-runtime-jni:0.0.1'
 }
+
+apply from: '../gradle/checkstyle.gradle'
