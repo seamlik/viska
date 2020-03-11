@@ -30,6 +30,9 @@ public class Message extends RealmObject {
 
   public boolean read = true;
 
+  /**
+   * Gets a text previewing the content of this {@link Message}.
+   */
   public String getPreview(final Resources resources) {
     if (content == null) {
       return "";
@@ -46,6 +49,9 @@ public class Message extends RealmObject {
     }
   }
 
+  /**
+   * Gets the content as UTF-8 encoded text.
+   */
   public String getContentAsText() {
     if (content == null) {
       return "";

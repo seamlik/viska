@@ -11,7 +11,8 @@ import io.realm.RealmRecyclerViewAdapter;
 import viska.database.Message;
 import viska.database.Vcard;
 
-public class ConversationAdapter extends RealmRecyclerViewAdapter<Message, ConversationAdapter.ViewHolder> {
+public class ConversationAdapter
+    extends RealmRecyclerViewAdapter<Message, ConversationAdapter.ViewHolder> {
 
   public static class ViewHolder extends RecyclerView.ViewHolder {
     public ViewHolder(View itemView) {

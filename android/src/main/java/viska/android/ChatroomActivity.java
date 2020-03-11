@@ -11,7 +11,11 @@ import viska.database.Chatroom;
 
 public class ChatroomActivity extends InstanceActivity {
 
-  public static void startActivity(final Context source, final String id) {
+  /**
+   * Starts this activity.
+   * @param id Chatroom ID
+   */
+  public static void start(final Context source, final String id) {
     final Uri uri = new Uri.Builder().scheme("viska").authority("chatroom").appendPath(id).build();
     final Intent intent = new Intent(source, ChatroomActivity.class);
     intent.setData(uri);

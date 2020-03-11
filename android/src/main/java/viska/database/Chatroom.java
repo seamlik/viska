@@ -20,6 +20,9 @@ public class Chatroom extends RealmObject {
   public RealmList<Message> messages;
   public String name;
 
+  /**
+   * Gets the calculated name to be shown to the user.
+   */
   public String getDisplayName() {
     if (name == null) {
       return members

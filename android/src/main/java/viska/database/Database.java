@@ -1,6 +1,5 @@
 package viska.database;
 
-import io.reactivex.Flowable;
 import io.realm.Realm;
 import io.realm.RealmResults;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +19,9 @@ public class Database implements AutoCloseable {
     realm.close();
   }
 
+  /**
+   * Gets the account ID.
+   */
   public String getAccountId() {
     final Profile raw = realm
         .where(Profile.class)
@@ -32,12 +34,14 @@ public class Database implements AutoCloseable {
     }
   }
 
-  public Flowable<Vcard> getVcard(final String id) {
+  /**
+   * Gets a {@link Vcard} by an account ID.
+   */
+  public Vcard getVcard(final String id) {
     return realm
         .where(Vcard.class)
         .equalTo("id", id)
-        .findFirst()
-        .asFlowable();
+        .findFirst();
   }
 
   public boolean isEmpty() {

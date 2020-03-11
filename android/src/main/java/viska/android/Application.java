@@ -47,6 +47,9 @@ public class Application extends android.app.Application {
     manager.createNotificationChannel(channelSystray);
   }
 
+  /**
+   * Gets a new instance of {@link Database}.
+   */
   public Database getDatabase() {
     final RealmConfiguration config = new RealmConfiguration.Builder()
         .name("database.realm")

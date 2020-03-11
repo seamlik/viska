@@ -11,7 +11,8 @@ import io.realm.RealmRecyclerViewAdapter;
 import viska.database.Chatroom;
 import viska.database.Message;
 
-public class ChatroomListAdapter extends RealmRecyclerViewAdapter<Chatroom, ChatroomListAdapter.ViewHolder> {
+public class ChatroomListAdapter
+    extends RealmRecyclerViewAdapter<Chatroom, ChatroomListAdapter.ViewHolder> {
 
 
   public static class ViewHolder extends RecyclerView.ViewHolder {
@@ -48,7 +49,7 @@ public class ChatroomListAdapter extends RealmRecyclerViewAdapter<Chatroom, Chat
     }
 
     holder.itemView.setOnClickListener(
-        view -> ChatroomActivity.startActivity(holder.itemView.getContext(), chatroom.id)
+        view -> ChatroomActivity.start(holder.itemView.getContext(), chatroom.id)
     );
   }
 }
