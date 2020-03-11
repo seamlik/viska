@@ -17,6 +17,7 @@ import com.google.android.flexbox.JustifyContent;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
+import viska.database.Vcard;
 
 public class MainActivity extends InstanceActivity {
 
@@ -76,7 +77,10 @@ public class MainActivity extends InstanceActivity {
     description.setText(accountId);
 
     final TextView name = drawer.getHeaderView(0).findViewById(R.id.name);
-    subscriptions.add(db.getVcard(accountId).subscribe(vcard -> name.setText(vcard.name)));
+    final Vcard vcard = db.getVcard(accountId);
+    if (vcard != null) {
+      subscriptions.add(vcard.<Vcard>asFlowable().subscribe(it -> name.setText(it.name)));
+    }
   }
 
   private boolean onNavigationItemSelected(final MenuItem item) {

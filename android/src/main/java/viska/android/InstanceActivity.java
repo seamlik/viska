@@ -45,9 +45,11 @@ public abstract class InstanceActivity extends AppCompatActivity {
 
     if (db != null) {
       db.close();
+      db = null;
     }
     if (subscriptions != null) {
       subscriptions.dispose();
+      subscriptions = null;
     }
   }
 }
