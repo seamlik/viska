@@ -1,9 +1,10 @@
 DEMO_DATABASE_LOCATION = target/demo.realm
 
-# Build Android
-android: $(DEMO_DATABASE_LOCATION)
+verify-electron: eslint
+
+verify-android: $(DEMO_DATABASE_LOCATION)
 	android/build.sh
-	gradle assemble
+	gradle check checkStyle
 
 # Generate a database for demo
 .PHONY: demo-db
