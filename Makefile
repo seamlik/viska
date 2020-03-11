@@ -16,6 +16,9 @@ node_modules:
 	npm i
 	(cd electron; npm i)
 
+eslint:
+	eslint --ext .mjs electron/bin electron/lib
+
 #
 # End of public tasks
 #

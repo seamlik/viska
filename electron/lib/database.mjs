@@ -60,7 +60,7 @@ const PeerSchema = {
   primaryKey: 'id',
   properties: {
     id: 'string',
-    role: {type: 'int', default: 0 }
+    role: { type: 'int', default: 0 }
   }
 }
 SCHEMAS.push(PeerSchema)
