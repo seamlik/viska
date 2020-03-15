@@ -17,7 +17,12 @@ impl<T, E> ResultOption<T, E> for Result<Option<T>, E> {
 }
 
 /// `Result<Iterator<Item = Result<X, Error>>, Error>`
-pub trait ResultIterator<SrcIter, E, I> {
+pub trait ResultIterator<SrcIter, E, I>
+where
+    SrcIter: Iterator<Item = Result<I, E>> + 'static,
+    E: 'static,
+    I: 'static,
+{
     /// Unpacks into `Iterator<Item = Result<X, Error>>`
     fn unpack(self) -> Box<dyn Iterator<Item = Result<I, E>>>;
 }
@@ -37,7 +42,7 @@ where
 }
 
 /// The unified way of displaying an ID byte string
-pub(crate) trait DisplayableId {
+pub trait DisplayableId {
     fn display(&self) -> String;
 }
 
