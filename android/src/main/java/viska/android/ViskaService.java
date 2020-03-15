@@ -39,7 +39,7 @@ public class ViskaService extends Service {
         .build();
     startForeground(R.id.notification_systray, notification);
 
-    daemon = viska.android.Module.placeholder_create_client();
+    daemon = viska.android.Module.placeholder_create_node();
   }
 
   @Override

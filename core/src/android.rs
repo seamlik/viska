@@ -13,6 +13,6 @@ pub fn initialize() {
 }
 
 #[riko::fun]
-pub fn placeholder_create_client() -> crate::Client {
-    crate::Client::create()
+pub fn placeholder_create_node() -> crate::Node {
+    crate::Node::create()
 }
