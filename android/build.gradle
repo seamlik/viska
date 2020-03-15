@@ -41,7 +41,6 @@ android {
   sourceSets {
     main {
       java {
-        srcDir 'src/main/riko'
         srcDir '../target/riko/jni'
       }
     }

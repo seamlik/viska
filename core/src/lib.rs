@@ -2,7 +2,6 @@
 mod bridge;
 
 pub mod android;
-mod jni;
 pub mod pki;
 pub(crate) mod util;
 
