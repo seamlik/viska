@@ -31,7 +31,7 @@ pub fn new_certificate() -> CertificateBundle {
     dn.push(DnType::CommonName, "Viska Account");
 
     let mut params = CertificateParams::default();
-    params.alg = &rcgen::PKCS_ED25519;
+    params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
     params.distinguished_name = dn;
 
     let cert = rcgen::Certificate::from_params(params).expect("Failed to generate certificate");
