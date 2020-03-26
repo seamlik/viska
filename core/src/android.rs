@@ -11,8 +11,3 @@ pub fn initialize() {
     let config = Config::default().with_min_level(Level::max());
     android_logger::init_once(config);
 }
-
-#[riko::fun]
-pub fn placeholder_create_node() -> crate::Node {
-    crate::Node::create()
-}

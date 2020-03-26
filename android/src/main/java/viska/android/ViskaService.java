@@ -38,8 +38,6 @@ public class ViskaService extends Service {
         .setSmallIcon(R.drawable.icon)
         .build();
     startForeground(R.id.notification_systray, notification);
-
-    daemon = viska.android.Module.placeholder_create_node();
   }
 
   @Override
