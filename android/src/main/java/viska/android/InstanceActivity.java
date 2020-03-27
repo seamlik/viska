@@ -4,13 +4,11 @@ import android.content.Intent;
 import android.os.Bundle;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import io.reactivex.disposables.CompositeDisposable;
 import viska.database.Database;
 
 public abstract class InstanceActivity extends AppCompatActivity {
 
   protected Database db;
-  protected CompositeDisposable subscriptions;
 
   @Override
   protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -35,7 +33,6 @@ public abstract class InstanceActivity extends AppCompatActivity {
       return;
     }
 
-    subscriptions = new CompositeDisposable();
     startForegroundService(new Intent(this, ViskaService.class));
   }
 
@@ -46,10 +43,6 @@ public abstract class InstanceActivity extends AppCompatActivity {
     if (db != null) {
       db.close();
       db = null;
-    }
-    if (subscriptions != null) {
-      subscriptions.dispose();
-      subscriptions = null;
     }
   }
 }

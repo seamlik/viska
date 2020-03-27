@@ -17,6 +17,8 @@ import com.google.android.flexbox.JustifyContent;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
+import com.uber.autodispose.AutoDispose;
+import com.uber.autodispose.android.lifecycle.AndroidLifecycleScopeProvider;
 import viska.database.Vcard;
 
 public class MainActivity extends InstanceActivity {
@@ -79,7 +81,10 @@ public class MainActivity extends InstanceActivity {
     final TextView name = drawer.getHeaderView(0).findViewById(R.id.name);
     final Vcard vcard = db.getVcard(accountId);
     if (vcard != null) {
-      subscriptions.add(vcard.<Vcard>asFlowable().subscribe(it -> name.setText(it.name)));
+      vcard
+          .<Vcard>asFlowable()
+          .as(AutoDispose.autoDisposable(AndroidLifecycleScopeProvider.from(this)))
+          .subscribe(it -> name.setText(it.name));
     }
   }
 

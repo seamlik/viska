@@ -7,9 +7,9 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import com.uber.autodispose.AutoDispose;
+import com.uber.autodispose.android.lifecycle.AndroidLifecycleScopeProvider;
 import io.reactivex.Completable;
-import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -17,8 +17,6 @@ import org.apache.commons.io.IOUtils;
 import viska.database.Database;
 
 public class NewProfileActivity extends AppCompatActivity {
-
-  private final CompositeDisposable subscriptions = new CompositeDisposable();
 
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -47,7 +45,7 @@ public class NewProfileActivity extends AppCompatActivity {
   private void onNewMockProfile() {
     final Application app = (Application) getApplication();
     app.getViewModel().creatingAccount.setValue(true);
-    Disposable sub = Completable
+    Completable
         .fromAction(() -> {
           final Database db = app.getDatabase();
           final String dbPath = db.getPath();
@@ -62,10 +60,10 @@ public class NewProfileActivity extends AppCompatActivity {
         })
         .observeOn(Schedulers.io())
         .subscribeOn(Schedulers.from(getMainExecutor()))
+        .as(AutoDispose.autoDisposable(AndroidLifecycleScopeProvider.from(this)))
         .subscribe(() -> {
           startActivity(new Intent(this, MainActivity.class));
           finish();
         });
-    subscriptions.add(sub);
   }
 }

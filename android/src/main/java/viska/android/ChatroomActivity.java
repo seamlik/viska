@@ -7,6 +7,8 @@ import android.os.Bundle;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.uber.autodispose.AutoDispose;
+import com.uber.autodispose.android.lifecycle.AndroidLifecycleScopeProvider;
 import viska.database.Chatroom;
 
 public class ChatroomActivity extends InstanceActivity {
@@ -39,9 +41,10 @@ public class ChatroomActivity extends InstanceActivity {
 
     final MaterialToolbar actionBar = findViewById(R.id.action_bar);
     setSupportActionBar(actionBar);
-    subscriptions.add(
-        chatroom.<Chatroom>asFlowable().subscribe(it -> setTitle(it.getDisplayName()))
-    );
+    chatroom
+        .<Chatroom>asFlowable()
+        .as(AutoDispose.autoDisposable(AndroidLifecycleScopeProvider.from(this)))
+        .subscribe(it -> setTitle(it.getDisplayName()));
 
     final RecyclerView list = findViewById(R.id.list);
     list.setAdapter(new ConversationAdapter(chatroom.getConversation()));
