@@ -160,24 +160,27 @@ impl ConnectionManager {
             .await
             .insert(connection.id, connection.clone());
 
-        let connection_cloned = connection.clone();
+        let connection_cloned_1 = connection.clone();
+        let connection_cloned_2 = connection.clone();
         let task = new_quic_connection
             .bi_streams
-            .filter_map(|bi_stream| async {
+            .filter_map(move |bi_stream| {
+                let connection_cloned = connection_cloned_1.clone();
                 match bi_stream {
-                    Ok(s) => {
-                        log::debug!("Accepted QUIC bidirectional stream");
-                        Some(s)
-                    }
+                    Ok(s) => futures::future::ready(Some(s)),
                     Err(err) => {
-                        log::error!("Failed to accept an incoming QUIC stream: {}", err);
-                        None
+                        log::error!(
+                            "Failed to accept an incoming QUIC stream from {:?}: {}",
+                            connection_cloned,
+                            err
+                        );
+                        futures::future::ready(None)
                     }
                 }
             })
             .for_each(move |(sender, receiver)| {
                 let connection_manager = self.clone();
-                let connection = connection_cloned.clone();
+                let connection = connection_cloned_2.clone();
                 let mut response_window_sink = self.response_window_sink.clone();
                 async move {
                     let window = ResponseWindow::new(
