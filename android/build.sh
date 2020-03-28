@@ -27,6 +27,9 @@ for target in "${TARGETS[@]}"
 do
   export AR=${ANDROID_HOME}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}-ar
   export CC=${ANDROID_HOME}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}${SDK_VERSION}-clang
-  cargo build --target $target --features "android" $@
-  cargo build --target $target --features "android" --release $@
+  (
+    cd core
+    cargo build --target $target --features "android" $@
+    cargo build --target $target --features "android" --release $@
+  )
 done

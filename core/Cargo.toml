@@ -1,0 +1,43 @@
+[package]
+authors = ["殷啟聰 | Kai-Chung Yan <seamlik@debian.org>"]
+description = "Peer-to-peer chatting app hiding inside popular distributed networks"
+edition = "2018"
+name = "viska"
+version = "0.0.1"
+
+[package.metadata.riko]
+targets = ["jni"]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[features]
+android = ["android_logger", "riko_runtime/riko_jni"]
+
+[dependencies]
+android_logger = { version = "0", optional = true }
+blake3 = "0"
+chrono = { version = "0", features = ["serde"] }
+data-encoding = "2"
+futures = "0.3"
+http = "0"
+jni = "0"
+log = "0"
+mime = "0"
+quinn = "0"
+rcgen = "0"
+riko = { git = "https://github.com/seamlik/riko" }
+riko_runtime = { git = "https://github.com/seamlik/riko" }
+rustls = { version = "0", features = ["dangerous_configuration", "quic"]}
+serde = { version = "1", features = ["derive"] }
+serde_bytes = "0"
+serde_cbor = "0"
+serde_with = "1"
+thiserror = "1"
+tokio = { version = "0", features = ["full"] }
+uuid = { version = "0", features = ["v4"] }
+webpki = "0"
+
+[dev-dependencies]
+anyhow = "1"
+env_logger = "0"

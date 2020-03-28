@@ -60,5 +60,11 @@ impl Certificate for [u8] {
     }
 }
 
+impl Certificate for rustls::Certificate {
+    fn id(&self) -> CertificateId {
+        blake3::hash(self.as_ref())
+    }
+}
+
 /// BLAKE3 digest of the entire certificate encoded in ASN.1 DER.
 pub type CertificateId = Hash;
