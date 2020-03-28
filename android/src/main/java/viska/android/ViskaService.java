@@ -43,7 +43,10 @@ public class ViskaService extends Service {
   @Override
   public void onDestroy() {
     super.onDestroy();
-    daemon.close();
-    daemon = null;
+    if (daemon != null) {
+      daemon.close();
+      daemon = null;
+    }
+
   }
 }
