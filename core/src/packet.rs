@@ -12,7 +12,7 @@ use quinn::WriteError;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-const MAX_PACKET_SIZE_BYTES: usize = 1024 * 1024;
+pub const MAX_PACKET_SIZE_BYTES: usize = 1024 * 1024;
 
 pub struct ResponseWindow {
     connections: Arc<ConnectionManager>,

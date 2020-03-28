@@ -73,19 +73,25 @@ impl LocalEndpoint {
         endpoint_builder.listen(server_config);
         let socket = UdpSocket::bind("[::]:0")?;
         let (endpoint, incoming) = endpoint_builder.with_socket(socket)?;
-        log::info!(
+        println!(
             "Started local endpoint on port {}",
             endpoint.local_addr().unwrap().port()
         );
 
         let stream = incoming
-            .then(|connecting| connecting)
-            .inspect(|connecting| {
-                if let Err(err) = connecting {
-                    log::error!("Failed to process an incoming connection: {}", err)
-                }
+            .then(|connecting| {
+                log::info!("Incoming connection from {}", connecting.remote_address());
+                connecting
             })
-            .filter_map(|connecting| async { connecting.ok() });
+            .filter_map(|connecting| async {
+                match connecting {
+                    Ok(new_quic_connection) => Some(new_quic_connection),
+                    Err(err) => {
+                        log::error!("Failed to accept an incoming connection: {}", err);
+                        None
+                    }
+                }
+            });
 
         Ok((
             Self {
@@ -97,8 +103,9 @@ impl LocalEndpoint {
     }
 
     pub async fn connect(&self, addr: &SocketAddr) -> Result<NewConnection, ConnectionError> {
+        log::info!("Outgoing connection to {}", addr);
         self.quic
-            .connect_with(self.client_config.clone(), addr, "Viska Node")?
+            .connect_with(self.client_config.clone(), addr, "viska.local")?
             .await
             .map_err(Into::into)
     }
@@ -124,25 +131,6 @@ impl ConnectionInfo for quinn::Connection {
     }
 }
 
-impl From<quinn::Connection> for Connection {
-    fn from(src: quinn::Connection) -> Self {
-        Self {
-            quic: src,
-            id: Uuid::new_v4(),
-        }
-    }
-}
-
-impl ConnectionInfo for Connection {
-    fn remote_address(&self) -> SocketAddr {
-        self.quic.remote_address()
-    }
-
-    fn account_id(&self) -> Option<CertificateId> {
-        self.quic.account_id()
-    }
-}
-
 pub struct ConnectionManager {
     connections: RwLock<HashMap<Uuid, Arc<Connection>>>,
     endpoint: LocalEndpoint,
@@ -162,7 +150,11 @@ impl ConnectionManager {
     }
 
     pub async fn add(self: Arc<Self>, new_quic_connection: NewConnection) -> Arc<Connection> {
-        let connection = Arc::<Connection>::new(new_quic_connection.connection.into());
+        let connection = Arc::<Connection>::new(Connection {
+            quic: new_quic_connection.connection,
+            manager: self.clone(),
+            id: Uuid::new_v4(),
+        });
         self.connections
             .write()
             .await
@@ -171,12 +163,18 @@ impl ConnectionManager {
         let connection_cloned = connection.clone();
         let task = new_quic_connection
             .bi_streams
-            .inspect(|bi_stream| {
-                if let Err(err) = bi_stream {
-                    log::error!("Failed to accept an incoming QUIC stream: {}", err);
+            .filter_map(|bi_stream| async {
+                match bi_stream {
+                    Ok(s) => {
+                        log::debug!("Accepted QUIC bidirectional stream");
+                        Some(s)
+                    }
+                    Err(err) => {
+                        log::error!("Failed to accept an incoming QUIC stream: {}", err);
+                        None
+                    }
                 }
             })
-            .filter_map(|bi_stream| async { bi_stream.ok() })
             .for_each(move |(sender, receiver)| {
                 let connection_manager = self.clone();
                 let connection = connection_cloned.clone();
@@ -197,7 +195,7 @@ impl ConnectionManager {
                 }
             });
         tokio::spawn(task);
-        log::info!("Connected by {}", connection.remote_address());
+        log::info!("New connection: {:?}", &connection);
         connection
     }
 

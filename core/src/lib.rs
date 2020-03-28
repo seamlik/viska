@@ -15,9 +15,16 @@ use futures::prelude::*;
 use handler::DeviceHandler;
 use handler::Handler;
 use handler::PeerHandler;
+use http::StatusCode;
 use packet::ResponseWindow;
 use pki::Certificate;
+use pki::CertificateId;
 use proto::Message;
+use proto::Request;
+use proto::Response;
+use quinn::ReadToEndError;
+use std::fmt::Debug;
+use std::fmt::Formatter;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use thiserror::Error;
@@ -25,7 +32,7 @@ use uuid::Uuid;
 
 /// The protagonist.
 pub struct Node {
-    connections: Arc<ConnectionManager>,
+    connection_manager: Arc<ConnectionManager>,
 }
 
 impl Node {
@@ -43,26 +50,17 @@ impl Node {
             key,
             database: &database,
         };
-        let (endpoint, new_connections) = LocalEndpoint::start(&config)?;
         let (window_sender, window_receiver) =
             futures::channel::mpsc::unbounded::<ResponseWindow>();
-        let connections = Arc::new(ConnectionManager::new(endpoint, window_sender));
 
-        let connections_cloned = connections.clone();
-        let connection_task = new_connections.for_each(move |new_quic_connection| {
-            connections_cloned
-                .clone()
-                .add(new_quic_connection)
-                .map(|_| {})
-        });
-
+        let database_cloned = database.clone();
         let account_id = certificate.id();
         let request_task = window_receiver.for_each(move |window| {
             let response = if window.account_id() == Some(account_id) {
                 DeviceHandler.handle(&window)
             } else {
                 PeerHandler {
-                    database: database.clone(),
+                    database: database_cloned.clone(),
                 }
                 .handle(&window)
             };
@@ -76,18 +74,30 @@ impl Node {
                 }
             }
         });
+        let request_task = tokio::spawn(request_task);
+
+        let (endpoint, new_connections) = LocalEndpoint::start(&config)?;
+        let connection_manager = Arc::new(ConnectionManager::new(endpoint, window_sender));
+
+        let connections_cloned = connection_manager.clone();
+        let connection_task = new_connections.for_each(move |new_quic_connection| {
+            connections_cloned
+                .clone()
+                .add(new_quic_connection)
+                .map(|_| {})
+        });
 
         let all_tasks = async {
             connection_task.await;
-            tokio::spawn(request_task)
+            request_task
                 .await
-                .unwrap_or_else(|err| log::error!("Error when processing requests: {}", err))
+                .unwrap_or_else(|err| log::error!("Error when processing requests: {}", err));
         };
-        Ok((Self { connections }, all_tasks))
+        Ok((Self { connection_manager }, all_tasks))
     }
 
     pub async fn connect(&self, addr: &SocketAddr) -> Result<Arc<Connection>, ConnectionError> {
-        self.connections.clone().connect(addr).await
+        self.connection_manager.clone().connect(addr).await
     }
 }
 
@@ -95,6 +105,74 @@ impl Node {
 pub struct Connection {
     pub id: Uuid,
     quic: quinn::Connection,
+    manager: Arc<ConnectionManager>,
+}
+
+impl Connection {
+    /// Sends a [Request] and awaits for its [Response].
+    ///
+    /// # Note
+    ///
+    /// If the remote [Node] is sending a packet larger than a threashold, this [Connection] will
+    /// be closed immediately.
+    pub async fn request(&self, request: &Request) -> Result<Response, RequestError> {
+        let (mut sender, receiver) = self.quic.open_bi().await?;
+        let raw_request = serde_cbor::to_vec(request)
+            .unwrap_or_else(|err| panic!("Failed to encode a request: {}", err));
+
+        sender.write_all(&raw_request).await?;
+        sender.finish().await?;
+        drop(sender);
+
+        match receiver.read_to_end(packet::MAX_PACKET_SIZE_BYTES).await {
+            Ok(raw_response) => {
+                let response = serde_cbor::from_slice(&raw_response)?;
+                log::debug!("Received response: {:?}", &response);
+                Ok(response)
+            }
+            Err(err) => match err {
+                ReadToEndError::TooLong => {
+                    self.manager
+                        .close(&self.id, StatusCode::PAYLOAD_TOO_LARGE)
+                        .await;
+                    Err(RequestError::ResponseTooLong)
+                }
+                ReadToEndError::Read(inner) => Err(inner.into()),
+            },
+        }
+    }
+}
+
+impl ConnectionInfo for Connection {
+    fn remote_address(&self) -> SocketAddr {
+        self.quic.remote_address()
+    }
+
+    fn account_id(&self) -> Option<CertificateId> {
+        self.quic.account_id()
+    }
+}
+
+impl Debug for Connection {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Connection")
+            .field("connection_id", &self.id)
+            .field("remote_address", &self.remote_address())
+            .field("account_id", &self.account_id())
+            .finish()
+    }
+}
+
+/// Error when sending a [Request] and waiting for its [Response].
+#[derive(Error, Debug)]
+#[error("Failed to complete a request-response lifecycle")]
+pub enum RequestError {
+    BadResponse(#[from] serde_cbor::Error),
+    Connection(#[from] quinn::ConnectionError),
+    Read(#[from] quinn::ReadError),
+    ResponseTooLong,
+    Write(#[from] quinn::WriteError),
 }
 
 /// Access point for Viska's database.
