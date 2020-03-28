@@ -23,8 +23,8 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::net::UdpSocket;
 use std::sync::Arc;
-use std::sync::RwLock;
 use thiserror::Error;
+use tokio::sync::RwLock;
 use uuid::Uuid;
 use webpki::DNSName;
 use webpki::DNSNameRef;
@@ -139,7 +139,7 @@ pub struct ConnectionManager {
 }
 
 impl ConnectionManager {
-    pub fn add(
+    pub async fn add(
         self: Arc<Self>,
         new_quic_connection: NewConnection,
         response_window_sink: UnboundedSender<ResponseWindow>,
@@ -147,7 +147,7 @@ impl ConnectionManager {
         let connection = Arc::<Connection>::new(new_quic_connection.connection.into());
         self.connections
             .write()
-            .unwrap()
+            .await
             .insert(connection.id, connection.clone());
 
         let task = new_quic_connection
@@ -180,11 +180,11 @@ impl ConnectionManager {
         tokio::spawn(task);
     }
 
-    pub fn close(&self, id: &Uuid, code: StatusCode) {
+    pub async fn close(&self, id: &Uuid, code: StatusCode) {
         let connection = self
             .connections
             .write()
-            .unwrap()
+            .await
             .remove(id)
             .expect(&format!("Double closing connection {}", &id));
         log::info!("Closing connection to {}", connection.remote_address());

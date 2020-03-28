@@ -53,8 +53,7 @@ impl Node {
             let connections_cloned = connections_cloned.clone();
             connections_cloned
                 .clone()
-                .add(new_quic_connection, window_sender.clone());
-            async {}
+                .add(new_quic_connection, window_sender.clone())
         });
 
         let account_id = certificate.id();
@@ -73,7 +72,7 @@ impl Node {
                         .send_response(r)
                         .await
                         .unwrap_or_else(|err| log::error!("Error sending a response: {}", err)),
-                    Err(err) => window.disconnect(err),
+                    Err(err) => window.disconnect(err).await,
                 }
             }
         });

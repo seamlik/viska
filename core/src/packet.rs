@@ -51,7 +51,9 @@ impl ResponseWindow {
             },
             Err(err) => match err {
                 ReadToEndError::TooLong => {
-                    connections.close(&connection.id, StatusCode::PAYLOAD_TOO_LARGE);
+                    connections
+                        .close(&connection.id, StatusCode::PAYLOAD_TOO_LARGE)
+                        .await;
                     None
                 }
                 ReadToEndError::Read(inner) => {
@@ -66,11 +68,11 @@ impl ResponseWindow {
         send_response(&mut self.sender, &response).await
     }
 
-    pub fn disconnect(self, err: crate::handler::Error) {
+    pub async fn disconnect(self, err: crate::handler::Error) {
         let code = match err {
             crate::handler::Error::PeerIdAbsent => StatusCode::UNAUTHORIZED,
         };
-        self.connections.close(&self.connection.id, code);
+        self.connections.close(&self.connection.id, code).await;
     }
 }
 
