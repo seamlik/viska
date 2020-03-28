@@ -7,9 +7,9 @@
 
 set -e
 
-if [ -z "$ANDROID_HOME" ]
+if [ -z "$ANDROID_SDK_ROOT" ]
 then
-  echo "Must set \$ANDROID_HOME!"
+  echo "Must set \$ANDROID_SDK_ROOT!"
   exit 1
 fi
 
@@ -17,7 +17,7 @@ SDK_VERSION=29
 NDK_VERSION=21.0.6113669
 
 # For `.cargo/config` which does not support environment variables
-ln --symbolic --force "${ANDROID_HOME}/ndk/${NDK_VERSION}" android/NDK_HOME
+ln --symbolic --force "${ANDROID_SDK_ROOT}/ndk/${NDK_VERSION}" android/NDK_HOME
 
 TARGETS=(
   aarch64-linux-android
@@ -25,8 +25,8 @@ TARGETS=(
 )
 for target in "${TARGETS[@]}"
 do
-  export AR=${ANDROID_HOME}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}-ar
-  export CC=${ANDROID_HOME}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}${SDK_VERSION}-clang
+  export AR=${ANDROID_SDK_ROOT}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}-ar
+  export CC=${ANDROID_SDK_ROOT}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/${target}${SDK_VERSION}-clang
   (
     cd core
     cargo build --target $target --features "android" $@
