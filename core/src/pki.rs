@@ -20,8 +20,12 @@ use rcgen::CertificateParams;
 use rcgen::DistinguishedName;
 use rcgen::DnType;
 
+/// Bundle generated when creating a certificate.
 pub struct CertificateBundle {
+    /// X.509 certificate encoded in DER.
     pub certificate: Vec<u8>,
+
+    // Private and (optionally) public key in PKCS#8 encoded in DER.
     pub keypair: Vec<u8>,
 }
 
@@ -47,24 +51,14 @@ pub fn new_certificate() -> CertificateBundle {
 /// X.509 certificate with extra features.
 pub trait Certificate {
     /// Calculates its ID.
-    ///
-    /// # See
-    ///
-    /// * [CertificateId]
-    fn id(&self) -> Hash;
-}
-
-impl Certificate for Vec<u8> {
-    fn id(&self) -> Hash {
-        blake3::hash(self)
-    }
+    fn id(&self) -> CertificateId;
 }
 
 impl Certificate for [u8] {
-    fn id(&self) -> Hash {
+    fn id(&self) -> CertificateId {
         blake3::hash(self)
     }
 }
 
 /// BLAKE3 digest of the entire certificate encoded in ASN.1 DER.
-pub type CertificateId = [u8; 32];
+pub type CertificateId = Hash;
