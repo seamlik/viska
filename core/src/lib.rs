@@ -159,7 +159,13 @@ impl Debug for Connection {
             .debug_struct("Connection")
             .field("connection_id", &self.id)
             .field("remote_address", &self.remote_address())
-            .field("account_id", &self.account_id())
+            .field(
+                "account_id",
+                &self
+                    .account_id()
+                    .map(|hash| hash.to_hex().to_string())
+                    .unwrap_or("null".into()),
+            )
             .finish()
     }
 }
