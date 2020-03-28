@@ -7,7 +7,6 @@ mod handler;
 mod packet;
 pub mod pki;
 pub mod proto;
-pub(crate) mod util;
 
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
