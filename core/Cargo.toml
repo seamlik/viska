@@ -40,4 +40,6 @@ webpki = "0"
 
 [dev-dependencies]
 anyhow = "1"
+clap = "2"
 env_logger = "0"
+structopt = "0"
