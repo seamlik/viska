@@ -1,16 +1,17 @@
 use crate::packet::ResponseWindow;
 use crate::pki::Certificate;
 use crate::pki::CertificateId;
+use crate::Connection;
+use crate::ConnectionError;
 use crate::Database;
+use crate::EndpointError;
 use futures::channel::mpsc::UnboundedSender;
 use futures::prelude::*;
 use http::StatusCode;
 use quinn::CertificateChain;
+use quinn::ClientConfig;
 use quinn::Endpoint;
-use quinn::EndpointError;
 use quinn::NewConnection;
-use quinn::ParseError;
-use quinn::PrivateKey;
 use quinn::ServerConfig;
 use rustls::internal::msgs::handshake::DistinguishedNames;
 use rustls::ClientCertVerified;
@@ -23,7 +24,6 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::net::UdpSocket;
 use std::sync::Arc;
-use thiserror::Error;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 use webpki::DNSName;
@@ -39,23 +39,35 @@ pub struct Config<'a> {
 ///
 /// This also serves as the main endpoint that is used to connect with remote [Node](crate::Node)s.
 pub struct LocalEndpoint {
-    endpoint: Endpoint,
+    quic: Endpoint,
+    client_config: ClientConfig,
 }
 
 impl LocalEndpoint {
-    pub fn start(config: &Config) -> Result<(Self, impl Stream<Item = NewConnection>), Error> {
+    pub fn start(
+        config: &Config,
+    ) -> Result<(Self, impl Stream<Item = NewConnection>), EndpointError> {
         let cert_chain = CertificateChain::from_certs(std::iter::once(
             quinn::Certificate::from_der(&config.certificate)?,
         ));
-        let key = PrivateKey::from_der(config.key)?;
-        let mut server_config = ServerConfig::default();
-        server_config.certificate(cert_chain, key)?;
-
-        let tls_config = Arc::get_mut(&mut server_config.crypto).unwrap();
-        tls_config.set_client_certificate_verifier(Arc::new(CertificateVerifier {
+        let quinn_key = quinn::PrivateKey::from_der(config.key)?;
+        let verifier = Arc::new(CertificateVerifier {
             account_id: config.certificate.id(),
             database: config.database.clone(),
-        }));
+        });
+
+        let mut server_config = ServerConfig::default();
+        server_config.certificate(cert_chain.clone(), quinn_key)?;
+        let server_tls_config = Arc::get_mut(&mut server_config.crypto).unwrap();
+        server_tls_config.set_client_certificate_verifier(verifier.clone());
+
+        let rustls_key = rustls::PrivateKey(config.key.into());
+        let mut client_config = ClientConfig::default();
+        let client_tls_config = Arc::get_mut(&mut client_config.crypto).unwrap();
+        client_tls_config.set_single_client_cert(cert_chain.into_iter().collect(), rustls_key)?;
+        client_tls_config
+            .dangerous()
+            .set_certificate_verifier(verifier);
 
         let mut endpoint_builder = Endpoint::builder();
         endpoint_builder.listen(server_config);
@@ -75,18 +87,21 @@ impl LocalEndpoint {
             })
             .filter_map(|connecting| async { connecting.ok() });
 
-        Ok((Self { endpoint }, stream))
+        Ok((
+            Self {
+                quic: endpoint,
+                client_config,
+            },
+            stream,
+        ))
     }
-}
 
-/// Error when starting an [Endpoint].
-#[derive(Error, Debug)]
-#[error("Failed to start a QUIC endpoint")]
-pub enum Error {
-    CryptoMaterial(#[from] ParseError),
-    TlsConfiguration(#[from] TLSError),
-    Quic(#[from] EndpointError),
-    Socket(#[from] std::io::Error),
+    pub async fn connect(&self, addr: &SocketAddr) -> Result<NewConnection, ConnectionError> {
+        self.quic
+            .connect_with(self.client_config.clone(), addr, "Viska Node")?
+            .await
+            .map_err(Into::into)
+    }
 }
 
 pub trait ConnectionInfo {
@@ -109,11 +124,6 @@ impl ConnectionInfo for quinn::Connection {
     }
 }
 
-pub struct Connection {
-    pub id: Uuid,
-    quic: quinn::Connection,
-}
-
 impl From<quinn::Connection> for Connection {
     fn from(src: quinn::Connection) -> Self {
         Self {
@@ -133,23 +143,32 @@ impl ConnectionInfo for Connection {
     }
 }
 
-#[derive(Default)]
 pub struct ConnectionManager {
-    connections: RwLock<HashMap<Uuid, Arc<Connection>>>, // TODO: Async RwLock
+    connections: RwLock<HashMap<Uuid, Arc<Connection>>>,
+    endpoint: LocalEndpoint,
+    response_window_sink: UnboundedSender<ResponseWindow>,
 }
 
 impl ConnectionManager {
-    pub async fn add(
-        self: Arc<Self>,
-        new_quic_connection: NewConnection,
+    pub fn new(
+        endpoint: LocalEndpoint,
         response_window_sink: UnboundedSender<ResponseWindow>,
-    ) {
+    ) -> Self {
+        Self {
+            endpoint,
+            response_window_sink,
+            connections: Default::default(),
+        }
+    }
+
+    pub async fn add(self: Arc<Self>, new_quic_connection: NewConnection) -> Arc<Connection> {
         let connection = Arc::<Connection>::new(new_quic_connection.connection.into());
         self.connections
             .write()
             .await
             .insert(connection.id, connection.clone());
 
+        let connection_cloned = connection.clone();
         let task = new_quic_connection
             .bi_streams
             .inspect(|bi_stream| {
@@ -160,8 +179,8 @@ impl ConnectionManager {
             .filter_map(|bi_stream| async { bi_stream.ok() })
             .for_each(move |(sender, receiver)| {
                 let connection_manager = self.clone();
-                let connection = connection.clone();
-                let mut response_window_sink = response_window_sink.clone();
+                let connection = connection_cloned.clone();
+                let mut response_window_sink = self.response_window_sink.clone();
                 async move {
                     let window = ResponseWindow::new(
                         connection_manager.clone(),
@@ -178,6 +197,8 @@ impl ConnectionManager {
                 }
             });
         tokio::spawn(task);
+        log::info!("Connected by {}", connection.remote_address());
+        connection
     }
 
     pub async fn close(&self, id: &Uuid, code: StatusCode) {
@@ -186,9 +207,16 @@ impl ConnectionManager {
             .write()
             .await
             .remove(id)
-            .expect(&format!("Double closing connection {}", &id));
+            .unwrap_or_else(|| panic!("Double closing connection {}", &id));
         log::info!("Closing connection to {}", connection.remote_address());
         connection.quic.close(code.as_u16().into(), &[]);
+    }
+
+    pub async fn connect(
+        self: Arc<Self>,
+        addr: &SocketAddr,
+    ) -> Result<Arc<Connection>, ConnectionError> {
+        Ok(self.clone().add(self.endpoint.connect(addr).await?).await)
     }
 }
 
@@ -209,9 +237,7 @@ impl CertificateVerifier {
         match presented_certs {
             [cert] => {
                 let peer_id = cert.id();
-                if self.account_id == peer_id {
-                    Ok(())
-                } else if self.database.is_peer(self.account_id.as_bytes()) {
+                if self.account_id == peer_id || self.database.is_peer(self.account_id.as_bytes()) {
                     Ok(())
                 } else {
                     Err(TLSError::General("Unrecognized certificate ID".into()))

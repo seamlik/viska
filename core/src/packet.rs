@@ -1,9 +1,9 @@
-use crate::endpoint::Connection;
 use crate::endpoint::ConnectionInfo;
 use crate::endpoint::ConnectionManager;
 use crate::pki::CertificateId;
 use crate::proto::Request;
 use crate::proto::Response;
+use crate::Connection;
 use http::StatusCode;
 use quinn::ReadToEndError;
 use quinn::RecvStream;

@@ -11,7 +11,6 @@ pub(crate) mod util;
 
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
-pub use endpoint::Error as EndpointError;
 use endpoint::LocalEndpoint;
 use futures::prelude::*;
 use handler::DeviceHandler;
@@ -20,12 +19,14 @@ use handler::PeerHandler;
 use packet::ResponseWindow;
 use pki::Certificate;
 use proto::Message;
+use std::net::SocketAddr;
 use std::sync::Arc;
+use thiserror::Error;
+use uuid::Uuid;
 
 /// The protagonist.
 pub struct Node {
     connections: Arc<ConnectionManager>,
-    endpoint: LocalEndpoint,
 }
 
 impl Node {
@@ -38,7 +39,6 @@ impl Node {
         key: &[u8],
         database: Arc<dyn Database>,
     ) -> Result<(Self, impl Future<Output = ()>), EndpointError> {
-        let connections = Arc::<ConnectionManager>::default();
         let config = endpoint::Config {
             certificate,
             key,
@@ -47,13 +47,14 @@ impl Node {
         let (endpoint, new_connections) = LocalEndpoint::start(&config)?;
         let (window_sender, window_receiver) =
             futures::channel::mpsc::unbounded::<ResponseWindow>();
+        let connections = Arc::new(ConnectionManager::new(endpoint, window_sender));
 
         let connections_cloned = connections.clone();
         let connection_task = new_connections.for_each(move |new_quic_connection| {
-            let connections_cloned = connections_cloned.clone();
             connections_cloned
                 .clone()
-                .add(new_quic_connection, window_sender.clone())
+                .add(new_quic_connection)
+                .map(|_| {})
         });
 
         let account_id = certificate.id();
@@ -83,14 +84,18 @@ impl Node {
                 .await
                 .unwrap_or_else(|err| log::error!("Error when processing requests: {}", err))
         };
-        Ok((
-            Self {
-                connections,
-                endpoint,
-            },
-            all_tasks,
-        ))
+        Ok((Self { connections }, all_tasks))
     }
+
+    pub async fn connect(&self, addr: &SocketAddr) -> Result<Arc<Connection>, ConnectionError> {
+        self.connections.clone().connect(addr).await
+    }
+}
+
+/// Connection to a remote [Node].
+pub struct Connection {
+    pub id: Uuid,
+    quic: quinn::Connection,
 }
 
 /// Access point for Viska's database.
@@ -100,4 +105,22 @@ pub trait Database: Send + Sync {
 
     /// Accepts an incoming [Message].
     fn accept_message(&self, message: &Message, sender: &[u8]);
+}
+
+/// Error when connecting with a remote [Node].
+#[derive(Error, Debug)]
+#[error("Failed to connect to a remote node")]
+pub enum ConnectionError {
+    Start(#[from] quinn::ConnectError),
+    Handshake(#[from] quinn::ConnectionError),
+}
+
+/// Error when starting a QUIC endpoint.
+#[derive(Error, Debug)]
+#[error("Failed to start a QUIC endpoint")]
+pub enum EndpointError {
+    CryptoMaterial(#[from] quinn::ParseError),
+    TlsConfiguration(#[from] rustls::TLSError),
+    Quic(#[from] quinn::EndpointError),
+    Socket(#[from] std::io::Error),
 }
