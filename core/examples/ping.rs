@@ -1,6 +1,6 @@
-use futures::prelude::*;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Instant;
 use structopt::StructOpt;
 use tokio::time::Duration;
 use viska::proto::Message;
@@ -16,25 +16,28 @@ async fn main() -> anyhow::Result<()> {
 
     let dummy_cert_bundle = viska::pki::new_certificate();
     let database: Arc<dyn Database> = Arc::new(DummyDatabase::default());
-    let (node, task) = Node::start(
+    let (node, _) = Node::start(
         &dummy_cert_bundle.certificate,
         &dummy_cert_bundle.keypair,
         database,
     )?;
 
     let connection = node.connect(&cli.destination).await?;
-    tokio::time::interval(Duration::from_secs(1))
-        .for_each(|_| async {
-            println!("Pinging remote node at {}", cli.destination);
-            match connection.request(&Request::Ping).await {
-                Ok(_) => println!("  SUCCESS"),
-                Err(err) => println!("  ERROR: {}", err),
-            }
-        })
-        .await;
-
-    task.await;
-    Ok(())
+    let mut counter = 0_u32;
+    loop {
+        let earlier = Instant::now();
+        counter += 1;
+        match connection.request(&Request::Ping).await {
+            Ok(_) => println!(
+                "Received pong ({}) after {} ms from {:?}",
+                counter,
+                (Instant::now() - earlier).as_millis(),
+                &connection
+            ),
+            Err(err) => println!("  ERROR: {}", err),
+        }
+        tokio::time::delay_for(Duration::from_secs(1)).await;
+    }
 }
 
 #[derive(StructOpt)]
