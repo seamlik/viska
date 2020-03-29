@@ -99,6 +99,7 @@ impl Node {
                 .await
                 .unwrap_or_else(|err| log::error!("Error when processing requests: {}", err));
         };
+        println!("Started Viska node with account {}", account_id.to_hex());
         Ok((Self { connection_manager }, all_tasks))
     }
 
