@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
         &dummy_cert_bundle.keypair,
         database,
     )?;
-    future.await;
+    future.await?;
     Ok(())
 }
 

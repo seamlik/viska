@@ -28,6 +28,7 @@ use std::fmt::Formatter;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use thiserror::Error;
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 /// The protagonist.
@@ -44,7 +45,7 @@ impl Node {
         certificate: &[u8],
         key: &[u8],
         database: Arc<dyn Database>,
-    ) -> Result<(Self, impl Future<Output = ()>), EndpointError> {
+    ) -> Result<(Self, JoinHandle<()>), EndpointError> {
         let config = endpoint::Config {
             certificate,
             key,
@@ -55,7 +56,7 @@ impl Node {
 
         let database_cloned = database.clone();
         let account_id = certificate.id();
-        let request_task = window_receiver.for_each(move |window| {
+        tokio::spawn(window_receiver.for_each(move |window| {
             let response = if window.account_id() == Some(account_id) {
                 DeviceHandler.handle(&window)
             } else {
@@ -73,14 +74,13 @@ impl Node {
                     Err(err) => window.disconnect(err).await,
                 }
             }
-        });
-        let request_task = tokio::spawn(request_task);
+        }));
 
         let (endpoint, incomings) = LocalEndpoint::start(&config)?;
         let connection_manager = Arc::new(ConnectionManager::new(endpoint, window_sender));
 
         let connection_manager_cloned = connection_manager.clone();
-        let connection_task = incomings.for_each(move |connecting| {
+        let task = tokio::spawn(incomings.for_each(move |connecting| {
             let connection_manager_cloned = connection_manager_cloned.clone();
             tokio::spawn(async {
                 match connecting.await {
@@ -91,16 +91,10 @@ impl Node {
                 }
             });
             async {}
-        });
+        }));
 
-        let all_tasks = async {
-            connection_task.await;
-            request_task
-                .await
-                .unwrap_or_else(|err| log::error!("Error when processing requests: {}", err));
-        };
         println!("Started Viska node with account {}", account_id.to_hex());
-        Ok((Self { connection_manager }, all_tasks))
+        Ok((Self { connection_manager }, task))
     }
 
     pub async fn connect(&self, addr: &SocketAddr) -> Result<Arc<Connection>, ConnectionError> {
