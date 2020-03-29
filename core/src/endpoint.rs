@@ -191,7 +191,16 @@ impl ConnectionManager {
                 async {}
             });
         tokio::spawn(task);
-        log::info!("New connection: {:?}", &connection);
+
+        log::info!(
+            "Connected to {} {:?}",
+            if Some(self.endpoint.account_id) == connection.account_id() {
+                "Device"
+            } else {
+                "Peer"
+            },
+            &connection
+        );
         connection
     }
 
