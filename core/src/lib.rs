@@ -170,7 +170,7 @@ impl Debug for Connection {
                 &self
                     .account_id()
                     .map(|hash| hash.to_hex().to_string())
-                    .unwrap_or("null".into()),
+                    .unwrap_or_else(|| "None".into()),
             )
             .finish()
     }
