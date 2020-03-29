@@ -36,11 +36,14 @@ impl ResponseWindow {
                     })
                 }
                 Err(err) => {
-                    log::error!("Failed to parse an incoming request: {}", &err);
+                    log::error!("Failed to parse an incoming request: {:?}", &err);
                     send_response(&mut sender, &err.into())
                         .await
                         .unwrap_or_else(|err| {
-                            log::error!("Failed to send a response regarding bad request: {}", err)
+                            log::error!(
+                                "Failed to send a response regarding bad request: {:?}",
+                                err
+                            )
                         });
                     None
                 }

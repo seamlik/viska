@@ -70,7 +70,7 @@ impl Node {
                     Ok(r) => window
                         .send_response(r)
                         .await
-                        .unwrap_or_else(|err| log::error!("Error sending a response: {}", err)),
+                        .unwrap_or_else(|err| log::error!("Error sending a response: {:?}", err)),
                     Err(err) => window.disconnect(err),
                 }
             }
@@ -87,7 +87,7 @@ impl Node {
                     Ok(new_connection) => {
                         connection_manager_cloned.add(new_connection).await;
                     }
-                    Err(err) => log::error!("Failed to accept an incoming connection: {}", err),
+                    Err(err) => log::error!("Failed to accept an incoming connection: {:?}", err),
                 }
             });
             async {}

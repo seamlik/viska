@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
                 (Instant::now() - earlier).as_millis(),
                 &connection
             ),
-            Err(err) => println!("  ERROR: {}", err),
+            Err(err) => println!("  ERROR: {:?}", err),
         }
         tokio::time::delay_for(Duration::from_secs(1)).await;
     }
