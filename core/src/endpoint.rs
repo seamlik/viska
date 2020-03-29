@@ -7,7 +7,6 @@ use crate::Database;
 use crate::EndpointError;
 use futures::channel::mpsc::UnboundedSender;
 use futures::prelude::*;
-use http::StatusCode;
 use quinn::CertificateChain;
 use quinn::Endpoint;
 use quinn::NewConnection;
@@ -145,10 +144,10 @@ impl ConnectionManager {
     }
 
     pub async fn add(self: Arc<Self>, new_quic_connection: NewConnection) -> Arc<Connection> {
+        let connection_id = Uuid::new_v4();
         let connection = Arc::<Connection>::new(Connection {
             quic: new_quic_connection.connection,
-            manager: self.clone(),
-            id: Uuid::new_v4(),
+            id: connection_id,
         });
         self.connections
             .write()
@@ -157,7 +156,8 @@ impl ConnectionManager {
 
         let connection_cloned_1 = connection.clone();
         let connection_cloned_2 = connection.clone();
-        let connection_manager = self.clone();
+        let connection_manager_1 = self.clone();
+        let connection_manager_2 = self.clone();
         let task = new_quic_connection
             .bi_streams
             .filter_map(move |bi_stream| {
@@ -175,17 +175,12 @@ impl ConnectionManager {
                 }
             })
             .for_each(move |(sender, receiver)| {
-                let connection_manager = connection_manager.clone();
+                // Create ResponseWindow
+                let connection_manager = connection_manager_1.clone();
                 let connection = connection_cloned_2.clone();
                 let mut response_window_sink = connection_manager.response_window_sink.clone();
                 tokio::spawn(async move {
-                    let window = ResponseWindow::new(
-                        connection_manager.clone(),
-                        connection.clone(),
-                        sender,
-                        receiver,
-                    )
-                    .await;
+                    let window = ResponseWindow::new(connection.clone(), sender, receiver).await;
                     if let Some(w) = window {
                         response_window_sink.send(w).await.unwrap_or_else(|err| {
                             log::error!("Failed to create a ResponseWindow: {}", err)
@@ -193,6 +188,17 @@ impl ConnectionManager {
                     }
                 });
                 async {}
+            })
+            .then(move |_| {
+                // Remove itself from ConnectionManager after being closed.
+                let connection_manager = connection_manager_2.clone();
+                async move {
+                    connection_manager
+                        .connections
+                        .write()
+                        .await
+                        .remove(&connection_id);
+                }
             });
         tokio::spawn(task);
 
@@ -206,17 +212,6 @@ impl ConnectionManager {
             &connection
         );
         connection
-    }
-
-    pub async fn close(&self, id: &Uuid, code: StatusCode) {
-        let connection = self
-            .connections
-            .write()
-            .await
-            .remove(id)
-            .unwrap_or_else(|| panic!("Double closing connection {}", &id));
-        log::info!("Closing connection to {}", connection.remote_address());
-        connection.quic.close(code.as_u16().into(), &[]);
     }
 
     pub async fn connect(

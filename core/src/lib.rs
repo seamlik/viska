@@ -71,7 +71,7 @@ impl Node {
                         .send_response(r)
                         .await
                         .unwrap_or_else(|err| log::error!("Error sending a response: {}", err)),
-                    Err(err) => window.disconnect(err).await,
+                    Err(err) => window.disconnect(err),
                 }
             }
         }));
@@ -106,7 +106,6 @@ impl Node {
 pub struct Connection {
     pub id: Uuid,
     quic: quinn::Connection,
-    manager: Arc<ConnectionManager>,
 }
 
 impl Connection {
@@ -133,14 +132,17 @@ impl Connection {
             }
             Err(err) => match err {
                 ReadToEndError::TooLong => {
-                    self.manager
-                        .close(&self.id, StatusCode::PAYLOAD_TOO_LARGE)
-                        .await;
+                    self.close(StatusCode::PAYLOAD_TOO_LARGE);
                     Err(RequestError::ResponseTooLong)
                 }
                 ReadToEndError::Read(inner) => Err(inner.into()),
             },
         }
+    }
+
+    pub fn close(&self, code: StatusCode) {
+        log::info!("Closing connection to {}", self.remote_address());
+        self.quic.close(code.as_u16().into(), &[]);
     }
 }
 

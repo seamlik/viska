@@ -1,5 +1,4 @@
 use crate::endpoint::ConnectionInfo;
-use crate::endpoint::ConnectionManager;
 use crate::pki::CertificateId;
 use crate::proto::Request;
 use crate::proto::Response;
@@ -15,7 +14,6 @@ use std::sync::Arc;
 pub const MAX_PACKET_SIZE_BYTES: usize = 1024 * 1024;
 
 pub struct ResponseWindow {
-    connections: Arc<ConnectionManager>,
     connection: Arc<Connection>,
     pub request: Request,
     sender: SendStream,
@@ -23,7 +21,6 @@ pub struct ResponseWindow {
 
 impl ResponseWindow {
     pub async fn new(
-        connections: Arc<ConnectionManager>,
         connection: Arc<Connection>,
         mut sender: SendStream,
         receiver: RecvStream,
@@ -33,7 +30,6 @@ impl ResponseWindow {
                 Ok(request) => {
                     log::debug!("Received request: {:?}", &request);
                     Some(Self {
-                        connections: connections.clone(),
                         connection,
                         request,
                         sender,
@@ -51,9 +47,7 @@ impl ResponseWindow {
             },
             Err(err) => match err {
                 ReadToEndError::TooLong => {
-                    connections
-                        .close(&connection.id, StatusCode::PAYLOAD_TOO_LARGE)
-                        .await;
+                    connection.close(StatusCode::PAYLOAD_TOO_LARGE);
                     None
                 }
                 ReadToEndError::Read(inner) => {
@@ -68,11 +62,11 @@ impl ResponseWindow {
         send_response(&mut self.sender, &response).await
     }
 
-    pub async fn disconnect(self, err: crate::handler::Error) {
+    pub fn disconnect(self, err: crate::handler::Error) {
         let code = match err {
             crate::handler::Error::PeerIdAbsent => StatusCode::UNAUTHORIZED,
         };
-        self.connections.close(&self.connection.id, code).await;
+        self.connection.close(code);
     }
 }
 
