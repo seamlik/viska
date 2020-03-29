@@ -39,14 +39,15 @@ pub struct Config<'a> {
 ///
 /// This also serves as the main endpoint that is used to connect with remote [Node](crate::Node)s.
 pub struct LocalEndpoint {
+    account_id: CertificateId,
     quic: Endpoint,
-    client_config: ClientConfig,
+    client_config: quinn::ClientConfig,
 }
 
 impl LocalEndpoint {
     pub fn start(
         config: &Config,
-    ) -> Result<(Self, impl Stream<Item = NewConnection>), EndpointError> {
+    ) -> Result<(Self, impl Stream<Item = quinn::Connecting>), EndpointError> {
         let cert_chain = CertificateChain::from_certs(std::iter::once(
             quinn::Certificate::from_der(&config.certificate)?,
         ));
@@ -82,27 +83,13 @@ impl LocalEndpoint {
             endpoint.local_addr().unwrap().port()
         );
 
-        let stream = incoming
-            .then(|connecting| {
-                log::info!("Incoming connection from {}", connecting.remote_address());
-                connecting
-            })
-            .filter_map(|connecting| async {
-                match connecting {
-                    Ok(new_quic_connection) => Some(new_quic_connection),
-                    Err(err) => {
-                        log::error!("Failed to accept an incoming connection: {}", err);
-                        None
-                    }
-                }
-            });
-
         Ok((
             Self {
+                account_id: config.certificate.id(),
                 quic: endpoint,
                 client_config,
             },
-            stream,
+            incoming,
         ))
     }
 
@@ -166,6 +153,7 @@ impl ConnectionManager {
 
         let connection_cloned_1 = connection.clone();
         let connection_cloned_2 = connection.clone();
+        let connection_manager = self.clone();
         let task = new_quic_connection
             .bi_streams
             .filter_map(move |bi_stream| {
@@ -183,10 +171,10 @@ impl ConnectionManager {
                 }
             })
             .for_each(move |(sender, receiver)| {
-                let connection_manager = self.clone();
+                let connection_manager = connection_manager.clone();
                 let connection = connection_cloned_2.clone();
-                let mut response_window_sink = self.response_window_sink.clone();
-                async move {
+                let mut response_window_sink = connection_manager.response_window_sink.clone();
+                tokio::spawn(async move {
                     let window = ResponseWindow::new(
                         connection_manager.clone(),
                         connection.clone(),
@@ -199,7 +187,8 @@ impl ConnectionManager {
                             log::error!("Failed to create a ResponseWindow: {}", err)
                         });
                     }
-                }
+                });
+                async {}
             });
         tokio::spawn(task);
         log::info!("New connection: {:?}", &connection);

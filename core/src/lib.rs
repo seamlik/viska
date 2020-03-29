@@ -76,15 +76,21 @@ impl Node {
         });
         let request_task = tokio::spawn(request_task);
 
-        let (endpoint, new_connections) = LocalEndpoint::start(&config)?;
+        let (endpoint, incomings) = LocalEndpoint::start(&config)?;
         let connection_manager = Arc::new(ConnectionManager::new(endpoint, window_sender));
 
-        let connections_cloned = connection_manager.clone();
-        let connection_task = new_connections.for_each(move |new_quic_connection| {
-            connections_cloned
-                .clone()
-                .add(new_quic_connection)
-                .map(|_| {})
+        let connection_manager_cloned = connection_manager.clone();
+        let connection_task = incomings.for_each(move |connecting| {
+            let connection_manager_cloned = connection_manager_cloned.clone();
+            tokio::spawn(async {
+                match connecting.await {
+                    Ok(new_connection) => {
+                        connection_manager_cloned.add(new_connection).await;
+                    }
+                    Err(err) => log::error!("Failed to accept an incoming connection: {}", err),
+                }
+            });
+            async {}
         });
 
         let all_tasks = async {
