@@ -122,7 +122,6 @@ impl Connection {
 
         sender.write_all(&raw_request).await?;
         sender.finish().await?;
-        drop(sender);
 
         match receiver.read_to_end(packet::MAX_PACKET_SIZE_BYTES).await {
             Ok(raw_response) => {

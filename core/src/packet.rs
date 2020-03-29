@@ -50,11 +50,12 @@ impl ResponseWindow {
             },
             Err(err) => match err {
                 ReadToEndError::TooLong => {
+                    sender.reset(StatusCode::PAYLOAD_TOO_LARGE.as_u16().into());
                     connection.close(StatusCode::PAYLOAD_TOO_LARGE);
                     None
                 }
                 ReadToEndError::Read(inner) => {
-                    log::error!("Failed to read an incoming request: {}", inner);
+                    log::error!("Failed to read an incoming request: {:?}", inner);
                     None
                 }
             },
@@ -65,10 +66,11 @@ impl ResponseWindow {
         send_response(&mut self.sender, &response).await
     }
 
-    pub fn disconnect(self, err: crate::handler::Error) {
+    pub fn disconnect(mut self, err: crate::handler::Error) {
         let code = match err {
             crate::handler::Error::PeerIdAbsent => StatusCode::UNAUTHORIZED,
         };
+        self.sender.reset(code.as_u16().into());
         self.connection.close(code);
     }
 }
@@ -89,5 +91,6 @@ async fn send_response(sender: &mut SendStream, response: &Response) -> Result<(
 }
 
 async fn send_raw(sender: &mut SendStream, response: &[u8]) -> Result<(), WriteError> {
-    sender.write_all(&response).await
+    sender.write_all(&response).await?;
+    sender.finish().await
 }
