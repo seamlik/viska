@@ -143,10 +143,10 @@ impl ConnectionManager {
         }
     }
 
-    pub async fn add(self: Arc<Self>, new_quic_connection: NewConnection) -> Arc<Connection> {
+    pub async fn add(self: Arc<Self>, new_connection: NewConnection) -> Arc<Connection> {
         let connection_id = Uuid::new_v4();
         let connection = Arc::<Connection>::new(Connection {
-            quic: new_quic_connection.connection,
+            quic: new_connection.connection,
             id: connection_id,
         });
         self.connections
@@ -154,53 +154,39 @@ impl ConnectionManager {
             .await
             .insert(connection.id, connection.clone());
 
-        let connection_cloned_1 = connection.clone();
-        let connection_cloned_2 = connection.clone();
-        let connection_manager_1 = self.clone();
-        let connection_manager_2 = self.clone();
-        let task = new_quic_connection
-            .bi_streams
-            .filter_map(move |bi_stream| {
-                let connection_cloned = connection_cloned_1.clone();
-                match bi_stream {
-                    Ok(s) => futures::future::ready(Some(s)),
+        // Create ResponseWindow
+        let connection_1 = connection.clone();
+        let connection_2 = connection.clone();
+        let mut bi_streams = new_connection.bi_streams;
+        let response_window_sink = self.response_window_sink.clone();
+        let connection_manager = self.clone();
+        tokio::spawn(async move {
+            while let Some(stream) = bi_streams.next().await {
+                let (sender, receiver) = match stream {
                     Err(err) => {
-                        log::error!(
-                            "Failed to accept an incoming QUIC stream from {:?}: {}",
-                            connection_cloned,
-                            err
-                        );
-                        futures::future::ready(None)
+                        log::error!("Closing {:?}: {:?}", connection_1.clone(), err);
+                        break;
                     }
-                }
-            })
-            .for_each(move |(sender, receiver)| {
-                // Create ResponseWindow
-                let connection_manager = connection_manager_1.clone();
-                let connection = connection_cloned_2.clone();
-                let mut response_window_sink = connection_manager.response_window_sink.clone();
+                    Ok((sender, receiver)) => (sender, receiver),
+                };
+
+                let mut response_window_sink = response_window_sink.clone();
+                let connection_2 = connection_2.clone();
                 tokio::spawn(async move {
-                    let window = ResponseWindow::new(connection.clone(), sender, receiver).await;
+                    let window = ResponseWindow::new(connection_2.clone(), sender, receiver).await;
                     if let Some(w) = window {
                         response_window_sink.send(w).await.unwrap_or_else(|err| {
-                            log::error!("Failed to create a ResponseWindow: {}", err)
+                            log::error!("Failed to create a ResponseWindow: {:?}", err)
                         });
                     }
                 });
-                async {}
-            })
-            .then(move |_| {
-                // Remove itself from ConnectionManager after being closed.
-                let connection_manager = connection_manager_2.clone();
-                async move {
-                    connection_manager
-                        .connections
-                        .write()
-                        .await
-                        .remove(&connection_id);
-                }
-            });
-        tokio::spawn(task);
+            }
+            connection_manager
+                .connections
+                .write()
+                .await
+                .remove(&connection_id);
+        });
 
         log::info!(
             "Connected to {} {:?}",
