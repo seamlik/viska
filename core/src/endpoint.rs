@@ -63,6 +63,8 @@ impl LocalEndpoint {
         let mut server_config = server_config_builder.build();
         let server_tls_config = Arc::get_mut(&mut server_config.crypto).unwrap();
         server_tls_config.set_client_certificate_verifier(verifier.clone());
+        let server_quic_config = Arc::get_mut(&mut server_config.transport).unwrap();
+        server_quic_config.stream_window_uni(0);
 
         let rustls_key = rustls::PrivateKey(config.key.into());
         let mut client_config_builder = quinn::ClientConfigBuilder::default();
@@ -73,6 +75,8 @@ impl LocalEndpoint {
         client_tls_config
             .dangerous()
             .set_certificate_verifier(verifier);
+        let client_quic_config = Arc::get_mut(&mut client_config.transport).unwrap();
+        client_quic_config.stream_window_uni(0);
 
         let mut endpoint_builder = Endpoint::builder();
         endpoint_builder.listen(server_config);
