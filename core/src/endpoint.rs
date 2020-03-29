@@ -9,10 +9,8 @@ use futures::channel::mpsc::UnboundedSender;
 use futures::prelude::*;
 use http::StatusCode;
 use quinn::CertificateChain;
-use quinn::ClientConfig;
 use quinn::Endpoint;
 use quinn::NewConnection;
-use quinn::ServerConfig;
 use rustls::internal::msgs::handshake::DistinguishedNames;
 use rustls::ClientCertVerified;
 use rustls::ClientCertVerifier;
@@ -28,6 +26,8 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 use webpki::DNSName;
 use webpki::DNSNameRef;
+
+const ALPN_PROTOCOL: &str = "viska";
 
 pub struct Config<'a> {
     pub certificate: &'a [u8],
@@ -56,13 +56,17 @@ impl LocalEndpoint {
             database: config.database.clone(),
         });
 
-        let mut server_config = ServerConfig::default();
-        server_config.certificate(cert_chain.clone(), quinn_key)?;
+        let mut server_config_builder = quinn::ServerConfigBuilder::default();
+        server_config_builder.protocols(&[ALPN_PROTOCOL.as_bytes()]);
+        server_config_builder.certificate(cert_chain.clone(), quinn_key)?;
+        let mut server_config = server_config_builder.build();
         let server_tls_config = Arc::get_mut(&mut server_config.crypto).unwrap();
         server_tls_config.set_client_certificate_verifier(verifier.clone());
 
         let rustls_key = rustls::PrivateKey(config.key.into());
-        let mut client_config = ClientConfig::default();
+        let mut client_config_builder = quinn::ClientConfigBuilder::default();
+        client_config_builder.protocols(&[ALPN_PROTOCOL.as_bytes()]);
+        let mut client_config = client_config_builder.build();
         let client_tls_config = Arc::get_mut(&mut client_config.crypto).unwrap();
         client_tls_config.set_single_client_cert(cert_chain.into_iter().collect(), rustls_key)?;
         client_tls_config
