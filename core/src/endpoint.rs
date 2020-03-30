@@ -56,15 +56,18 @@ impl LocalEndpoint {
             database: config.database.clone(),
         });
 
+        let mut transport_config = quinn::TransportConfig::default();
+        transport_config.stream_window_uni(0);
+        let transport_config = Arc::new(transport_config);
+
+        // Server config
         let mut server_config_builder = quinn::ServerConfigBuilder::default();
         server_config_builder.protocols(&[ALPN_PROTOCOL.as_bytes()]);
         server_config_builder.certificate(cert_chain.clone(), quinn_key)?;
         let mut server_config = server_config_builder.build();
-        let server_tls_config = Arc::get_mut(&mut server_config.crypto).unwrap();
-        server_tls_config.set_client_certificate_verifier(verifier.clone());
-        let server_quic_config = Arc::get_mut(&mut server_config.transport).unwrap();
-        server_quic_config.stream_window_uni(0);
+        server_config.transport = transport_config.clone();
 
+        // Client config
         let rustls_key = rustls::PrivateKey(config.key.into());
         let mut client_config_builder = quinn::ClientConfigBuilder::default();
         client_config_builder.protocols(&[ALPN_PROTOCOL.as_bytes()]);
@@ -74,8 +77,7 @@ impl LocalEndpoint {
         client_tls_config
             .dangerous()
             .set_certificate_verifier(verifier);
-        let client_quic_config = Arc::get_mut(&mut client_config.transport).unwrap();
-        client_quic_config.stream_window_uni(0);
+        client_config.transport = transport_config;
 
         let mut endpoint_builder = Endpoint::builder();
         endpoint_builder.listen(server_config);
