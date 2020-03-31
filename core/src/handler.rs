@@ -27,7 +27,6 @@ pub struct PeerHandler {
 impl Handler for PeerHandler {
     fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
         match &window.request {
-            Request::Ping => Ok(Default::default()),
             Request::Message(message) => match window.account_id() {
                 Some(id) => {
                     self.database.accept_message(&message, id.as_bytes());
@@ -35,6 +34,7 @@ impl Handler for PeerHandler {
                 }
                 None => Err(Error::PeerIdAbsent),
             },
+            _ => DefaultHandler.handle(window),
         }
     }
 }
@@ -42,6 +42,16 @@ impl Handler for PeerHandler {
 pub struct DeviceHandler;
 
 impl Handler for DeviceHandler {
+    fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
+        match &window.request {
+            _ => DefaultHandler.handle(window),
+        }
+    }
+}
+
+struct DefaultHandler;
+
+impl Handler for DefaultHandler {
     fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
         match &window.request {
             Request::Ping => Ok(Default::default()),
