@@ -1,0 +1,20 @@
+[package]
+edition = "2018"
+name = "viska_android"
+version = "0.0.1"
+publish = false
+
+[package.metadata.riko]
+targets = ["jni"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+android_logger = "0.8.6"
+jni = "0.16.0"
+log = "0.4.8"
+quinn = { git = "https://github.com/djc/quinn.git", branch = "master" }
+riko = { git = "https://github.com/seamlik/riko" }
+riko_runtime = { git = "https://github.com/seamlik/riko", features = ["riko_jni"] }
+viska = { path = "../core" }

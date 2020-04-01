@@ -1,15 +1,16 @@
 DEMO_DATABASE_LOCATION = target/demo.realm
 
-verify-electron: eslint
-
-verify-android: $(DEMO_DATABASE_LOCATION)
-	android/build.sh
+verify: eslint
+	cargo test --package viska
 	gradle check checkStyle
 
-# Generate a database for demo
-.PHONY: demo-db
-demo-db:
-	node --experimental-modules electron/bin/demo-db.mjs $(DEMO_DATABASE_LOCATION)
+.PHONY: android
+android: $(DEMO_DATABASE_LOCATION)
+	cross build --package viska_android --target aarch64-linux-android
+	cross build --package viska_android --target x86_64-linux-android
+	cross build --package viska_android --release --target aarch64-linux-android
+	cross build --package viska_android --release --target x86_64-linux-android
+	gradle assemble
 
 # Download Node.js dependencies
 .PHONY: node_modules
@@ -23,3 +24,6 @@ eslint:
 #
 # End of public tasks
 #
+
+$(DEMO_DATABASE_LOCATION):
+	node --experimental-modules electron/bin/demo-db.mjs $(DEMO_DATABASE_LOCATION)

@@ -1,4 +1,5 @@
-#![cfg(feature = "android")]
+#[path = "../../target/riko/bridge.rs"]
+mod bridge;
 
 use android_logger::Config;
 use log::Level;

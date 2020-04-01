@@ -27,8 +27,8 @@ public class Application extends android.app.Application {
   @Override
   public void onCreate() {
     super.onCreate();
-    System.loadLibrary("viska");
-    viska.android.Module.initialize();
+    System.loadLibrary("viska_android");
+    viska_android.Module.initialize();
     initializeNotifications();
     Realm.init(this);
   }

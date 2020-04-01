@@ -1,7 +1,3 @@
-#[path = "../../target/riko/bridge.rs"]
-mod bridge;
-
-pub mod android;
 mod endpoint;
 mod handler;
 mod packet;

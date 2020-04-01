@@ -7,7 +7,6 @@
 .project
 .settings
 .vscode/
-/android/NDK_HOME
 /gradle/wrapper/
 /gradlew
 /gradlew.bat

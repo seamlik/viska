@@ -8,20 +8,10 @@ version = "0.0.1"
 [package.metadata.riko]
 targets = ["jni"]
 
-[lib]
-crate-type = ["cdylib", "lib"]
-
-[features]
-android = ["android_logger", "riko_runtime/riko_jni"]
-
 [dependencies]
-android_logger = { version = "0", optional = true }
 blake3 = { version = "0.3", features = ["pure"] }
-chrono = { version = "0", features = ["serde"] }
-data-encoding = "2"
 futures = "0.3"
 http = "0"
-jni = "0"
 log = "0"
 mime = "0"
 quinn = "0"
