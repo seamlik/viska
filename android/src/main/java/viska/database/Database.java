@@ -11,22 +11,16 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class Database implements AutoCloseable {
   private static final String PROFILE_ID = "id";
 
-  @NonNull
-  private final Realm realm;
+  @NonNull private final Realm realm;
 
   @Override
   public void close() {
     realm.close();
   }
 
-  /**
-   * Gets the account ID.
-   */
+  /** Gets the account ID. */
   public String getAccountId() {
-    final Profile raw = realm
-        .where(Profile.class)
-        .equalTo("name", PROFILE_ID)
-        .findFirst();
+    final Profile raw = realm.where(Profile.class).equalTo("name", PROFILE_ID).findFirst();
     if (raw == null) {
       return "";
     } else {
@@ -34,14 +28,9 @@ public class Database implements AutoCloseable {
     }
   }
 
-  /**
-   * Gets a {@link Vcard} by an account ID.
-   */
+  /** Gets a {@link Vcard} by an account ID. */
   public Vcard getVcard(final String id) {
-    return realm
-        .where(Vcard.class)
-        .equalTo("id", id)
-        .findFirst();
+    return realm.where(Vcard.class).equalTo("id", id).findFirst();
   }
 
   public boolean isEmpty() {

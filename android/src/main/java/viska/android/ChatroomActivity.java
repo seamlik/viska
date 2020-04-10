@@ -15,6 +15,7 @@ public class ChatroomActivity extends InstanceActivity {
 
   /**
    * Starts this activity.
+   *
    * @param id Chatroom ID
    */
   public static void start(final Context source, final String id) {

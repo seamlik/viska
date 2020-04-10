@@ -14,7 +14,6 @@ import viska.database.Message;
 public class ChatroomListAdapter
     extends RealmRecyclerViewAdapter<Chatroom, ChatroomListAdapter.ViewHolder> {
 
-
   public static class ViewHolder extends RecyclerView.ViewHolder {
     public ViewHolder(View itemView) {
       super(itemView);
@@ -28,8 +27,8 @@ public class ChatroomListAdapter
   @Override
   public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
     return new ViewHolder(
-        LayoutInflater.from(parent.getContext()).inflate(R.layout.chatroom_list_item, parent, false)
-    );
+        LayoutInflater.from(parent.getContext())
+            .inflate(R.layout.chatroom_list_item, parent, false));
   }
 
   @Override
@@ -49,7 +48,6 @@ public class ChatroomListAdapter
     }
 
     holder.itemView.setOnClickListener(
-        view -> ChatroomActivity.start(holder.itemView.getContext(), chatroom.id)
-    );
+        view -> ChatroomActivity.start(holder.itemView.getContext(), chatroom.id));
   }
 }

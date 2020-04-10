@@ -21,8 +21,7 @@ public class Application extends android.app.Application {
 
   public static final String NOTIFICATION_CHANNEL_SYSTRAY = "systray";
 
-  @Getter
-  private final ViewModel viewModel = new ViewModel();
+  @Getter private final ViewModel viewModel = new ViewModel();
 
   @Override
   public void onCreate() {
@@ -33,27 +32,22 @@ public class Application extends android.app.Application {
     Realm.init(this);
   }
 
-  /**
-   * Initializes notifications.
-   */
+  /** Initializes notifications. */
   public void initializeNotifications() {
     final NotificationManager manager = getSystemService(NotificationManager.class);
-    final NotificationChannel channelSystray = new NotificationChannel(
-        NOTIFICATION_CHANNEL_SYSTRAY,
-        getString(R.string.notification_systray_name),
-        NotificationManager.IMPORTANCE_NONE
-    );
+    final NotificationChannel channelSystray =
+        new NotificationChannel(
+            NOTIFICATION_CHANNEL_SYSTRAY,
+            getString(R.string.notification_systray_name),
+            NotificationManager.IMPORTANCE_NONE);
     channelSystray.setShowBadge(false);
     manager.createNotificationChannel(channelSystray);
   }
 
-  /**
-   * Gets a new instance of {@link Database}.
-   */
+  /** Gets a new instance of {@link Database}. */
   public Database getDatabase() {
-    final RealmConfiguration config = new RealmConfiguration.Builder()
-        .name("database.realm")
-        .build();
+    final RealmConfiguration config =
+        new RealmConfiguration.Builder().name("database.realm").build();
     return new Database(Realm.getInstance(config));
   }
 }

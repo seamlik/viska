@@ -12,27 +12,15 @@ import java.util.Date;
 import viska.android.R;
 
 public class Message extends RealmObject {
-  @PrimaryKey
-  @Required
-  public String id;
-
-  @Index
-  @Required
-  public Date time;
-
-  @Required
-  public String sender;
-
+  @PrimaryKey @Required public String id;
+  @Index @Required public Date time;
+  @Required public String sender;
   public Blob content;
-
-  @Required
-  public RealmList<String> participants;
+  @Required public RealmList<String> participants;
 
   public boolean read = true;
 
-  /**
-   * Gets a text previewing the content of this {@link Message}.
-   */
+  /** Gets a text previewing the content of this {@link Message}. */
   public String getPreview(final Resources resources) {
     if (content == null) {
       return "";
@@ -49,9 +37,7 @@ public class Message extends RealmObject {
     }
   }
 
-  /**
-   * Gets the content as UTF-8 encoded text.
-   */
+  /** Gets the content as UTF-8 encoded text. */
   public String getContentAsText() {
     if (content == null) {
       return "";

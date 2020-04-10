@@ -15,11 +15,15 @@ public abstract class InstanceActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
 
     final Application app = (Application) getApplication();
-    app.getViewModel().creatingAccount.observe(this, creatingAccount -> {
-      if (creatingAccount) {
-        finish();
-      }
-    });
+    app.getViewModel()
+        .creatingAccount
+        .observe(
+            this,
+            creatingAccount -> {
+              if (creatingAccount) {
+                finish();
+              }
+            });
   }
 
   @Override

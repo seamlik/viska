@@ -26,8 +26,7 @@ public class RosterListAdapter
   @Override
   public ViewHolder onCreateViewHolder(@NonNull final ViewGroup parent, int viewType) {
     return new ViewHolder(
-        LayoutInflater.from(parent.getContext()).inflate(R.layout.roster_list_item, parent, false)
-    );
+        LayoutInflater.from(parent.getContext()).inflate(R.layout.roster_list_item, parent, false));
   }
 
   @Override

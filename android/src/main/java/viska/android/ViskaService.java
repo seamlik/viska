@@ -25,18 +25,14 @@ public class ViskaService extends Service {
   @Override
   public void onCreate() {
     super.onCreate();
-    final Notification notification = new Notification
-        .Builder(this, Application.NOTIFICATION_CHANNEL_SYSTRAY)
-        .setContentTitle(getString(R.string.notification_systray_title))
-        .setContentIntent(PendingIntent.getActivity(
-          this,
-          0,
-          new Intent(this, MainActivity.class),
-          0
-        ))
-        .setCategory(Notification.CATEGORY_STATUS)
-        .setSmallIcon(R.drawable.icon)
-        .build();
+    final Notification notification =
+        new Notification.Builder(this, Application.NOTIFICATION_CHANNEL_SYSTRAY)
+            .setContentTitle(getString(R.string.notification_systray_title))
+            .setContentIntent(
+                PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), 0))
+            .setCategory(Notification.CATEGORY_STATUS)
+            .setSmallIcon(R.drawable.icon)
+            .build();
     startForeground(R.id.notification_systray, notification);
   }
 
@@ -47,6 +43,5 @@ public class ViskaService extends Service {
       daemon.close();
       daemon = null;
     }
-
   }
 }

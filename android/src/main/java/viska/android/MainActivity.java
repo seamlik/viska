@@ -133,13 +133,14 @@ public class MainActivity extends InstanceActivity {
   }
 
   private void askExit() {
-    final DialogInterface.OnClickListener listener = (dialog, which) -> {
-      if (which != DialogInterface.BUTTON_POSITIVE) {
-        return;
-      }
-      stopService(new Intent(this, ViskaService.class));
-      finish();
-    };
+    final DialogInterface.OnClickListener listener =
+        (dialog, which) -> {
+          if (which != DialogInterface.BUTTON_POSITIVE) {
+            return;
+          }
+          stopService(new Intent(this, ViskaService.class));
+          finish();
+        };
 
     new MaterialAlertDialogBuilder(this)
         .setTitle(R.string.exit)
@@ -150,6 +151,5 @@ public class MainActivity extends InstanceActivity {
         .show();
   }
 
-  private void onFabClicked(final View view) {
-  }
+  private void onFabClicked(final View view) {}
 }

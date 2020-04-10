@@ -10,13 +10,8 @@ import java.util.Date;
 
 @RealmClass(fieldNamingPolicy = RealmNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
 public class Vcard extends RealmObject {
-  @PrimaryKey
-  @Required
-  public String id;
-
-  @Required
-  public String name = "";
-
+  @PrimaryKey @Required public String id;
+  @Required public String name = "";
   public Date timeUpdated;
   public Blob avatar;
 

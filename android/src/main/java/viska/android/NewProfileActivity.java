@@ -29,41 +29,45 @@ public class NewProfileActivity extends AppCompatActivity {
     final Application app = (Application) getApplication();
     final ProgressBar progressBar = findViewById(R.id.progress);
     final Button newAccountButton = findViewById(R.id.new_account);
-    app.getViewModel().creatingAccount.observe(this, running -> {
-      if (running) {
-        progressBar.setVisibility(View.VISIBLE);
-        newAccountButton.setVisibility(View.GONE);
-        newMockProfileButton.setVisibility(View.GONE);
-      } else {
-        progressBar.setVisibility(View.GONE);
-        newAccountButton.setVisibility(View.VISIBLE);
-        newMockProfileButton.setVisibility(BuildConfig.DEBUG ? View.VISIBLE : View.GONE);
-      }
-    });
+    app.getViewModel()
+        .creatingAccount
+        .observe(
+            this,
+            running -> {
+              if (running) {
+                progressBar.setVisibility(View.VISIBLE);
+                newAccountButton.setVisibility(View.GONE);
+                newMockProfileButton.setVisibility(View.GONE);
+              } else {
+                progressBar.setVisibility(View.GONE);
+                newAccountButton.setVisibility(View.VISIBLE);
+                newMockProfileButton.setVisibility(BuildConfig.DEBUG ? View.VISIBLE : View.GONE);
+              }
+            });
   }
 
   private void onNewMockProfile() {
     final Application app = (Application) getApplication();
     app.getViewModel().creatingAccount.setValue(true);
-    Completable
-        .fromAction(() -> {
-          final Database db = app.getDatabase();
-          final String dbPath = db.getPath();
-          db.close();
+    Completable.fromAction(
+            () -> {
+              final Database db = app.getDatabase();
+              final String dbPath = db.getPath();
+              db.close();
 
-          IOUtils.copy(
-              getResources().getAssets().open("demo.realm"),
-              new FileOutputStream(new File(dbPath))
-          );
+              IOUtils.copy(
+                  getResources().getAssets().open("demo.realm"),
+                  new FileOutputStream(new File(dbPath)));
 
-          app.getViewModel().creatingAccount.postValue(false);
-        })
+              app.getViewModel().creatingAccount.postValue(false);
+            })
         .observeOn(Schedulers.io())
         .subscribeOn(Schedulers.from(getMainExecutor()))
         .as(AutoDispose.autoDisposable(AndroidLifecycleScopeProvider.from(this)))
-        .subscribe(() -> {
-          startActivity(new Intent(this, MainActivity.class));
-          finish();
-        });
+        .subscribe(
+            () -> {
+              startActivity(new Intent(this, MainActivity.class));
+              finish();
+            });
   }
 }

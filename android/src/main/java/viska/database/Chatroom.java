@@ -10,23 +10,15 @@ import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class Chatroom extends RealmObject {
-  @PrimaryKey
-  @Required
-  public String id;
-
-  @Required
-  public RealmList<String> members;
-
+  @PrimaryKey @Required public String id;
+  @Required public RealmList<String> members;
   public RealmList<Message> messages;
   public String name;
 
-  /**
-   * Gets the calculated name to be shown to the user.
-   */
+  /** Gets the calculated name to be shown to the user. */
   public String getDisplayName() {
     if (name == null) {
-      return members
-          .stream()
+      return members.stream()
           .map(member -> Vcard.getById(getRealm(), member).name)
           .collect(Collectors.joining(", "));
     } else {

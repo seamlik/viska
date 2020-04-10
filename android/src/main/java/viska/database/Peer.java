@@ -6,10 +6,7 @@ import io.realm.annotations.Required;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class Peer extends RealmObject {
-  @PrimaryKey
-  @Required
-  public String id;
-
+  @PrimaryKey @Required public String id;
   public int role = 0;
 
   @Nullable
