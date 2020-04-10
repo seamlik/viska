@@ -1,15 +1,5 @@
-buildscript {
-  repositories {
-    jcenter()
-    google()
-  }
-  dependencies {
-    classpath 'com.android.tools.build:gradle:3.6.1'
-    classpath 'io.realm:realm-gradle-plugin:6.1.0'
-  }
-}
-
 apply plugin: 'com.android.application'
+apply plugin: 'com.diffplug.gradle.spotless'
 apply plugin: 'realm-android'
 
 repositories {
@@ -47,6 +37,13 @@ android {
   }
 }
 
+spotless {
+  java {
+    googleJavaFormat()
+    target '**/*.java'
+  }
+}
+
 dependencies {
   annotationProcessor 'org.projectlombok:lombok:1.18.12'
   compileOnly 'org.projectlombok:lombok:1.18.12'
@@ -61,5 +58,3 @@ dependencies {
   implementation 'io.realm:android-adapters:2.1.1'
   implementation 'riko:riko-runtime-jni:0.0.1'
 }
-
-apply from: '../gradle/checkstyle.gradle'

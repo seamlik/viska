@@ -2,7 +2,7 @@ DEMO_DATABASE_LOCATION = target/demo.realm
 
 verify: eslint
 	cargo test --package viska
-	gradle check checkStyle
+	gradle check
 
 .PHONY: android
 android: $(DEMO_DATABASE_LOCATION)

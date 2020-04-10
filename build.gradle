@@ -1,0 +1,11 @@
+buildscript {
+  repositories {
+    google()
+    jcenter()
+  }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:3.6.2'
+    classpath 'com.diffplug.spotless:spotless-plugin-gradle:3.28.1'
+    classpath 'io.realm:realm-gradle-plugin:6.1.0'
+  }
+}
