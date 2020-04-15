@@ -50,6 +50,7 @@ impl Node {
         let (window_sender, window_receiver) =
             futures::channel::mpsc::unbounded::<ResponseWindow>();
 
+        // Handle requests
         let database_cloned = database.clone();
         let account_id = certificate.id();
         tokio::spawn(window_receiver.for_each(move |window| {
@@ -75,6 +76,7 @@ impl Node {
         let (endpoint, incomings) = LocalEndpoint::start(&config)?;
         let connection_manager = Arc::new(ConnectionManager::new(endpoint, window_sender));
 
+        // Process incoming connections
         let connection_manager_cloned = connection_manager.clone();
         let task = tokio::spawn(incomings.for_each(move |connecting| {
             let connection_manager_cloned = connection_manager_cloned.clone();
@@ -188,7 +190,7 @@ pub trait Database: Send + Sync {
     fn accept_message(&self, message: &Message, sender: &[u8]);
 }
 
-/// Error when connecting with a remote [Node].
+/// Error when connecting to a remote [Node].
 #[derive(Error, Debug)]
 #[error("Failed to connect to a remote node")]
 pub enum ConnectionError {
