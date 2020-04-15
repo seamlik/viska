@@ -5,7 +5,6 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
-import riko.Any;
 
 public class ViskaService extends Service {
 
@@ -15,7 +14,7 @@ public class ViskaService extends Service {
     }
   }
 
-  private Any daemon;
+  private riko.Object daemon;
 
   @Override
   public IBinder onBind(Intent intent) {

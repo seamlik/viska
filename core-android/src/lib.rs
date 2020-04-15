@@ -1,5 +1,8 @@
-#[path = "../../target/riko/bridge.rs"]
-mod bridge;
+#[path = "../../target/riko/viska_android.rs"]
+mod bridge_android;
+
+#[path = "../../target/riko/viska.rs"]
+mod bridge_core;
 
 use android_logger::Config;
 use log::Level;
