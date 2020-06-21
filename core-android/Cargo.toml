@@ -14,7 +14,7 @@ crate-type = ["cdylib"]
 android_logger = "0.8.6"
 jni = "0.16.0"
 log = "0.4.8"
-quinn = { git = "https://github.com/djc/quinn.git", branch = "master" }
+quinn = "0.6.1"
 riko = { git = "https://github.com/seamlik/riko" }
 riko_runtime = { git = "https://github.com/seamlik/riko", features = ["riko_jni"] }
 viska = { path = "../core" }
