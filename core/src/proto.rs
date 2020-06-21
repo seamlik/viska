@@ -5,7 +5,6 @@ use mime::Mime;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
-use serde_cbor::Value;
 
 /// Incoming request.
 #[derive(Debug, Serialize, Deserialize)]
@@ -14,12 +13,8 @@ pub enum Request {
     Ping,
 }
 
-fn empty_body() -> Value {
-    Value::Null
-}
-
-fn is_empty_body(value: &Value) -> bool {
-    if let Value::Null = value {
+fn is_empty_body(value: &ResponseBody) -> bool {
+    if let ResponseBody::None = value {
         true
     } else {
         false
@@ -31,7 +26,7 @@ fn is_ok_status(code: &StatusCode) -> bool {
 }
 
 /// Response to a [Request].
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct Response {
     #[serde(with = "serde_with::rust::display_fromstr")]
@@ -39,7 +34,7 @@ pub struct Response {
     pub status: StatusCode,
 
     #[serde(skip_serializing_if = "is_empty_body")]
-    body: Value,
+    body: ResponseBody,
 }
 
 impl Response {
@@ -52,22 +47,24 @@ impl Response {
     }
 }
 
-/// Response of "OK".
-impl Default for Response {
-    fn default() -> Self {
-        Self {
-            body: empty_body(),
-            status: Default::default(),
-        }
-    }
-}
-
 impl From<serde_cbor::Error> for Response {
     fn from(src: serde_cbor::Error) -> Self {
         Self {
             status: StatusCode::BAD_REQUEST,
-            body: Value::Text(src.to_string()),
+            body: ResponseBody::Text(src.to_string()),
         }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub enum ResponseBody {
+    None,
+    Text(String),
+}
+
+impl Default for ResponseBody {
+    fn default() -> Self {
+        Self::None
     }
 }
 
