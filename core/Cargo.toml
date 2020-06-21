@@ -10,6 +10,7 @@ targets = ["jni"]
 
 [dependencies]
 blake3 = { version = "0.3", features = ["pure"] }
+flexbuffers = "0.1"
 futures = "0.3"
 http = "0"
 log = "0"
@@ -21,7 +22,6 @@ riko_runtime = { git = "https://github.com/seamlik/riko" }
 rustls = { version = "0", features = ["dangerous_configuration", "quic"]}
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0"
-serde_cbor = "0"
 serde_with = "1"
 thiserror = "1"
 tokio = { version = "0", features = ["full"] }

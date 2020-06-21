@@ -7,6 +7,7 @@ pub mod proto;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
 use endpoint::LocalEndpoint;
+use flexbuffers::DeserializationError;
 use futures::prelude::*;
 use handler::DeviceHandler;
 use handler::Handler;
@@ -115,7 +116,7 @@ impl Connection {
     /// be closed immediately.
     pub async fn request(&self, request: &Request) -> Result<Response, RequestError> {
         let (mut sender, receiver) = self.quic.open_bi().await?;
-        let raw_request = serde_cbor::to_vec(request)
+        let raw_request = flexbuffers::to_vec(request)
             .unwrap_or_else(|err| panic!("Failed to encode a request: {}", err));
 
         sender.write_all(&raw_request).await?;
@@ -123,7 +124,7 @@ impl Connection {
 
         match receiver.read_to_end(packet::MAX_PACKET_SIZE_BYTES).await {
             Ok(raw_response) => {
-                let response = serde_cbor::from_slice(&raw_response)?;
+                let response = flexbuffers::from_slice(&raw_response)?;
                 log::debug!("Received response: {:?}", &response);
                 Ok(response)
             }
@@ -174,7 +175,7 @@ impl Debug for Connection {
 #[derive(Error, Debug)]
 #[error("Failed to complete a request-response lifecycle")]
 pub enum RequestError {
-    BadResponse(#[from] serde_cbor::Error),
+    BadResponse(#[from] DeserializationError),
     Connection(#[from] quinn::ConnectionError),
     Read(#[from] quinn::ReadError),
     ResponseTooLong,

@@ -1,5 +1,6 @@
 //! Protocols between [Node](crate::Node)s.
 
+use flexbuffers::DeserializationError;
 use http::StatusCode;
 use mime::Mime;
 use serde::Deserialize;
@@ -47,8 +48,8 @@ impl Response {
     }
 }
 
-impl From<serde_cbor::Error> for Response {
-    fn from(src: serde_cbor::Error) -> Self {
+impl From<DeserializationError> for Response {
+    fn from(src: DeserializationError) -> Self {
         Self {
             status: StatusCode::BAD_REQUEST,
             body: ResponseBody::Text(src.to_string()),

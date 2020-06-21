@@ -26,7 +26,7 @@ impl ResponseWindow {
         receiver: RecvStream,
     ) -> Option<Self> {
         match receiver.read_to_end(MAX_PACKET_SIZE_BYTES).await {
-            Ok(raw) => match serde_cbor::from_slice(&raw) {
+            Ok(raw) => match flexbuffers::from_slice(&raw) {
                 Ok(request) => {
                     log::debug!("Received request: {:?}", &request);
                     Some(Self {
@@ -86,7 +86,7 @@ impl ConnectionInfo for ResponseWindow {
 
 async fn send_response(sender: &mut SendStream, response: &Response) -> Result<(), WriteError> {
     log::debug!("Sending response: {:?}", &response);
-    let raw = serde_cbor::to_vec(response).expect("Failed to encode a response");
+    let raw = flexbuffers::to_vec(response).expect("Failed to encode a response");
     send_raw(sender, &raw).await
 }
 
