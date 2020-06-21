@@ -1,2 +1,8 @@
 [workspace]
 members = ["core", "core-android"]
+
+[profile.dev]
+lto = true
+
+[profile.release]
+lto = true
