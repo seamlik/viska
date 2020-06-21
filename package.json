@@ -1,9 +1,12 @@
 {
-  "name": "root",
+  "name": "viska",
   "version": "0.0.0",
   "private": true,
+  "engines": {
+    "node": ">=14"
+  },
+  "type": "module",
   "devDependencies": {
-    "eslint": "",
     "eslint-config-standard": "",
     "eslint-plugin-import": "",
     "eslint-plugin-node": "",

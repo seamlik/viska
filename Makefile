@@ -1,9 +1,6 @@
-DEMO_DATABASE_LOCATION = target/demo.realm
-
 verify: riko
 	cargo test --package viska
 	gradle check
-	eslint election
 
 .PHONY: android
 android: $(DEMO_DATABASE_LOCATION) riko
@@ -16,10 +13,3 @@ android: $(DEMO_DATABASE_LOCATION) riko
 .PHONY: riko
 riko:
 	cargo riko
-
-#
-# End of public tasks
-#
-
-$(DEMO_DATABASE_LOCATION):
-	node --experimental-modules electron/bin/demo-db.mjs $(DEMO_DATABASE_LOCATION)
