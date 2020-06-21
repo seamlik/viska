@@ -15,7 +15,7 @@ http = "0"
 log = "0"
 mime = "0"
 quinn = "0.6.1"
-rcgen = "0"
+rcgen = "=0.8.0" # Bug generating bad DER format
 riko = { git = "https://github.com/seamlik/riko" }
 riko_runtime = { git = "https://github.com/seamlik/riko" }
 rustls = { version = "0", features = ["dangerous_configuration", "quic"]}
