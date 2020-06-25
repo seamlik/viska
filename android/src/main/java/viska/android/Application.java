@@ -3,10 +3,8 @@ package viska.android;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import androidx.lifecycle.MutableLiveData;
-import io.realm.Realm;
-import io.realm.RealmConfiguration;
+import com.couchbase.lite.CouchbaseLite;
 import lombok.Getter;
-import viska.database.Database;
 
 public class Application extends android.app.Application {
 
@@ -29,7 +27,7 @@ public class Application extends android.app.Application {
     System.loadLibrary("viska_android");
     viska_android.Module.initialize();
     initializeNotifications();
-    Realm.init(this);
+    CouchbaseLite.init(this);
   }
 
   /** Initializes notifications. */
@@ -42,12 +40,5 @@ public class Application extends android.app.Application {
             NotificationManager.IMPORTANCE_NONE);
     channelSystray.setShowBadge(false);
     manager.createNotificationChannel(channelSystray);
-  }
-
-  /** Gets a new instance of {@link Database}. */
-  public Database getDatabase() {
-    final RealmConfiguration config =
-        new RealmConfiguration.Builder().name("database.realm").build();
-    return new Database(Realm.getInstance(config));
   }
 }

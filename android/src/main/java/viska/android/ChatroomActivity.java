@@ -6,9 +6,12 @@ import android.net.Uri;
 import android.os.Bundle;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.couchbase.lite.Document;
 import com.google.android.material.appbar.MaterialToolbar;
-import com.uber.autodispose.AutoDispose;
-import com.uber.autodispose.android.lifecycle.AndroidLifecycleScopeProvider;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import viska.database.Chatroom;
 
 public class ChatroomActivity extends InstanceActivity {
@@ -16,10 +19,16 @@ public class ChatroomActivity extends InstanceActivity {
   /**
    * Starts this activity.
    *
-   * @param id Chatroom ID
+   * @param chatroomMembers Account ID of the chatroom members.
    */
-  public static void start(final Context source, final String id) {
-    final Uri uri = new Uri.Builder().scheme("viska").authority("chatroom").appendPath(id).build();
+  public static void start(final Context source, final Collection<String> chatroomMembers) {
+    // Will be like viska://chatroom/account1+account2+...
+    final Uri uri =
+        new Uri.Builder()
+            .scheme("viska")
+            .authority("chatroom")
+            .appendPath(String.join("+", chatroomMembers))
+            .build();
     final Intent intent = new Intent(source, ChatroomActivity.class);
     intent.setData(uri);
     source.startActivity(intent);
@@ -38,22 +47,33 @@ public class ChatroomActivity extends InstanceActivity {
   protected void onStart() {
     super.onStart();
 
-    final Chatroom chatroom = getChatroom();
-
     final MaterialToolbar actionBar = findViewById(R.id.action_bar);
     setSupportActionBar(actionBar);
-    chatroom
-        .<Chatroom>asFlowable()
-        .as(AutoDispose.autoDisposable(AndroidLifecycleScopeProvider.from(this)))
-        .subscribe(it -> setTitle(it.getDisplayName()));
+
+    final List<String> chatroomMembers = getChatroomMembers();
+    if (chatroomMembers.isEmpty()) {
+      return;
+    }
+
+    final String chatroomId = Chatroom.Companion.getChatroomIdFromMembers(chatroomMembers);
+    db.addDocumentChangeListener(
+        Chatroom.Companion.getDocumentId(chatroomId),
+        change -> {
+          final Document document = change.getDatabase().getDocument(change.getDocumentID());
+          if (document != null) {
+            final Chatroom chatroom = new Chatroom(change.getDatabase(), document);
+            setTitle(chatroom.getDisplayName());
+          }
+        });
 
     final RecyclerView list = findViewById(R.id.list);
-    list.setAdapter(new ConversationAdapter(chatroom.getConversation()));
+    list.setAdapter(new ConversationAdapter(db, chatroomMembers));
   }
 
-  private Chatroom getChatroom() {
+  private List<String> getChatroomMembers() {
     final Uri uri = getIntent().getData();
-    final String id = uri == null ? null : uri.getLastPathSegment();
-    return db.getChatroom(id == null ? "" : id);
+    return uri == null
+        ? Collections.emptyList()
+        : Arrays.asList(uri.getLastPathSegment().split("\\+"));
   }
 }

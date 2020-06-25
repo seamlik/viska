@@ -12,13 +12,14 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.couchbase.lite.Document;
 import com.google.android.flexbox.FlexboxLayoutManager;
 import com.google.android.flexbox.JustifyContent;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
-import com.uber.autodispose.AutoDispose;
-import com.uber.autodispose.android.lifecycle.AndroidLifecycleScopeProvider;
+import viska.database.DatabaseCorruptedException;
+import viska.database.ProfileKt;
 import viska.database.Vcard;
 
 public class MainActivity extends InstanceActivity {
@@ -74,18 +75,26 @@ public class MainActivity extends InstanceActivity {
 
     final NavigationView drawer = findViewById(R.id.drawer);
 
-    final String accountId = db.getAccountId();
+    final String accountId;
+    try {
+      accountId = ProfileKt.getProfile(db).getAccountId();
+    } catch (DatabaseCorruptedException err) {
+      moveToNewProfileActivity();
+      return;
+    }
+
     final TextView description = drawer.getHeaderView(0).findViewById(R.id.description);
     description.setText(accountId);
 
     final TextView name = drawer.getHeaderView(0).findViewById(R.id.name);
-    final Vcard vcard = db.getVcard(accountId);
-    if (vcard != null) {
-      vcard
-          .<Vcard>asFlowable()
-          .as(AutoDispose.autoDisposable(AndroidLifecycleScopeProvider.from(this)))
-          .subscribe(it -> name.setText(it.name));
-    }
+    db.addDocumentChangeListener(
+        Vcard.Companion.getDocumentId(accountId),
+        change -> {
+          final Document vcard = change.getDatabase().getDocument(change.getDocumentID());
+          if (vcard != null) {
+            name.setText(vcard.getString("name"));
+          }
+        });
   }
 
   private boolean onNavigationItemSelected(final MenuItem item) {
@@ -116,13 +125,13 @@ public class MainActivity extends InstanceActivity {
         drawerMenuChatrooms.setChecked(true);
         getSupportActionBar().setTitle(R.string.chatrooms);
         list.setLayoutManager(linearLayoutManager);
-        list.setAdapter(new ChatroomListAdapter(db.getChatrooms()));
+        list.setAdapter(new ChatroomListAdapter(db));
         break;
       case ROSTER:
         drawerMenuRoster.setChecked(true);
         getSupportActionBar().setTitle(R.string.roster);
         list.setLayoutManager(flexboxLayoutManager);
-        list.setAdapter(new RosterListAdapter(db.getRoster()));
+        list.setAdapter(new RosterListAdapter(db));
         break;
       default:
         return;

@@ -1,10 +1,14 @@
 package viska.android;
 
+import static viska.database.DatabaseKt.open;
+
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import viska.database.Database;
+import com.couchbase.lite.CouchbaseLiteException;
+import com.couchbase.lite.Database;
 
 public abstract class InstanceActivity extends AppCompatActivity {
 
@@ -30,8 +34,8 @@ public abstract class InstanceActivity extends AppCompatActivity {
   protected void onStart() {
     super.onStart();
 
-    db = ((Application) getApplication()).getDatabase();
-    if (db.isEmpty()) {
+    db = open();
+    if (db.getCount() == 0) {
       startActivity(new Intent(this, NewProfileActivity.class));
       finish();
       return;
@@ -45,8 +49,17 @@ public abstract class InstanceActivity extends AppCompatActivity {
     super.onStop();
 
     if (db != null) {
-      db.close();
+      try {
+        db.close();
+      } catch (CouchbaseLiteException e) {
+        Log.e(this.getClass().getCanonicalName(), "Failed to close database", e);
+      }
       db = null;
     }
+  }
+
+  protected void moveToNewProfileActivity() {
+    startActivity(new Intent(this, NewProfileActivity.class));
+    finish();
   }
 }

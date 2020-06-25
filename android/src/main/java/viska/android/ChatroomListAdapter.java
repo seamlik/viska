@@ -5,14 +5,17 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
-import io.realm.OrderedRealmCollection;
-import io.realm.RealmRecyclerViewAdapter;
+import com.couchbase.lite.Database;
+import com.couchbase.lite.Result;
+import java.util.Objects;
 import viska.database.Chatroom;
+import viska.database.ChatroomKt;
 import viska.database.Message;
 
 public class ChatroomListAdapter
-    extends RealmRecyclerViewAdapter<Chatroom, ChatroomListAdapter.ViewHolder> {
+    extends CouchbaseLiveQueryListAdapter<ChatroomListAdapter.ViewHolder> {
 
   public static class ViewHolder extends RecyclerView.ViewHolder {
     public ViewHolder(View itemView) {
@@ -20,8 +23,31 @@ public class ChatroomListAdapter
     }
   }
 
-  public ChatroomListAdapter(OrderedRealmCollection<Chatroom> data) {
-    super(data, true, true);
+  public static class Differ extends DiffUtil.ItemCallback<Result> {
+    private final Database database;
+
+    public Differ(final Database database) {
+      this.database = database;
+    }
+
+    @Override
+    public boolean areItemsTheSame(@NonNull Result oldItem, @NonNull Result newItem) {
+      return Objects.equals(
+          new Chatroom(database, oldItem).getDocumentId(),
+          new Chatroom(database, newItem).getDocumentId());
+    }
+
+    @Override
+    public boolean areContentsTheSame(@NonNull Result oldItem, @NonNull Result newItem) {
+      return Objects.equals(new Chatroom(database, oldItem), new Chatroom(database, newItem));
+    }
+  }
+
+  private final Database database;
+
+  public ChatroomListAdapter(final Database database) {
+    super(ChatroomKt.queryChatrooms(database), new Differ(database));
+    this.database = database;
   }
 
   @Override
@@ -33,7 +59,7 @@ public class ChatroomListAdapter
 
   @Override
   public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-    final Chatroom chatroom = getItem(position);
+    final Chatroom chatroom = new Chatroom(database, getItem(position));
 
     final TextView name = holder.itemView.findViewById(R.id.name);
     name.setText(chatroom.getDisplayName());
@@ -44,10 +70,10 @@ public class ChatroomListAdapter
       description.setVisibility(View.GONE);
     } else {
       description.setVisibility(View.VISIBLE);
-      description.setText(latestMsg.getPreview(holder.itemView.getResources()));
+      description.setText(latestMsg.preview(holder.itemView.getResources()));
     }
 
     holder.itemView.setOnClickListener(
-        view -> ChatroomActivity.start(holder.itemView.getContext(), chatroom.id));
+        view -> ChatroomActivity.start(holder.itemView.getContext(), chatroom.getMembers()));
   }
 }

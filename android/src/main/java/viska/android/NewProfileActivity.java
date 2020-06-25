@@ -7,14 +7,12 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import com.couchbase.lite.Database;
 import com.uber.autodispose.AutoDispose;
 import com.uber.autodispose.android.lifecycle.AndroidLifecycleScopeProvider;
 import io.reactivex.Completable;
 import io.reactivex.schedulers.Schedulers;
-import java.io.File;
-import java.io.FileOutputStream;
-import org.apache.commons.io.IOUtils;
-import viska.database.Database;
+import viska.database.DatabaseKt;
 
 public class NewProfileActivity extends AppCompatActivity {
 
@@ -51,14 +49,9 @@ public class NewProfileActivity extends AppCompatActivity {
     app.getViewModel().creatingAccount.setValue(true);
     Completable.fromAction(
             () -> {
-              final Database db = app.getDatabase();
-              final String dbPath = db.getPath();
+              final Database db = DatabaseKt.open();
+              DatabaseKt.createDemoProfile(db);
               db.close();
-
-              IOUtils.copy(
-                  getResources().getAssets().open("demo.realm"),
-                  new FileOutputStream(new File(dbPath)));
-
               app.getViewModel().creatingAccount.postValue(false);
             })
         .observeOn(Schedulers.io())
