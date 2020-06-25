@@ -4,20 +4,23 @@
   android:orientation="vertical"
   android:paddingVertical="@dimen/padding_large"
   android:paddingHorizontal="@dimen/padding_large"
-  xmlns:android="http://schemas.android.com/apk/res/android">
+  xmlns:android="http://schemas.android.com/apk/res/android"
+>
   
   <TextView
     android:id="@+id/name"
     android:layout_height="wrap_content"
     android:layout_width="match_parent"
     android:maxLines="1"
-    android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"/>
+    android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
+  />
 
   <TextView
     android:id="@+id/description"
     android:layout_height="wrap_content"
     android:layout_width="match_parent"
     android:maxLines="1"
-    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"/>
+    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+  />
 
 </LinearLayout>

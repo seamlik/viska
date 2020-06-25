@@ -13,22 +13,31 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program. If not, see <http://www.gnu.org/licenses/>.
   -->
-
-<vector android:height="48dp"
-        android:width="48dp"
-        android:viewportHeight="180"
-        android:viewportWidth="180"
-        xmlns:android="http://schemas.android.com/apk/res/android">
-    <path android:fillAlpha="1"
-          android:fillColor="#e334e7"
-          android:pathData="M89.67,89.67m-89.67,0a89.67,89.67 0,1 1,179.34 0a89.67,89.67 0,1 1,-179.34 0"/>
-    <path android:fillAlpha="1"
-          android:fillColor="#48fffb"
-          android:pathData="m164.22,39.96c-85.14,22.11 -66.8,90.38 -100.11,135.61 8.29,2.48 16.9,3.75 25.56,3.77 49.52,0 89.67,-40.15 89.67,-89.67 -0.02,-17.7 -5.28,-34.99 -15.12,-49.71z"/>
-    <path android:fillAlpha="1"
-          android:fillColor="#4f4324"
-          android:pathData="M118.1,42.84m-7.06,0a7.06,7.06 0,1 1,14.12 0a7.06,7.06 0,1 1,-14.12 0"/>
-    <path android:fillAlpha="1"
-          android:fillColor="#e334e7"
-          android:pathData="m1.84,169.48c10.46,-9.67 26.4,-16.61 24.02,-32.71l27.4,31.74c-34.07,6.79 -42.3,3.71 -51.42,0.97z"/>
+<vector
+  android:height="48dp"
+  android:width="48dp"
+  android:viewportHeight="180"
+  android:viewportWidth="180"
+  xmlns:android="http://schemas.android.com/apk/res/android"
+>
+    <path
+    android:fillAlpha="1"
+    android:fillColor="#e334e7"
+    android:pathData="M89.67,89.67m-89.67,0a89.67,89.67 0,1 1,179.34 0a89.67,89.67 0,1 1,-179.34 0"
+  />
+    <path
+    android:fillAlpha="1"
+    android:fillColor="#48fffb"
+    android:pathData="m164.22,39.96c-85.14,22.11 -66.8,90.38 -100.11,135.61 8.29,2.48 16.9,3.75 25.56,3.77 49.52,0 89.67,-40.15 89.67,-89.67 -0.02,-17.7 -5.28,-34.99 -15.12,-49.71z"
+  />
+    <path
+    android:fillAlpha="1"
+    android:fillColor="#4f4324"
+    android:pathData="M118.1,42.84m-7.06,0a7.06,7.06 0,1 1,14.12 0a7.06,7.06 0,1 1,-14.12 0"
+  />
+    <path
+    android:fillAlpha="1"
+    android:fillColor="#e334e7"
+    android:pathData="m1.84,169.48c10.46,-9.67 26.4,-16.61 24.02,-32.71l27.4,31.74c-34.07,6.79 -42.3,3.71 -51.42,0.97z"
+  />
 </vector>

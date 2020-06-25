@@ -1,6 +1,9 @@
+PRETTIER_ARGS = --ignore-path .gitignore --plugin=@prettier/plugin-xml .
+
 verify: riko
 	cargo test --package viska
 	gradle check
+	prettier --check $(PRETTIER_ARGS)
 
 .PHONY: android
 android: $(DEMO_DATABASE_LOCATION) riko
@@ -13,3 +16,7 @@ android: $(DEMO_DATABASE_LOCATION) riko
 .PHONY: riko
 riko:
 	cargo riko
+
+.PHONY: prettier
+prettier:
+	prettier --write $(PRETTIER_ARGS)

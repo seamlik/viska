@@ -3,24 +3,28 @@
   xmlns:app="http://schemas.android.com/apk/res-auto"
   android:id="@+id/drawer_layout"
   android:layout_height="match_parent"
-  android:layout_width="match_parent">
+  android:layout_width="match_parent"
+>
 
   <androidx.coordinatorlayout.widget.CoordinatorLayout
     android:id="@+id/coordinator"
     android:layout_height="match_parent"
-    android:layout_width="match_parent">
+    android:layout_width="match_parent"
+  >
 
     <com.google.android.material.appbar.AppBarLayout
       android:id="@+id/app_bar_layout"
       android:layout_height="wrap_content"
-      android:layout_width="match_parent">
+      android:layout_width="match_parent"
+    >
 
       <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/action_bar"
         android:layout_height="wrap_content"
         android:layout_width="match_parent"
         app:navigationIcon="@drawable/menu"
-        app:titleTextColor="@android:color/white"/>
+        app:titleTextColor="@android:color/white"
+      />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -28,7 +32,8 @@
       android:id="@+id/list"
       android:layout_height="match_parent"
       android:layout_width="match_parent"
-      app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior"/>
+      app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior"
+    />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
       android:id="@+id/fab"
@@ -37,7 +42,8 @@
       android:layout_margin="@dimen/padding_large"
       android:layout_width="wrap_content"
       android:src="@android:drawable/ic_input_add"
-      app:layout_behavior="com.google.android.material.floatingactionbutton.FloatingActionButton$Behavior"/>
+      app:layout_behavior="com.google.android.material.floatingactionbutton.FloatingActionButton$Behavior"
+    />
 
   </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
@@ -47,6 +53,7 @@
     android:layout_height="match_parent"
     android:layout_width="wrap_content"
     app:headerLayout="@layout/drawer_header"
-    app:menu="@menu/drawer"/>
+    app:menu="@menu/drawer"
+  />
 
 </androidx.drawerlayout.widget.DrawerLayout>

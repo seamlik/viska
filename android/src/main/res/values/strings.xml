@@ -3,7 +3,9 @@
   <string name="app">Viska</string>
   <string name="avatar">Avatar</string>
   <string name="chatrooms">Chatrooms</string>
-  <string name="dialog_description_exit">All connections to your peers will be cut and you will no longer receive messages.</string>
+  <string
+    name="dialog_description_exit"
+  >All connections to your peers will be cut and you will no longer receive messages.</string>
   <string name="exit">Exit</string>
   <string name="new_account">Create a new account</string>
   <string name="new_mock_profile">Use a mocked database</string>

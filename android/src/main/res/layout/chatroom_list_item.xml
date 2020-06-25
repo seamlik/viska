@@ -4,7 +4,8 @@
   android:layout_height="wrap_content"
   android:layout_width="match_parent"
   xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:app="http://schemas.android.com/apk/res-auto">
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+>
 
   <ImageView
     android:contentDescription="@string/avatar"
@@ -14,7 +15,8 @@
     android:src="@drawable/person"
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toTopOf="parent"/>
+    app:layout_constraintTop_toTopOf="parent"
+  />
 
   <TextView
     android:id="@+id/name"
@@ -25,7 +27,8 @@
     app:layout_constraintBottom_toTopOf="@id/description"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toEndOf="@id/avatar"
-    app:layout_constraintTop_toTopOf="parent"/>
+    app:layout_constraintTop_toTopOf="parent"
+  />
 
   <TextView
     android:id="@+id/description"
@@ -35,6 +38,7 @@
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintEnd_toEndOf="@id/name"
     app:layout_constraintStart_toEndOf="@id/avatar"
-    app:layout_constraintTop_toBottomOf="@id/name"/>
+    app:layout_constraintTop_toBottomOf="@id/name"
+  />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

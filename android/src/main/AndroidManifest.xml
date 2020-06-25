@@ -1,9 +1,10 @@
 <manifest
   package="viska.android"
   xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:tools="http://schemas.android.com/tools">
+  xmlns:tools="http://schemas.android.com/tools"
+>
 
-  <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
   <application
     android:icon="@drawable/icon"
@@ -11,17 +12,22 @@
     android:name=".Application"
     android:supportsRtl="true"
     android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar"
-    tools:replace="android:label">
-    <activity
-      android:launchMode="singleInstance"
-      android:name=".MainActivity">
+    tools:replace="android:label"
+  >
+    <activity android:launchMode="singleInstance" android:name=".MainActivity">
       <intent-filter>
-        <action android:name="android.intent.action.MAIN"/>
-        <category android:name="android.intent.category.LAUNCHER"/>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
     </activity>
-    <activity android:name=".NewProfileActivity" android:launchMode="singleInstance"/>
-    <activity android:name=".ChatroomActivity" android:documentLaunchMode="intoExisting"/>
-    <service android:name=".ViskaService"/>
+    <activity
+      android:name=".NewProfileActivity"
+      android:launchMode="singleInstance"
+    />
+    <activity
+      android:name=".ChatroomActivity"
+      android:documentLaunchMode="intoExisting"
+    />
+    <service android:name=".ViskaService" />
   </application>
 </manifest>

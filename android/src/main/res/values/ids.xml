@@ -1,3 +1,3 @@
 <resources>
-  <item name="notification_systray" type="id"/>
+  <item name="notification_systray" type="id" />
 </resources>

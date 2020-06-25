@@ -2,7 +2,8 @@
   android:layout_height="match_parent"
   android:layout_width="match_parent"
   xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:app="http://schemas.android.com/apk/res-auto">
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+>
 
   <com.google.android.material.button.MaterialButton
     android:id="@+id/new_account"
@@ -12,7 +13,8 @@
     app:layout_constraintBottom_toBottomOf="@id/new_mock_profile"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toTopOf="parent"/>
+    app:layout_constraintTop_toTopOf="parent"
+  />
 
   <com.google.android.material.button.MaterialButton
     android:id="@+id/new_mock_profile"
@@ -22,7 +24,8 @@
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"
-    app:layout_constraintTop_toBottomOf="@id/new_account"/>
+    app:layout_constraintTop_toBottomOf="@id/new_account"
+  />
 
   <ProgressBar
     android:id="@+id/progress"
@@ -32,6 +35,7 @@
     android:layout_width="match_parent"
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintTop_toTopOf="parent"
-    style="@style/Widget.AppCompat.ProgressBar.Horizontal"/>
+    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+  />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
