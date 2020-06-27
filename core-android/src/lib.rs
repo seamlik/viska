@@ -1,7 +1,11 @@
+#![feature(proc_macro_hygiene)]
+
 #[path = "../../target/riko/viska_android.rs"]
+#[riko::ignore]
 mod bridge_android;
 
 #[path = "../../target/riko/viska.rs"]
+#[riko::ignore]
 mod bridge_core;
 
 use android_logger::Config;
