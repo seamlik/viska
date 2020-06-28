@@ -11,7 +11,7 @@ import com.couchbase.lite.QueryBuilder
 import com.couchbase.lite.SelectResult
 import java.util.Objects
 
-class Chatroom(private val database: Database, document: DictionaryInterface) : Entity(document) {
+class Chatroom(database: Database, document: DictionaryInterface) : Entity(database, document) {
   companion object {
     fun getDocumentId(chatroomId: String) = "Chatroom-$chatroomId"
     fun getChatroomIdFromMembers(members: Collection<String>): String = TODO()
@@ -54,7 +54,7 @@ class Chatroom(private val database: Database, document: DictionaryInterface) : 
                     .and(Expression.property("participants").equalTo(Expression.list(members))))
             .orderBy(Ordering.property("time").descending())
             .execute()
-            .map { Message(it) }
+            .map { Message(database, it) }
             .firstOrNull()
 
   val members: List<String>

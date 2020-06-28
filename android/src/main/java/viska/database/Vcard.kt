@@ -4,7 +4,7 @@ import com.couchbase.lite.Database
 import com.couchbase.lite.DictionaryInterface
 import java.util.Objects
 
-class Vcard(document: DictionaryInterface) : Entity(document) {
+class Vcard(database: Database, document: DictionaryInterface) : Entity(database, document) {
   companion object {
     fun getDocumentId(accountId: String) = "Vcard-$accountId"
   }
@@ -30,4 +30,4 @@ class Vcard(document: DictionaryInterface) : Entity(document) {
 }
 
 fun Database.getVcard(accountId: String) =
-    getDocument(Vcard.getDocumentId(accountId))?.run { Vcard(this) }
+    getDocument(Vcard.getDocumentId(accountId))?.run { Vcard(this@getVcard, this) }

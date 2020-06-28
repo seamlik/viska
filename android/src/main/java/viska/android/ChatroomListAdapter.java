@@ -5,11 +5,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 import com.couchbase.lite.Database;
-import com.couchbase.lite.Result;
-import java.util.Objects;
 import viska.database.Chatroom;
 import viska.database.ChatroomKt;
 import viska.database.Message;
@@ -23,30 +20,12 @@ public class ChatroomListAdapter
     }
   }
 
-  public static class Differ extends DiffUtil.ItemCallback<Result> {
-    private final Database database;
-
-    public Differ(final Database database) {
-      this.database = database;
-    }
-
-    @Override
-    public boolean areItemsTheSame(@NonNull Result oldItem, @NonNull Result newItem) {
-      return Objects.equals(
-          new Chatroom(database, oldItem).getDocumentId(),
-          new Chatroom(database, newItem).getDocumentId());
-    }
-
-    @Override
-    public boolean areContentsTheSame(@NonNull Result oldItem, @NonNull Result newItem) {
-      return Objects.equals(new Chatroom(database, oldItem), new Chatroom(database, newItem));
-    }
-  }
-
   private final Database database;
 
   public ChatroomListAdapter(final Database database) {
-    super(ChatroomKt.queryChatrooms(database), new Differ(database));
+    super(
+        ChatroomKt.queryChatrooms(database),
+        new EntityDiffer<>(result -> new Chatroom(database, result)));
     this.database = database;
   }
 

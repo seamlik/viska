@@ -14,7 +14,7 @@ import com.couchbase.lite.SelectResult
 import java.util.Objects
 import viska.android.R
 
-class Message(document: DictionaryInterface) : Entity(document) {
+class Message(database: Database, document: DictionaryInterface) : Entity(database, document) {
   val content
     get() = document.getBlob("content") ?: throw DatabaseCorruptedException()
 

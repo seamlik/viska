@@ -9,7 +9,7 @@ import com.couchbase.lite.QueryBuilder
 import com.couchbase.lite.SelectResult
 import java.util.Objects
 
-class Peer(private val database: Database, document: DictionaryInterface) : Entity(document) {
+class Peer(database: Database, document: DictionaryInterface) : Entity(database, document) {
   val role
     get() = document.getInt("role")
 
