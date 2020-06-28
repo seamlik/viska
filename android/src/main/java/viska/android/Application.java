@@ -4,7 +4,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import androidx.lifecycle.MutableLiveData;
 import com.couchbase.lite.CouchbaseLite;
-import lombok.Getter;
 
 public class Application extends android.app.Application {
 
@@ -19,7 +18,11 @@ public class Application extends android.app.Application {
 
   public static final String NOTIFICATION_CHANNEL_SYSTRAY = "systray";
 
-  @Getter private final ViewModel viewModel = new ViewModel();
+  private final ViewModel viewModel = new ViewModel();
+
+  public ViewModel getViewModel() {
+    return viewModel;
+  }
 
   @Override
   public void onCreate() {
