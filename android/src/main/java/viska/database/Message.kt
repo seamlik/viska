@@ -25,7 +25,7 @@ class Message(database: Database, document: DictionaryInterface) : Entity(databa
     get() = document.getDate("time") ?: throw DatabaseCorruptedException()
 
   /** Chatroom members. */
-  val participants
+  val recipients
     get() =
         (document.getArray("participants") as Array?)?.map { it as String }?.toList() ?: emptyList()
 
