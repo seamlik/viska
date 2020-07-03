@@ -3,6 +3,7 @@ package viska.android;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
@@ -80,6 +81,7 @@ public class MainActivity extends InstanceActivity {
     try {
       accountId = Hex.encodeHexString(ProfileKt.getProfile(db).getAccountId(), false);
     } catch (DatabaseCorruptedException err) {
+      Log.e(getClass().getCanonicalName(), err.getLocalizedMessage(), err);
       moveToNewProfileActivity();
       return;
     }
