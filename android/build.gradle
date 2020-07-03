@@ -20,6 +20,9 @@ android {
   composeOptions {
     kotlinCompilerExtensionVersion '0.1.0-dev14'
   }
+  kotlinOptions {
+    jvmTarget = '1.8'
+  }
   defaultConfig {
     applicationId 'viska.android'
     minSdkVersion 28
@@ -61,6 +64,7 @@ dependencies {
   implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0'
   implementation 'androidx.ui:ui-core:0.1.0-dev14'
   implementation 'androidx.ui:ui-layout:0.1.0-dev14'
+  implementation 'androidx.ui:ui-livedata:0.1.0-dev14'
   implementation 'androidx.ui:ui-material:0.1.0-dev14'
   implementation 'androidx.ui:ui-tooling:0.1.0-dev14'
   implementation 'com.couchbase.lite:couchbase-lite-android:2.7.1'
