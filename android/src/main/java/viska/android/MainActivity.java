@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.couchbase.lite.Document;
+import com.couchbase.lite.ListenerToken;
 import com.google.android.flexbox.FlexboxLayoutManager;
 import com.google.android.flexbox.JustifyContent;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -63,14 +64,13 @@ public class MainActivity extends InstanceActivity {
     flexboxLayoutManager = new FlexboxLayoutManager(this);
     flexboxLayoutManager.setJustifyContent(JustifyContent.CENTER);
     linearLayoutManager = new LinearLayoutManager(this);
-
-    model.screen.observe(this, this::changeScreen);
   }
 
   @Override
   protected void onStart() {
     super.onStart();
 
+    model.screen.observe(this, this::changeScreen);
     model.screen.setValue(model.screen.getValue());
 
     final NavigationView drawer = findViewById(R.id.drawer);
@@ -87,14 +87,16 @@ public class MainActivity extends InstanceActivity {
     description.setText(accountId);
 
     final TextView name = drawer.getHeaderView(0).findViewById(R.id.name);
-    db.addDocumentChangeListener(
-        Vcard.Companion.getDocumentId(accountId),
-        change -> {
-          final Document vcard = change.getDatabase().getDocument(change.getDocumentID());
-          if (vcard != null) {
-            name.setText(vcard.getString("name"));
-          }
-        });
+    final ListenerToken token =
+        db.addDocumentChangeListener(
+            Vcard.Companion.getDocumentId(accountId),
+            change -> {
+              final Document vcard = change.getDatabase().getDocument(change.getDocumentID());
+              if (vcard != null) {
+                name.setText(vcard.getString("name"));
+              }
+            });
+    storeListenerToken(token);
   }
 
   private boolean onNavigationItemSelected(final MenuItem item) {
@@ -120,18 +122,23 @@ public class MainActivity extends InstanceActivity {
     final MenuItem drawerMenuChatrooms = drawer.getMenu().findItem(R.id.chatrooms);
     final MenuItem drawerMenuRoster = drawer.getMenu().findItem(R.id.roster);
     final RecyclerView list = findViewById(R.id.list);
+    if (list.getAdapter() != null) {
+      ((CouchbaseLiveQueryListAdapter) list.getAdapter()).unsubscribe();
+    }
     switch (screen) {
       case CHATROOMS:
         drawerMenuChatrooms.setChecked(true);
         getSupportActionBar().setTitle(R.string.chatrooms);
         list.setLayoutManager(linearLayoutManager);
-        list.setAdapter(new ChatroomListAdapter(db));
+        final ChatroomListAdapter chatroomListAdapter = new ChatroomListAdapter(db);
+        list.setAdapter(chatroomListAdapter);
         break;
       case ROSTER:
         drawerMenuRoster.setChecked(true);
         getSupportActionBar().setTitle(R.string.roster);
         list.setLayoutManager(flexboxLayoutManager);
-        list.setAdapter(new RosterListAdapter(db));
+        final RosterListAdapter rosterListAdapter = new RosterListAdapter(db);
+        list.setAdapter(rosterListAdapter);
         break;
       default:
         return;
@@ -139,6 +146,16 @@ public class MainActivity extends InstanceActivity {
 
     final DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
     drawerLayout.closeDrawers();
+  }
+
+  @Override
+  protected void onStop() {
+    final RecyclerView list = findViewById(R.id.list);
+    if (list.getAdapter() != null) {
+      ((CouchbaseLiveQueryListAdapter) list.getAdapter()).unsubscribe();
+    }
+
+    super.onStop();
   }
 
   private void askExit() {

@@ -9,10 +9,13 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import com.couchbase.lite.CouchbaseLiteException;
 import com.couchbase.lite.Database;
+import com.couchbase.lite.ListenerToken;
+import java.util.ArrayList;
 
 public abstract class InstanceActivity extends AppCompatActivity {
 
   protected Database db;
+  private final ArrayList<ListenerToken> tokens = new ArrayList<>();
 
   @Override
   protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -49,6 +52,10 @@ public abstract class InstanceActivity extends AppCompatActivity {
     super.onStop();
 
     if (db != null) {
+      synchronized (tokens) {
+        tokens.forEach(db::removeChangeListener);
+        tokens.clear();
+      }
       try {
         db.close();
       } catch (CouchbaseLiteException e) {
@@ -61,5 +68,11 @@ public abstract class InstanceActivity extends AppCompatActivity {
   protected void moveToNewProfileActivity() {
     startActivity(new Intent(this, NewProfileActivity.class));
     finish();
+  }
+
+  protected void storeListenerToken(final ListenerToken token) {
+    synchronized (tokens) {
+      tokens.add(token);
+    }
   }
 }

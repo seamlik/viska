@@ -7,6 +7,7 @@ import android.os.Bundle;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.couchbase.lite.Document;
+import com.couchbase.lite.ListenerToken;
 import com.google.android.material.appbar.MaterialToolbar;
 import java.util.Arrays;
 import java.util.Collection;
@@ -56,18 +57,29 @@ public class ChatroomActivity extends InstanceActivity {
     }
 
     final String chatroomId = Chatroom.Companion.getChatroomIdFromMembers(chatroomMembers);
-    db.addDocumentChangeListener(
-        Chatroom.Companion.getDocumentId(chatroomId),
-        change -> {
-          final Document document = change.getDatabase().getDocument(change.getDocumentID());
-          if (document != null) {
-            final Chatroom chatroom = new Chatroom(change.getDatabase(), document);
-            setTitle(chatroom.getDisplayName());
-          }
-        });
+    final ListenerToken token =
+        db.addDocumentChangeListener(
+            Chatroom.Companion.getDocumentId(chatroomId),
+            change -> {
+              final Document document = change.getDatabase().getDocument(change.getDocumentID());
+              if (document != null) {
+                final Chatroom chatroom = new Chatroom(change.getDatabase(), document);
+                setTitle(chatroom.getDisplayName());
+              }
+            });
+    storeListenerToken(token);
 
     final RecyclerView list = findViewById(R.id.list);
-    list.setAdapter(new ConversationAdapter(db, chatroomMembers));
+    final ConversationAdapter adapter = new ConversationAdapter(db, chatroomMembers);
+    list.setAdapter(adapter);
+  }
+
+  @Override
+  protected void onStop() {
+    final RecyclerView list = findViewById(R.id.list);
+    ((CouchbaseLiveQueryListAdapter) list.getAdapter()).unsubscribe();
+
+    super.onStop();
   }
 
   private List<String> getChatroomMembers() {
