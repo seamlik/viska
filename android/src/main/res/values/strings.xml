@@ -8,7 +8,7 @@
   >All connections to your peers will be cut and you will no longer receive messages.</string>
   <string name="exit">Exit</string>
   <string name="new_account">Create a new account</string>
-  <string name="new_mock_profile">Use a mocked database</string>
+  <string name="new_mock_profile">Generate a mocked profile</string>
   <string name="notification_systray_name">Status icon</string>
   <string name="notification_systray_title">Viska is running</string>
   <string name="placeholder_audio">(Audio)</string>
