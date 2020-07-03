@@ -21,9 +21,8 @@ public abstract class InstanceActivity extends AppCompatActivity {
   protected void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
-    final Application app = (Application) getApplication();
-    app.getViewModel()
-        .creatingAccount
+    GlobalState.INSTANCE
+        .getCreatingAccount()
         .observe(
             this,
             creatingAccount -> {

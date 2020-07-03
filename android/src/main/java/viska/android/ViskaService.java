@@ -25,7 +25,7 @@ public class ViskaService extends Service {
   public void onCreate() {
     super.onCreate();
     final Notification notification =
-        new Notification.Builder(this, Application.NOTIFICATION_CHANNEL_SYSTRAY)
+        new Notification.Builder(this, ApplicationKt.NOTIFICATION_CHANNEL_SYSTRAY)
             .setContentTitle(getString(R.string.notification_systray_title))
             .setContentIntent(
                 PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), 0))

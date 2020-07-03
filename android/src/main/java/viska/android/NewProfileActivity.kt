@@ -26,8 +26,7 @@ class NewProfileActivity : AppCompatActivity() {
   @Composable
   @Preview
   private fun Ui() {
-    val app = application as Application
-    val creatingAccount by app.viewModel.creatingAccount.observeAsState(false)
+    val creatingAccount by GlobalState.creatingAccount.observeAsState(false)
 
     Column(
         verticalArrangement = Arrangement.SpaceEvenly,
@@ -45,11 +44,10 @@ class NewProfileActivity : AppCompatActivity() {
   }
 
   private fun newAccount() {
-    val app = application as Application
-    app.viewModel.creatingAccount.value = true
+    GlobalState.creatingAccount.value = true
     val database = viska.database.open()
     database.createNewProfile()
-    app.viewModel.creatingAccount.value = false
+    GlobalState.creatingAccount.value = false
 
     startActivity(Intent(this, MainActivity::class.java))
     finish()
