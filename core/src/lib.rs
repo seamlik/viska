@@ -1,3 +1,9 @@
+#![feature(proc_macro_hygiene)]
+
+#[path = "../../target/riko/viska.rs"]
+#[riko::ignore]
+pub mod bridge;
+
 mod endpoint;
 mod handler;
 mod packet;
