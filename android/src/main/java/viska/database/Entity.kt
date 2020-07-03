@@ -5,7 +5,9 @@ import com.couchbase.lite.DictionaryInterface
 import com.couchbase.lite.Document
 import com.couchbase.lite.MutableDocument
 
-open class Entity(protected val database: Database, protected val document: DictionaryInterface) {
+abstract class Entity(
+    protected val database: Database, protected val document: DictionaryInterface
+) {
   val documentId
     get() = document.getString("id") ?: throw DatabaseCorruptedException("No document ID")
 
@@ -23,5 +25,9 @@ open class Entity(protected val database: Database, protected val document: Dict
           }
         }
     database.save(mutableDocument)
+  }
+
+  override fun equals(other: Any?): Boolean {
+    TODO()
   }
 }
