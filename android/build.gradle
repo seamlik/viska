@@ -6,6 +6,7 @@ apply plugin: 'com.diffplug.gradle.spotless'
 repositories {
   google()
   jcenter()
+  mavenLocal()
 }
 
 android {
