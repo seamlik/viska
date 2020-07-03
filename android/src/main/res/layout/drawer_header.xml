@@ -13,6 +13,7 @@
     android:layout_width="match_parent"
     android:maxLines="1"
     android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
+    android:text="@string/unknown_account"
   />
 
   <TextView

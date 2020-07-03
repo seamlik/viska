@@ -19,6 +19,7 @@ import com.google.android.flexbox.JustifyContent;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
+import org.apache.commons.codec.binary.Hex;
 import viska.database.DatabaseCorruptedException;
 import viska.database.ProfileKt;
 import viska.database.Vcard;
@@ -77,7 +78,7 @@ public class MainActivity extends InstanceActivity {
 
     final String accountId;
     try {
-      accountId = ProfileKt.getProfile(db).getAccountId();
+      accountId = Hex.encodeHexString(ProfileKt.getProfile(db).getAccountId(), false);
     } catch (DatabaseCorruptedException err) {
       moveToNewProfileActivity();
       return;
