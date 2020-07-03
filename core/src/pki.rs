@@ -19,18 +19,23 @@ use blake3::Hash;
 use rcgen::CertificateParams;
 use rcgen::DistinguishedName;
 use rcgen::DnType;
+use serde::Deserialize;
+use serde::Serialize;
+use serde_bytes::ByteBuf;
 
 /// Bundle generated when creating a certificate.
+#[derive(Deserialize, Serialize)]
 pub struct CertificateBundle {
     /// X.509 certificate encoded in DER.
-    pub certificate: Vec<u8>,
+    pub certificate: ByteBuf,
 
     // Private and (optionally) public key in PKCS#8 encoded in DER.
-    pub keypair: Vec<u8>,
+    pub keypair: ByteBuf,
 }
 
 /// Generates a certificate for an account.
-pub fn new_certificate() -> CertificateBundle {
+#[riko::fun]
+pub fn new_certificate() -> crate::pki::CertificateBundle {
     let mut dn = DistinguishedName::new();
     dn.push(DnType::CommonName, "Viska Account");
 
@@ -39,12 +44,13 @@ pub fn new_certificate() -> CertificateBundle {
     params.distinguished_name = dn;
 
     let cert = rcgen::Certificate::from_params(params).expect("Failed to generate certificate");
+    let cert_bytes = cert
+        .serialize_der()
+        .expect("Failed to serialize certificate into DER");
     let keypair = cert.get_key_pair().serialize_der();
     CertificateBundle {
-        certificate: cert
-            .serialize_der()
-            .expect("Failed to serialize certificate into DER"),
-        keypair,
+        certificate: ByteBuf::from(cert_bytes),
+        keypair: ByteBuf::from(keypair),
     }
 }
 
@@ -68,3 +74,12 @@ impl Certificate for rustls::Certificate {
 
 /// BLAKE3 digest of the entire certificate encoded in ASN.1 DER.
 pub type CertificateId = Hash;
+
+/// THE hash function (BLAKE3) universally used in the project.
+///
+/// This is exported only because this algorithm isn't available in most languages or platform at moment.
+#[riko::fun]
+pub fn hash(src: &ByteBuf) -> ByteBuf {
+    let raw_hash: [u8; 32] = blake3::hash(src).into();
+    ByteBuf::from(raw_hash)
+}

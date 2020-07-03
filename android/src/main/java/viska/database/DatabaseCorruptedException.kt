@@ -2,4 +2,4 @@ package viska.database
 
 import java.lang.RuntimeException
 
-class DatabaseCorruptedException() : RuntimeException() {}
+class DatabaseCorruptedException(msg: String?) : RuntimeException(msg)

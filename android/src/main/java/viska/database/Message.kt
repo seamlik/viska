@@ -16,13 +16,13 @@ import viska.android.R
 
 class Message(database: Database, document: DictionaryInterface) : Entity(database, document) {
   val content
-    get() = document.getBlob("content") ?: throw DatabaseCorruptedException()
+    get() = document.getBlob("content") ?: throw DatabaseCorruptedException("No message content")
 
   val sender
-    get() = document.getString("sender") ?: throw DatabaseCorruptedException()
+    get() = document.getString("sender") ?: throw DatabaseCorruptedException("No message sender")
 
   val time
-    get() = document.getDate("time") ?: throw DatabaseCorruptedException()
+    get() = document.getDate("time") ?: throw DatabaseCorruptedException("No message sent time")
 
   /** Chatroom members. */
   val recipients
