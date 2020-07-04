@@ -20,7 +20,7 @@ quinn = "0.6.1"
 rcgen = "=0.8.0" # Bug generating bad DER format
 riko = { git = "https://github.com/seamlik/riko" }
 riko_runtime = { git = "https://github.com/seamlik/riko", features = ["riko_jni"] }
-rustls = { version = "0", features = ["dangerous_configuration", "quic"]}
+rustls = { version = "0.17", features = ["dangerous_configuration", "quic"]}
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0"
 serde_with = "1"
