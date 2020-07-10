@@ -83,3 +83,8 @@ pub fn hash(src: &ByteBuf) -> ByteBuf {
     let raw_hash: [u8; 32] = blake3::hash(src).into();
     ByteBuf::from(raw_hash)
 }
+
+#[riko::fun]
+pub fn display_id(id: &ByteBuf) -> String {
+    hex::encode_upper(id)
+}
