@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package viska.daemon;
+
+import "google/protobuf/empty.proto";
+import "transaction.proto";
+
+service Platform {
+  rpc Commit(stream viska.transaction.Transaction) returns (google.protobuf.Empty) {}
+}

@@ -43,7 +43,7 @@ public abstract class InstanceActivity extends AppCompatActivity {
       return;
     }
 
-    startForegroundService(new Intent(this, ViskaService.class));
+    startForegroundService(new Intent(this, DaemonService.class));
   }
 
   @Override

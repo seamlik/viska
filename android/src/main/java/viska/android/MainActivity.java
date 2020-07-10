@@ -95,7 +95,7 @@ public class MainActivity extends InstanceActivity {
     final TextView name = drawer.getHeaderView(0).findViewById(R.id.name);
     final ListenerToken token =
         db.addDocumentChangeListener(
-            Vcard.Companion.getDocumentId(accountId),
+            Vcard.Companion.documentId(accountId),
             change -> {
               final Document vcard = change.getDatabase().getDocument(change.getDocumentID());
               if (vcard != null) {
@@ -170,7 +170,7 @@ public class MainActivity extends InstanceActivity {
           if (which != DialogInterface.BUTTON_POSITIVE) {
             return;
           }
-          stopService(new Intent(this, ViskaService.class));
+          stopService(new Intent(this, DaemonService.class));
           finish();
         };
 

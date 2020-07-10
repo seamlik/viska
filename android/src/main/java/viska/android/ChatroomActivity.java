@@ -13,6 +13,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import org.bson.BsonBinary;
 import viska.database.Chatroom;
 
 public class ChatroomActivity extends InstanceActivity {
@@ -22,13 +24,17 @@ public class ChatroomActivity extends InstanceActivity {
    *
    * @param chatroomMembers Account ID of the chatroom members.
    */
-  public static void start(final Context source, final Collection<String> chatroomMembers) {
+  public static void start(final Context source, final Collection<byte[]> chatroomMembers) {
     // Will be like viska://chatroom/account1+account2+...
+    final String displayListOfMembers =
+        chatroomMembers.stream()
+            .map(id -> viska.pki.Module.display_id(new BsonBinary(id)).asString().getValue())
+            .collect(Collectors.joining("+"));
     final Uri uri =
         new Uri.Builder()
             .scheme("viska")
             .authority("chatroom")
-            .appendPath(String.join("+", chatroomMembers))
+            .appendPath(displayListOfMembers)
             .build();
     final Intent intent = new Intent(source, ChatroomActivity.class);
     intent.setData(uri);
@@ -59,7 +65,7 @@ public class ChatroomActivity extends InstanceActivity {
     final String chatroomId = Chatroom.Companion.getChatroomIdFromMembers(chatroomMembers);
     final ListenerToken token =
         db.addDocumentChangeListener(
-            Chatroom.Companion.getDocumentId(chatroomId),
+            Chatroom.Companion.documentId(chatroomId),
             change -> {
               final Document document = change.getDatabase().getDocument(change.getDocumentID());
               if (document != null) {

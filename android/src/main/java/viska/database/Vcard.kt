@@ -3,10 +3,14 @@ package viska.database
 import com.couchbase.lite.Database
 import com.couchbase.lite.DictionaryInterface
 import java.util.Objects
+import org.bson.BsonBinary
 
 class Vcard(database: Database, document: DictionaryInterface) : Entity(database, document) {
   companion object {
-    fun getDocumentId(accountId: String) = "Vcard-$accountId"
+    fun documentId(accountId: ByteArray) =
+        "Vcard:${viska.pki.Module.display_id(BsonBinary(accountId))!!.asString().value}"
+
+    fun documentId(accountIdUppercase: String) = "Vcard:$accountIdUppercase"
   }
 
   val name
@@ -29,5 +33,8 @@ class Vcard(database: Database, document: DictionaryInterface) : Entity(database
   }
 }
 
-fun Database.getVcard(accountId: String) =
-    getDocument(Vcard.getDocumentId(accountId))?.run { Vcard(this@getVcard, this) }
+fun Database.getVcard(accountId: ByteArray) =
+    getDocument(Vcard.documentId(accountId))?.run { Vcard(this@getVcard, this) }
+
+fun Database.getVcard(accountIdUppercase: String) =
+    getDocument(Vcard.documentId(accountIdUppercase))?.run { Vcard(this@getVcard, this) }

@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package viska.transaction;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+message Transaction {
+  google.protobuf.Timestamp time = 1;
+  Packet packet = 2;
+}
+
+message Packet {
+  Operation operation = 1;
+  bytes key = 2;
+  PayloadType type = 3;
+  oneof payload {
+    Message message = 10;
+    Chatroom chatroom = 11;
+    Peer peer = 12;
+  }
+}
+
+enum Operation {
+  DELETE = 0;
+  ADD = 1;
+}
+
+enum PayloadType {
+  CHATROOM = 0;
+  MESSAGE = 1;
+  PEER = 2;
+}
+
+message Message {
+  bytes content = 1;
+  string mime = 2;
+  bytes sender = 3;
+  google.protobuf.Timestamp time = 4;
+
+  // Includes the sender.
+  repeated bytes recipients = 5;
+}
+
+message Chatroom {
+  // Custom name given by the user.
+  string name = 1;
+
+  repeated bytes members = 2;
+}
+
+// Account ID is indicated in the `key` field of a `Packet`.
+message Peer {
+  // Custom name given by the user.
+  string name = 1;
+
+  // Positive number or 0 indicates a friend, negative number indicates blocked account.
+  sint32 role = 2;
+}

@@ -28,6 +28,6 @@
       android:name=".ChatroomActivity"
       android:documentLaunchMode="intoExisting"
     />
-    <service android:name=".ViskaService" />
+    <service android:name=".DaemonService" />
   </application>
 </manifest>

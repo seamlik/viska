@@ -27,7 +27,14 @@ abstract class Entity(
     database.save(mutableDocument)
   }
 
+  fun delete() {
+    when (document) {
+      is Document -> database.delete(document)
+      else -> database.getDocument(documentId)?.also { database.delete(it) }
+    }
+  }
+
   override fun equals(other: Any?): Boolean {
-    TODO()
+    TODO("Entity implementations must implement this method")
   }
 }

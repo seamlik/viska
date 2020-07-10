@@ -45,7 +45,7 @@ public class ConversationAdapter
     final TextView content = holder.itemView.findViewById(R.id.content);
     content.setText(message.preview(holder.itemView.getResources()));
 
-    final String sender = message.getSender();
+    final byte[] sender = message.getSender().getContent();
     final Vcard vcard = VcardKt.getVcard(database, sender);
     final TextView name = holder.itemView.findViewById(R.id.name);
     name.setText(vcard.getName());

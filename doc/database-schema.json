@@ -29,48 +29,6 @@
         "key": { "$ref": "#/definitions/Bytes" }
       }
     },
-    "Message": {
-      "type": "object",
-      "properties": {
-        "content": { "$ref": "#/definitions/Blob" },
-        "sender": { "$ref": "#/definitions/AccountId" },
-        "time": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "recipients": {
-          "type": "array",
-          "item": { "$ref": "#/definitions/AccountId" },
-          "description": "Includes the sender"
-        }
-      }
-    },
-    "Chatroom": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "members": {
-          "type": "array",
-          "item": { "$ref": "#/definitions/AccountId" }
-        }
-      }
-    },
-    "Peer": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Custom name given by the user"
-        },
-        "id": { "$ref": "#/definitions/AccountId" },
-        "role": {
-          "type": "integer",
-          "description": "Positive number or 0 indicates a friend, negative number indicates blocked account."
-        }
-      }
-    },
     "Vcard": {
       "type": "object",
       "properties": {

@@ -6,6 +6,8 @@ import org.bson.BsonBinary
 
 val LOG_TAG = "viska.database"
 
+val MIME_ACCOUNT_ID = "application/viska-account-id"
+
 fun open() = Database("main")
 
 fun Database.initialize() {
