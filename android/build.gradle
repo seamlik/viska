@@ -53,7 +53,7 @@ spotless {
     target '**/*.java'
   }
   kotlin {
-    ktfmt('0.13')
+    ktfmt('0.15')
     target '**/*.kt'
   }
 }
