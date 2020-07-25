@@ -11,9 +11,9 @@ targets = ["jni"]
 crate-type = ["cdylib"]
 
 [dependencies]
-android_logger = "0.8.6"
+android_logger = "0.9"
 jni = "0.17"
-log = "0.4.8"
+log = "0.4"
 quinn = "0.6.1"
 riko = { git = "https://github.com/seamlik/riko" }
 riko_runtime = { git = "https://github.com/seamlik/riko", features = ["riko_jni"] }
