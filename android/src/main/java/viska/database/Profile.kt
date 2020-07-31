@@ -37,10 +37,9 @@ class Profile(private val context: Context, val accountIdText: String) {
   }
 }
 
-val Context.profile: Profile?
-  get() {
-    val accountIdText =
-        PreferenceManager.getDefaultSharedPreferences(this).getString("active-account", null)
-            ?: return null
-    return Profile(this, accountIdText)
-  }
+fun Context.openProfile(): Profile? {
+  val accountIdText =
+      PreferenceManager.getDefaultSharedPreferences(this).getString("active-account", null)
+          ?: return null
+  return Profile(this, accountIdText)
+}

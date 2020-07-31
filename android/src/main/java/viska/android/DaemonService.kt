@@ -3,7 +3,6 @@ package viska.android
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
@@ -15,7 +14,7 @@ import java.net.InetSocketAddress
 import viska.daemon.PlatformDaemon
 import viska.database.Profile
 import viska.database.TransactionManager
-import viska.database.profile
+import viska.database.openProfile
 
 class DaemonService : Service() {
   private lateinit var profile: Profile
@@ -35,7 +34,7 @@ class DaemonService : Service() {
             .build()
     startForeground(R.id.notification_systray, notification)
 
-    profile = (this as Context).profile ?: throw IllegalStateException("No active account")
+    profile = openProfile() ?: throw IllegalStateException("No active account")
     database = profile.openDatabase()
     transactionManager = TransactionManager(database)
 
