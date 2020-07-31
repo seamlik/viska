@@ -54,6 +54,12 @@ message Peer {
   // Custom name given by the user.
   string name = 1;
 
-  // Positive number or 0 indicates a friend, negative number indicates blocked account.
-  sint32 role = 2;
+  PeerRole role = 2;
+}
+
+enum PeerRole {
+  // These peers will be denied upon TLS connection.
+  BLOCKED = 0;
+
+  FRIEND = 1;
 }

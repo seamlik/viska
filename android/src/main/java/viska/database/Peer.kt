@@ -20,7 +20,7 @@ class Peer(database: Database, document: DictionaryInterface) : Entity(database,
       val document = MutableDocument(documentId(accountId))
 
       document.setString("name", payload.name)
-      document.setInt("role", payload.role)
+      document.setString("role", payload.role.name)
 
       return document
     }
