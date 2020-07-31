@@ -1,29 +1,46 @@
 package viska.database
 
-import com.couchbase.lite.Blob
+import android.content.Context
+import androidx.preference.PreferenceManager
 import com.couchbase.lite.Database
-import com.couchbase.lite.DictionaryInterface
-import com.couchbase.lite.MutableDocument
-import org.bson.BsonBinary
+import com.couchbase.lite.DatabaseConfiguration
+import java.nio.file.Files
+import org.bson.BsonString
 
-class Profile(database: Database, document: DictionaryInterface) : Entity(database, document) {
-  companion object {
-    fun fromPkiBundle(database: Database, certificate: ByteArray, key: ByteArray): Profile {
-      val document = MutableDocument("profile")
-      document.setBlob("certificate", Blob("application/x-x509-ca-cert", certificate))
-      document.setBlob("key", Blob("application/pkcs8", key))
-      return Profile(database, document)
+class Profile(private val context: Context, val accountIdText: String) {
+
+  val accountId = viska.pki.Module.parse_id(BsonString(accountIdText))!!.asBinary().data
+
+  val certificate: ByteArray
+    get() {
+      val path =
+          context.filesDir
+              .toPath()
+              .resolve("account")
+              .resolve(accountIdText)
+              .resolve("certificate.der")
+      return Files.readAllBytes(path)
     }
+
+  fun openDatabase(): Database {
+    val config =
+        DatabaseConfiguration().apply {
+          directory =
+              context.filesDir
+                  .toPath()
+                  .resolve("account")
+                  .resolve(accountIdText)
+                  .resolve("database")
+                  .toString()
+        }
+    return Database("main", config)
   }
-
-  val certificate
-    get() =
-        document.getBlob("certificate")?.content
-            ?: throw DatabaseCorruptedException("No account certificate")
-
-  val accountId: ByteArray
-    get() = viska.pki.Module.hash(BsonBinary(certificate))!!.asBinary().data
 }
 
-val Database.profile
-  get() = Profile(this, getDocument("profile") ?: throw DatabaseCorruptedException("No profile"))
+val Context.profile: Profile?
+  get() {
+    val accountIdText =
+        PreferenceManager.getDefaultSharedPreferences(this).getString("active-account", null)
+            ?: return null
+    return Profile(this, accountIdText)
+  }

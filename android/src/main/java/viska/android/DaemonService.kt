@@ -3,17 +3,22 @@ package viska.android
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import com.couchbase.lite.Database
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder
+import java.lang.IllegalStateException
 import java.net.InetSocketAddress
 import viska.daemon.PlatformDaemon
+import viska.database.Profile
 import viska.database.TransactionManager
+import viska.database.profile
 
 class DaemonService : Service() {
+  private lateinit var profile: Profile
   private lateinit var database: Database
   private lateinit var transactionManager: TransactionManager
   private lateinit var grpcServer: Server
@@ -30,7 +35,8 @@ class DaemonService : Service() {
             .build()
     startForeground(R.id.notification_systray, notification)
 
-    database = viska.database.open()
+    profile = (this as Context).profile ?: throw IllegalStateException("No active account")
+    database = profile.openDatabase()
     transactionManager = TransactionManager(database)
 
     val grpcServerPort = "::1"

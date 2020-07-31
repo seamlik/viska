@@ -16,6 +16,7 @@
 //! the algorithms, it must notify the user and urge for an immediate update on software.
 
 use blake3::Hash;
+use hex::FromHexError;
 use rcgen::CertificateParams;
 use rcgen::DistinguishedName;
 use rcgen::DnType;
@@ -30,7 +31,7 @@ pub struct CertificateBundle {
     pub certificate: ByteBuf,
 
     // Private and (optionally) public key in PKCS#8 encoded in DER.
-    pub keypair: ByteBuf,
+    pub key: ByteBuf,
 }
 
 /// Generates a certificate for an account.
@@ -50,7 +51,7 @@ pub fn new_certificate() -> crate::pki::CertificateBundle {
     let keypair = cert.get_key_pair().serialize_der();
     CertificateBundle {
         certificate: ByteBuf::from(cert_bytes),
-        keypair: ByteBuf::from(keypair),
+        key: ByteBuf::from(keypair),
     }
 }
 
@@ -84,7 +85,14 @@ pub fn hash(src: &ByteBuf) -> ByteBuf {
     ByteBuf::from(raw_hash)
 }
 
+/// Encodes a binary ID (e.g. account ID) in the unified representation.
 #[riko::fun]
 pub fn display_id(id: &ByteBuf) -> String {
     hex::encode_upper(id)
+}
+
+/// Decodes a binary ID (e.g. account ID) from the unified representation.
+#[riko::fun]
+pub fn parse_id(id: &String) -> Result<ByteBuf, FromHexError> {
+    hex::decode(id).map(ByteBuf::from)
 }

@@ -1,14 +1,16 @@
 package viska.database
 
+import android.content.Context
 import android.util.Log
+import androidx.core.content.edit
+import androidx.preference.PreferenceManager
 import com.couchbase.lite.Database
+import java.nio.file.Files
 import org.bson.BsonBinary
 
-val LOG_TAG = "viska.database"
+const val LOG_TAG = "viska.database"
 
-val MIME_ACCOUNT_ID = "application/viska-account-id"
-
-fun open() = Database("main")
+const val MIME_ACCOUNT_ID = "application/viska-account-id"
 
 fun Database.initialize() {
   TODO()
@@ -16,13 +18,21 @@ fun Database.initialize() {
 
 fun Database.createDemoProfile(): Unit = TODO()
 
-fun Database.createNewProfile() {
+fun Context.createNewProfile() {
   val bundle = viska.pki.Module.new_certificate()!!
   val certificate = bundle.asDocument().getBinary("certificate").data
-  val keypair = bundle.asDocument().getBinary("keypair").data
+  val key = bundle.asDocument().getBinary("key").data
 
   val accountId = viska.pki.Module.hash(BsonBinary(certificate))?.asBinary()?.data
   val displayAccountId = viska.pki.Module.display_id(BsonBinary(accountId))!!.asString().value
   Log.i(LOG_TAG, "Generated account $displayAccountId")
-  Profile.fromPkiBundle(this, certificate, keypair).save()
+
+  val profileDir = filesDir.toPath().resolve("account").resolve(displayAccountId)
+  Files.createDirectories(profileDir)
+  Files.write(profileDir.resolve("certificate.der"), certificate)
+  Files.write(profileDir.resolve("key.der"), key)
+
+  PreferenceManager.getDefaultSharedPreferences(this).edit(commit = true) {
+    putString("active-account", displayAccountId)
+  }
 }

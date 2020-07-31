@@ -45,8 +45,7 @@ class NewProfileActivity : AppCompatActivity() {
 
   private fun newAccount() {
     GlobalState.creatingAccount.value = true
-    val database = viska.database.open()
-    database.createNewProfile()
+    createNewProfile()
     GlobalState.creatingAccount.value = false
 
     startActivity(Intent(this, MainActivity::class.java))

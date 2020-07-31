@@ -3,7 +3,6 @@ package viska.android;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
@@ -20,9 +19,6 @@ import com.google.android.flexbox.JustifyContent;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.navigation.NavigationView;
-import org.bson.BsonBinary;
-import viska.database.DatabaseCorruptedException;
-import viska.database.ProfileKt;
 import viska.database.Vcard;
 
 public class MainActivity extends InstanceActivity {
@@ -77,25 +73,13 @@ public class MainActivity extends InstanceActivity {
 
     final NavigationView drawer = findViewById(R.id.drawer);
 
-    final String accountId;
-    try {
-      accountId =
-          viska.pki.Module.display_id(new BsonBinary(ProfileKt.getProfile(db).getAccountId()))
-              .asString()
-              .getValue();
-    } catch (DatabaseCorruptedException err) {
-      Log.e(getClass().getCanonicalName(), err.getLocalizedMessage(), err);
-      moveToNewProfileActivity();
-      return;
-    }
-
     final TextView description = drawer.getHeaderView(0).findViewById(R.id.description);
-    description.setText(accountId);
+    description.setText(profile.getAccountIdText());
 
     final TextView name = drawer.getHeaderView(0).findViewById(R.id.name);
     final ListenerToken token =
         db.addDocumentChangeListener(
-            Vcard.Companion.documentId(accountId),
+            Vcard.Companion.documentId(profile.getAccountIdText()),
             change -> {
               final Document vcard = change.getDatabase().getDocument(change.getDocumentID());
               if (vcard != null) {

@@ -1,7 +1,5 @@
 package viska.android;
 
-import static viska.database.DatabaseKt.open;
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -11,15 +9,24 @@ import com.couchbase.lite.CouchbaseLiteException;
 import com.couchbase.lite.Database;
 import com.couchbase.lite.ListenerToken;
 import java.util.ArrayList;
+import viska.database.Profile;
+import viska.database.ProfileKt;
 
 public abstract class InstanceActivity extends AppCompatActivity {
 
+  protected Profile profile;
   protected Database db;
   private final ArrayList<ListenerToken> tokens = new ArrayList<>();
 
   @Override
   protected void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+
+    profile = ProfileKt.getProfile(this);
+    if (profile == null) {
+      Log.i(getClass().getSimpleName(), "No active account, switching to NewProfileActivity");
+      moveToNewProfileActivity();
+    }
 
     GlobalState.INSTANCE
         .getCreatingAccount()
@@ -36,13 +43,7 @@ public abstract class InstanceActivity extends AppCompatActivity {
   protected void onStart() {
     super.onStart();
 
-    db = open();
-    if (db.getCount() == 0) {
-      startActivity(new Intent(this, NewProfileActivity.class));
-      finish();
-      return;
-    }
-
+    db = profile.openDatabase();
     startForegroundService(new Intent(this, DaemonService.class));
   }
 

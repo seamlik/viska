@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
     let database: Arc<dyn Database> = Arc::new(DummyDatabase::default());
     let (node, _) = Node::start(
         &dummy_cert_bundle.certificate,
-        &dummy_cert_bundle.keypair,
+        &dummy_cert_bundle.key,
         database,
     )?;
 
