@@ -6,7 +6,7 @@ verify: riko
 	prettier --check $(PRETTIER_ARGS)
 
 .PHONY: android
-android: $(DEMO_DATABASE_LOCATION) riko
+android: riko
 	cross build --package viska_android --target aarch64-linux-android
 	cross build --package viska_android --target x86_64-linux-android
 	cross build --package viska_android --release --target aarch64-linux-android
