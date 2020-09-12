@@ -1,11 +1,14 @@
+//! Pings a Node.
+//!
+//! TODO: Turn this into an integration test
+
 use std::net::SocketAddr;
-use std::sync::Arc;
 use std::time::Instant;
 use structopt::StructOpt;
 use tokio::time::Duration;
-use viska::proto::Message;
+use viska::daemon::DummyPlatform;
+use viska::proto::request::Payload;
 use viska::proto::Request;
-use viska::Database;
 use viska::Node;
 
 #[tokio::main]
@@ -15,19 +18,23 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::from_args();
 
     let dummy_cert_bundle = viska::pki::new_certificate();
-    let database: Arc<dyn Database> = Arc::new(DummyDatabase::default());
+    let platform_grpc_port = DummyPlatform::start();
     let (node, _) = Node::start(
         &dummy_cert_bundle.certificate,
         &dummy_cert_bundle.key,
-        database,
+        platform_grpc_port,
+        false,
     )?;
 
     let connection = node.connect(&cli.destination).await?;
     let mut counter = 0_u32;
+    let request = Request {
+        payload: Some(Payload::Ping(())),
+    };
     loop {
         let earlier = Instant::now();
         counter += 1;
-        match connection.request(&Request::Ping).await {
+        match connection.request(&request).await {
             Ok(_) => println!(
                 "Received pong ({}) after {} ms from {:?}",
                 counter,
@@ -43,16 +50,4 @@ async fn main() -> anyhow::Result<()> {
 #[derive(StructOpt)]
 struct Cli {
     destination: SocketAddr,
-}
-
-#[derive(Default)]
-struct DummyDatabase;
-
-impl viska::Database for DummyDatabase {
-    fn is_peer(&self, _: &[u8]) -> bool {
-        true
-    }
-    fn accept_message(&self, _: &Message, _: &[u8]) {
-        println!("Received a message");
-    }
 }

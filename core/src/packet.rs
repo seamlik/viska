@@ -4,6 +4,7 @@ use crate::proto::Request;
 use crate::proto::Response;
 use crate::Connection;
 use http::StatusCode;
+use prost::Message as _;
 use quinn::ReadToEndError;
 use quinn::RecvStream;
 use quinn::SendStream;
@@ -26,7 +27,7 @@ impl ResponseWindow {
         receiver: RecvStream,
     ) -> Option<Self> {
         match receiver.read_to_end(MAX_PACKET_SIZE_BYTES).await {
-            Ok(raw) => match flexbuffers::from_slice(&raw) {
+            Ok(raw) => match Request::decode(raw.as_slice()) {
                 Ok(request) => {
                     log::debug!("Received request: {:?}", &request);
                     Some(Self {
@@ -65,14 +66,6 @@ impl ResponseWindow {
     pub async fn send_response(mut self, response: Response) -> Result<(), WriteError> {
         send_response(&mut self.sender, &response).await
     }
-
-    pub fn disconnect(mut self, err: crate::handler::Error) {
-        let code = match err {
-            crate::handler::Error::PeerIdAbsent => StatusCode::UNAUTHORIZED,
-        };
-        self.sender.reset(code.as_u16().into());
-        self.connection.close(code);
-    }
 }
 
 impl ConnectionInfo for ResponseWindow {
@@ -86,7 +79,10 @@ impl ConnectionInfo for ResponseWindow {
 
 async fn send_response(sender: &mut SendStream, response: &Response) -> Result<(), WriteError> {
     log::debug!("Sending response: {:?}", &response);
-    let raw = flexbuffers::to_vec(response).expect("Failed to encode a response");
+    let mut raw = Vec::<u8>::new();
+    response
+        .encode(&mut raw)
+        .expect("Failed to encode a response");
     send_raw(sender, &raw).await
 }
 

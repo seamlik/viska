@@ -9,24 +9,28 @@ version = "0.0.1"
 targets = ["jni"]
 
 [dependencies]
+async-trait = "0.1"
 blake3 = { version = "0.3", features = ["pure"] }
-flexbuffers = "0.1"
+bytes = "0.5"
 futures = "0.3"
 hex = "0.4"
 http = "0"
 jni = "0.17"
 log = "0.4"
-mime = "0"
 quinn = "0.6.1"
+rand = "0.7"
 rcgen = "=0.8.0" # Bug generating bad DER format
 riko = { git = "https://github.com/seamlik/riko" }
 riko_runtime = { git = "https://github.com/seamlik/riko", features = ["riko_jni"] }
 rustls = { version = "0.17", features = ["dangerous_configuration", "quic"]}
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0"
-serde_with = "1"
+tonic = "0.3"
+prost = "0.6"
+prost-types = "0.6"
 thiserror = "1"
 tokio = { version = "0", features = ["full"] }
+tower = "0.3"
 uuid = { version = "0", features = ["v4"] }
 webpki = "0"
 
@@ -35,3 +39,6 @@ anyhow = "1"
 clap = "2"
 env_logger = "0"
 structopt = "0"
+
+[build-dependencies]
+tonic-build = "0.3"

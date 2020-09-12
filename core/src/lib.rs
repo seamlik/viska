@@ -4,16 +4,22 @@
 #[riko::ignore]
 pub mod bridge;
 
+pub mod daemon;
 mod endpoint;
 mod handler;
 mod packet;
 pub mod pki;
 pub mod proto;
+mod util;
 
+pub mod transaction {
+    tonic::include_proto!("viska.transaction");
+}
+
+use crate::endpoint::CertificateVerifier;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
 use endpoint::LocalEndpoint;
-use flexbuffers::DeserializationError;
 use futures::prelude::*;
 use handler::DeviceHandler;
 use handler::Handler;
@@ -22,7 +28,8 @@ use http::StatusCode;
 use packet::ResponseWindow;
 use pki::Certificate;
 use pki::CertificateId;
-use proto::Message;
+use prost::DecodeError;
+use prost::Message as _;
 use proto::Request;
 use proto::Response;
 use quinn::ReadToEndError;
@@ -37,6 +44,7 @@ use uuid::Uuid;
 /// The protagonist.
 pub struct Node {
     connection_manager: Arc<ConnectionManager>,
+    grpc_port: u16,
 }
 
 impl Node {
@@ -47,40 +55,44 @@ impl Node {
     pub fn start(
         certificate: &[u8],
         key: &[u8],
-        database: Arc<dyn Database>,
+        platform_grpc_port: u16,
+        enable_certificate_verification: bool,
     ) -> Result<(Self, JoinHandle<()>), EndpointError> {
-        let config = endpoint::Config {
-            certificate,
-            key,
-            database: &database,
-        };
+        let certificate_verifier = Arc::new(CertificateVerifier {
+            enabled: enable_certificate_verification,
+            account_id: certificate.id(),
+            peer_whitelist: Default::default(),
+        });
+
+        // Start gRPC server
+        let node_grpc_port = daemon::StandardNode::start(certificate_verifier.clone());
+
+        let config = endpoint::Config { certificate, key };
         let (window_sender, window_receiver) =
             futures::channel::mpsc::unbounded::<ResponseWindow>();
 
         // Handle requests
-        let database_cloned = database.clone();
         let account_id = certificate.id();
         tokio::spawn(window_receiver.for_each(move |window| {
-            let response = if window.account_id() == Some(account_id) {
-                DeviceHandler.handle(&window)
+            let handler: Box<dyn Handler + Send + Sync> = if window.account_id() == Some(account_id)
+            {
+                Box::new(DeviceHandler)
             } else {
-                PeerHandler {
-                    database: database_cloned.clone(),
-                }
-                .handle(&window)
+                Box::new(PeerHandler { platform_grpc_port })
             };
-            async {
-                match response {
-                    Ok(r) => window
-                        .send_response(r)
-                        .await
-                        .unwrap_or_else(|err| log::error!("Error sending a response: {:?}", err)),
-                    Err(err) => window.disconnect(err),
-                }
+            async move {
+                let response = match handler.handle(&window).await {
+                    Ok(r) => r,
+                    Err(err) => err.into(),
+                };
+                window
+                    .send_response(response)
+                    .await
+                    .unwrap_or_else(|err| log::error!("Error sending a response: {:?}", err));
             }
         }));
 
-        let (endpoint, incomings) = LocalEndpoint::start(&config)?;
+        let (endpoint, incomings) = LocalEndpoint::start(&config, certificate_verifier)?;
         let connection_manager = Arc::new(ConnectionManager::new(endpoint, window_sender));
 
         // Process incoming connections
@@ -99,11 +111,22 @@ impl Node {
         }));
 
         println!("Started Viska node with account {}", account_id.to_hex());
-        Ok((Self { connection_manager }, task))
+        Ok((
+            Self {
+                connection_manager,
+                grpc_port: node_grpc_port,
+            },
+            task,
+        ))
     }
 
     pub async fn connect(&self, addr: &SocketAddr) -> Result<Arc<Connection>, ConnectionError> {
         self.connection_manager.clone().connect(addr).await
+    }
+
+    /// Gets the port to its gRPC server.
+    pub fn grpc_port(&self) -> u16 {
+        self.grpc_port
     }
 }
 
@@ -122,7 +145,9 @@ impl Connection {
     /// be closed immediately.
     pub async fn request(&self, request: &Request) -> Result<Response, RequestError> {
         let (mut sender, receiver) = self.quic.open_bi().await?;
-        let raw_request = flexbuffers::to_vec(request)
+        let mut raw_request = Vec::<u8>::new();
+        request
+            .encode(&mut raw_request)
             .unwrap_or_else(|err| panic!("Failed to encode a request: {}", err));
 
         sender.write_all(&raw_request).await?;
@@ -130,7 +155,7 @@ impl Connection {
 
         match receiver.read_to_end(packet::MAX_PACKET_SIZE_BYTES).await {
             Ok(raw_response) => {
-                let response = flexbuffers::from_slice(&raw_response)?;
+                let response = Response::decode(raw_response.as_slice())?;
                 log::debug!("Received response: {:?}", &response);
                 Ok(response)
             }
@@ -181,20 +206,11 @@ impl Debug for Connection {
 #[derive(Error, Debug)]
 #[error("Failed to complete a request-response lifecycle")]
 pub enum RequestError {
-    BadResponse(#[from] DeserializationError),
+    BadResponse(#[from] DecodeError),
     Connection(#[from] quinn::ConnectionError),
     Read(#[from] quinn::ReadError),
     ResponseTooLong,
     Write(#[from] quinn::WriteError),
-}
-
-/// Access point for Viska's database.
-pub trait Database: Send + Sync {
-    /// Checks if an account of the provided `account_id` is in the roster.
-    fn is_peer(&self, account_id: &[u8]) -> bool;
-
-    /// Accepts an incoming [Message].
-    fn accept_message(&self, message: &Message, sender: &[u8]);
 }
 
 /// Error when connecting to a remote [Node].

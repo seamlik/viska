@@ -3,7 +3,6 @@ use crate::pki::Certificate;
 use crate::pki::CertificateId;
 use crate::Connection;
 use crate::ConnectionError;
-use crate::Database;
 use crate::EndpointError;
 use futures::channel::mpsc::UnboundedSender;
 use futures::prelude::*;
@@ -18,10 +17,11 @@ use rustls::ServerCertVerified;
 use rustls::ServerCertVerifier;
 use rustls::TLSError;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::net::UdpSocket;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use std::sync::RwLock;
 use uuid::Uuid;
 use webpki::DNSName;
 use webpki::DNSNameRef;
@@ -31,7 +31,6 @@ const ALPN_PROTOCOL: &str = "viska";
 pub struct Config<'a> {
     pub certificate: &'a [u8],
     pub key: &'a [u8],
-    pub database: &'a Arc<dyn Database>,
 }
 
 /// QUIC endpoint that binds to all local interfaces in the network.
@@ -46,15 +45,12 @@ pub struct LocalEndpoint {
 impl LocalEndpoint {
     pub fn start(
         config: &Config,
+        verifier: Arc<CertificateVerifier>,
     ) -> Result<(Self, impl Stream<Item = quinn::Connecting>), EndpointError> {
         let cert_chain = CertificateChain::from_certs(std::iter::once(
             quinn::Certificate::from_der(&config.certificate)?,
         ));
         let quinn_key = quinn::PrivateKey::from_der(config.key)?;
-        let verifier = Arc::new(CertificateVerifier {
-            account_id: config.certificate.id(),
-            database: config.database.clone(),
-        });
 
         let mut transport_config = quinn::TransportConfig::default();
         transport_config.stream_window_uni(0);
@@ -128,7 +124,7 @@ impl ConnectionInfo for quinn::Connection {
 }
 
 pub struct ConnectionManager {
-    connections: RwLock<HashMap<Uuid, Arc<Connection>>>,
+    connections: tokio::sync::RwLock<HashMap<Uuid, Arc<Connection>>>,
     endpoint: LocalEndpoint,
     response_window_sink: UnboundedSender<ResponseWindow>,
 }
@@ -210,24 +206,23 @@ impl ConnectionManager {
     }
 }
 
-/// Certification verifier for Viska's protocols.
-///
-/// Only 2 kinds of [Node](cate::Node)s are allowed to connect with us:
-///
-/// * Device: Those with the same certificate as us.
-/// * Peer: Those whose certificate ID is in our roster.
-struct CertificateVerifier {
-    account_id: CertificateId,
-    database: Arc<dyn Database>,
+pub struct CertificateVerifier {
+    pub account_id: CertificateId,
+    pub peer_whitelist: RwLock<HashSet<CertificateId>>,
+    pub enabled: bool,
 }
 
 impl CertificateVerifier {
     fn verify(&self, presented_certs: &[rustls::Certificate]) -> Result<(), TLSError> {
+        if !self.enabled {
+            return Ok(());
+        }
         // TODO: Check expiration
         match presented_certs {
             [cert] => {
                 let peer_id = cert.id();
-                if self.account_id == peer_id || self.database.is_peer(self.account_id.as_bytes()) {
+                if self.account_id == peer_id || self.peer_is_allowed(peer_id) {
+                    log::info!("Peer {} is known, accepting connection.", peer_id.to_hex());
                     Ok(())
                 } else {
                     Err(TLSError::General("Unrecognized certificate ID".into()))
@@ -238,6 +233,10 @@ impl CertificateVerifier {
                 "Only 1 certificate is allowed in the chain".into(),
             )),
         }
+    }
+
+    fn peer_is_allowed(&self, id: CertificateId) -> bool {
+        self.peer_whitelist.read().unwrap().contains(&id)
     }
 }
 

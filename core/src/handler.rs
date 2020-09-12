@@ -1,61 +1,67 @@
-use crate::endpoint::ConnectionInfo;
+use crate::daemon::platform_client::PlatformClient;
+use crate::daemon::GrpcClient;
 use crate::packet::ResponseWindow;
-use crate::proto::Request;
+use crate::proto::request::Payload;
 use crate::proto::Response;
-use crate::Database;
-use std::sync::Arc;
+use async_trait::async_trait;
 use thiserror::Error;
+use tonic::Status;
 
-/// Error when handling a [Request].
-///
-/// If such error occurred, no response should be sent to the peer; the connection must be closed
-/// immediately.
 #[derive(Error, Debug)]
-#[error("Unrecoverable error occured during request handling")]
+#[error("Error during request handling")]
 pub enum Error {
-    PeerIdAbsent,
+    GrpcOperation(#[from] Status),
+    GrpcConnection(#[from] tonic::transport::Error),
 }
 
+#[async_trait]
 pub trait Handler {
-    fn handle(&self, window: &ResponseWindow) -> Result<Response, Error>;
+    async fn handle(&self, window: &ResponseWindow) -> Result<Response, Error>;
 }
 
 pub struct PeerHandler {
-    pub database: Arc<dyn Database>,
+    pub platform_grpc_port: u16,
 }
 
+#[async_trait]
 impl Handler for PeerHandler {
-    fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
-        match &window.request {
-            Request::Message(message) => match window.account_id() {
-                Some(id) => {
-                    self.database.accept_message(&message, id.as_bytes());
-                    Ok(Default::default())
-                }
-                None => Err(Error::PeerIdAbsent),
-            },
-            _ => DefaultHandler.handle(window),
+    async fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
+        match &window.request.payload {
+            Some(Payload::Message(message)) => {
+                let mut platform = PlatformClient::create(self.platform_grpc_port).await?;
+                platform
+                    .accept_message(message.clone())
+                    .await
+                    .map(|_| Response::default())
+                    .map_err(From::from)
+            }
+            _ => DefaultHandler.handle(window).await,
         }
     }
 }
 
 pub struct DeviceHandler;
 
+#[async_trait]
 impl Handler for DeviceHandler {
-    fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
+    async fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
         match &window.request {
-            _ => DefaultHandler.handle(window),
+            _ => DefaultHandler.handle(window).await,
         }
     }
 }
 
 struct DefaultHandler;
 
+#[async_trait]
 impl Handler for DefaultHandler {
-    fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
-        match &window.request {
-            Request::Ping => Ok(Default::default()),
-            _ => Ok(Response::forbidden()),
+    async fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
+        match &window.request.payload {
+            Some(payload) => match payload {
+                Payload::Ping(()) => Ok(Default::default()),
+                _ => Ok(Response::forbidden()),
+            },
+            None => Ok(Response::bad_request("No payload".into())),
         }
     }
 }

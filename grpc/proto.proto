@@ -1,0 +1,25 @@
+// Protocol to communicate with other Nodes.
+
+syntax = "proto3";
+
+package viska.proto;
+
+import "google/protobuf/empty.proto";
+import "transaction.proto";
+
+// Incoming request from another node.
+message Request {
+  oneof payload {
+    google.protobuf.Empty ping = 1;
+    viska.transaction.Message message = 2;
+  }
+}
+
+// Outgoing response sent to a node.
+message Response {
+  // Analogous to the HTTP status code.
+  uint32 status = 1;
+
+  // Optional error message if any.
+  string reason = 2;
+}

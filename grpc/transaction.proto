@@ -1,15 +1,18 @@
+// Models for database entries and the atomic chain of changes applied on them.
+
 syntax = "proto3";
 
 package viska.transaction;
 
-import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
 
+// Change to a single database entry.
 message Transaction {
   google.protobuf.Timestamp time = 1;
   Packet packet = 2;
 }
 
+// Content of a Transaction.
 message Packet {
   Operation operation = 1;
   bytes key = 2;
@@ -40,8 +43,12 @@ message Message {
 
   // Includes the sender.
   repeated bytes recipients = 5;
+
+  // Message ID which is a UUID.
+  bytes id = 6;
 }
 
+// Chatroom.
 message Chatroom {
   // Custom name given by the user.
   string name = 1;
@@ -49,6 +56,8 @@ message Chatroom {
   repeated bytes members = 2;
 }
 
+// Peer.
+//
 // Account ID is indicated in the `key` field of a `Packet`.
 message Peer {
   // Custom name given by the user.
@@ -57,9 +66,19 @@ message Peer {
   PeerRole role = 2;
 }
 
+// Peer role.
 enum PeerRole {
-  // These peers will be denied upon TLS connection.
+  // Will be denied upon TLS connection.
   BLOCKED = 0;
 
-  FRIEND = 1;
+  // Will only be allowed for sending roster
+  UNKNOWN = 1;
+
+  // Will be allowed for all interaction between peers.
+  FRIEND = 2;
+}
+
+// Account ID.
+message AccountId {
+  bytes content = 1;
 }

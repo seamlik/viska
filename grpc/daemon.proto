@@ -1,3 +1,5 @@
+// gRPC services.
+
 syntax = "proto3";
 
 package viska.daemon;
@@ -5,6 +7,22 @@ package viska.daemon;
 import "google/protobuf/empty.proto";
 import "transaction.proto";
 
+// Services provided by the application and the operating system.
 service Platform {
   rpc Commit(stream viska.transaction.Transaction) returns (google.protobuf.Empty) {}
+
+  // Accepts an incoming chat message from a peer.
+  rpc AcceptMessage(viska.transaction.Message) returns (google.protobuf.Empty) {}
+}
+
+// Represents a Node
+service Node {
+  // Updates the peer whitelist.
+  //
+  // The Node will starts fetching whatever data it needs from the Platform and calculates a new
+  // peer whitelist.
+  //
+  // This list will be used when verifying the peer certificate of a TLS connection. Only peers
+  // in this list are allowed to connect with the Node.
+  rpc UpdatePeerWhitelist(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }
