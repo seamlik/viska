@@ -132,7 +132,7 @@ impl Node {
 
 /// Connection to a remote [Node].
 pub struct Connection {
-    pub id: Uuid,
+    id: Uuid,
     quic: quinn::Connection,
 }
 
