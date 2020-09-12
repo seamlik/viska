@@ -24,14 +24,13 @@ abstract class InstanceActivity : AppCompatActivity() {
 
     profile = openProfile() ?: return moveToNewProfileActivity()
 
-    GlobalState.creatingAccount
-        .observe(
-            this,
-            Observer { creatingAccount: Boolean ->
-              if (creatingAccount) {
-                finish()
-              }
-            })
+    GlobalState.creatingAccount.observe(
+        this,
+        Observer { creatingAccount: Boolean ->
+          if (creatingAccount) {
+            finish()
+          }
+        })
   }
 
   override fun onStart() {

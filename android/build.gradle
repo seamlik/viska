@@ -57,11 +57,11 @@ android {
 
 spotless {
   java {
-    googleJavaFormat('1.8')
+    googleJavaFormat('1.9')
     target '**/*.java'
   }
   kotlin {
-    ktfmt('0.16')
+    ktfmt('0.18')
     target '**/*.kt'
   }
 }

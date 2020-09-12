@@ -14,7 +14,8 @@ class Profile(private val context: Context, val accountIdText: String) {
   val certificate: ByteArray
     get() {
       val path =
-          context.filesDir
+          context
+              .filesDir
               .toPath()
               .resolve("account")
               .resolve(accountIdText)
@@ -26,7 +27,8 @@ class Profile(private val context: Context, val accountIdText: String) {
     val config =
         DatabaseConfiguration().apply {
           directory =
-              context.filesDir
+              context
+                  .filesDir
                   .toPath()
                   .resolve("account")
                   .resolve(accountIdText)
