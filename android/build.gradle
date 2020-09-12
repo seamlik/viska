@@ -11,7 +11,7 @@ repositories {
 }
 
 android {
-  compileSdkVersion 29
+  compileSdkVersion 30
   compileOptions {
     sourceCompatibility 8
     targetCompatibility sourceCompatibility
@@ -20,7 +20,7 @@ android {
     compose true
   }
   composeOptions {
-    kotlinCompilerExtensionVersion '0.1.0-dev14'
+    kotlinCompilerExtensionVersion '1.0.0-alpha02'
   }
   kotlinOptions {
     jvmTarget = '1.8'
@@ -28,7 +28,7 @@ android {
   defaultConfig {
     applicationId 'viska.android'
     minSdkVersion 28
-    targetSdkVersion 29
+    targetSdkVersion 30
     versionName '0'
     versionCode 1
   }
@@ -68,14 +68,14 @@ spotless {
 
 protobuf {
   protoc {
-    artifact = 'com.google.protobuf:protoc:3.12.2'
+    artifact = 'com.google.protobuf:protoc:3.13.0'
   }
   plugins {
     grpc {
-      artifact = 'io.grpc:protoc-gen-grpc-java:1.30.2'
+      artifact = 'io.grpc:protoc-gen-grpc-java:1.32.1'
     }
     grpckt {
-      artifact = 'io.grpc:protoc-gen-grpc-kotlin:0.1.4'
+      artifact = 'io.grpc:protoc-gen-grpc-kotlin:0.1.5'
     }
   }
   generateProtoTasks {
@@ -92,24 +92,24 @@ protobuf {
 }
 
 dependencies {
-  implementation 'androidx.constraintlayout:constraintlayout:2.0.0-rc1'
+  implementation 'androidx.compose.foundation:foundation-layout:1.0.0-alpha02'
+  implementation 'androidx.compose.material:material:1.0.0-alpha02'
+  implementation 'androidx.compose.runtime:runtime-livedata:1.0.0-alpha02'
+  implementation 'androidx.compose.ui:ui:1.0.0-alpha02'
+  implementation 'androidx.constraintlayout:constraintlayout:2.0.1'
   implementation 'androidx.core:core-ktx:1.3.1'
   implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
   implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0'
   implementation 'androidx.preference:preference-ktx:1.1.1'
-  implementation 'androidx.ui:ui-core:0.1.0-dev14'
-  implementation 'androidx.ui:ui-layout:0.1.0-dev14'
-  implementation 'androidx.ui:ui-livedata:0.1.0-dev14'
-  implementation 'androidx.ui:ui-material:0.1.0-dev14'
-  implementation 'androidx.ui:ui-tooling:0.1.0-dev14'
+  implementation 'androidx.ui:ui-tooling:1.0.0-alpha02'
   implementation 'com.couchbase.lite:couchbase-lite-android:2.7.1'
   implementation 'com.google.android.material:material:1.3.0-alpha02'
   implementation 'com.google.android:flexbox:2.0.1'
-  implementation 'com.google.protobuf:protobuf-java:3.12.2'
-  implementation 'io.grpc:grpc-kotlin-stub:0.1.4'
-  implementation 'io.grpc:grpc-netty:1.30.2'
-  implementation 'io.grpc:grpc-protobuf:1.30.2'
-  implementation 'io.grpc:grpc-stub:1.30.2'
+  implementation 'com.google.protobuf:protobuf-java:3.13.0'
+  implementation 'io.grpc:grpc-kotlin-stub:0.1.5'
+  implementation 'io.grpc:grpc-netty:1.32.1'
+  implementation 'io.grpc:grpc-protobuf:1.32.1'
+  implementation 'io.grpc:grpc-stub:1.32.1'
   implementation 'javax.annotation:javax.annotation-api:1.3.2'
   implementation 'riko:riko-runtime-jni:0.0.1'
   testImplementation 'junit:junit:4.13'
