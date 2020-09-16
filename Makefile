@@ -8,9 +8,11 @@ verify:
 .PHONY: android
 android:
 	cross build --package viska_android --target aarch64-linux-android
+	cross build --package viska_android --target aarch64-linux-android --release
+	cross build --package viska_android --target armv7-linux-androideabi
+	cross build --package viska_android --target armv7-linux-androideabi --release
 	cross build --package viska_android --target x86_64-linux-android
-	cross build --package viska_android --release --target aarch64-linux-android
-	cross build --package viska_android --release --target x86_64-linux-android
+	cross build --package viska_android --target x86_64-linux-android --release
 	gradle assemble
 
 # This target must be run at least once before building the project
