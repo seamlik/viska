@@ -40,8 +40,6 @@ message Message {
   string mime = 2;
   bytes sender = 3;
   google.protobuf.Timestamp time = 4;
-
-  // Includes the sender.
   repeated bytes recipients = 5;
 
   // Message ID which is a UUID.

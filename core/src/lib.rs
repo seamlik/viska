@@ -5,6 +5,7 @@
 pub mod bridge;
 
 pub mod daemon;
+pub mod database;
 mod endpoint;
 mod handler;
 mod packet;

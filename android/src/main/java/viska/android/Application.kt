@@ -4,7 +4,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import androidx.core.content.getSystemService
 import com.couchbase.lite.CouchbaseLite
+import dagger.hilt.android.HiltAndroidApp
 
+@HiltAndroidApp
 class Application : android.app.Application() {
   override fun onCreate() {
     super.onCreate()

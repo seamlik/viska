@@ -6,20 +6,19 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
-import com.couchbase.lite.Database
+import dagger.hilt.android.AndroidEntryPoint
 import io.grpc.Server
 import io.grpc.netty.NettyServerBuilder
-import java.lang.IllegalStateException
 import java.net.InetSocketAddress
+import javax.inject.Inject
 import viska.daemon.PlatformDaemon
-import viska.database.Profile
+import viska.database.ProfileService
 import viska.database.TransactionManager
-import viska.database.openProfile
 
+@AndroidEntryPoint
 class DaemonService : Service() {
-  private lateinit var profile: Profile
-  private lateinit var database: Database
-  private lateinit var transactionManager: TransactionManager
+  @Inject lateinit var profileService: ProfileService
+  @Inject lateinit var transactionManager: TransactionManager
   private lateinit var grpcServer: Server
 
   override fun onCreate() {
@@ -28,15 +27,11 @@ class DaemonService : Service() {
         Notification.Builder(this, NOTIFICATION_CHANNEL_SYSTRAY)
             .setContentTitle(getString(R.string.notification_systray_title))
             .setContentIntent(
-                PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), 0))
+                PendingIntent.getActivity(this, 0, Intent(this, DashboardActivity::class.java), 0))
             .setCategory(Notification.CATEGORY_STATUS)
             .setSmallIcon(R.drawable.icon)
             .build()
     startForeground(R.id.notification_systray, notification)
-
-    profile = openProfile() ?: throw IllegalStateException("No active account")
-    database = profile.openDatabase()
-    transactionManager = TransactionManager(database)
 
     val grpcServerPort = "::1"
     grpcServer =
@@ -51,7 +46,7 @@ class DaemonService : Service() {
 
   override fun onDestroy() {
     grpcServer.shutdown()
-    database.close()
+    profileService.close()
 
     super.onDestroy()
   }

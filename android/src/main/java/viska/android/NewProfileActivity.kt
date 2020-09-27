@@ -30,7 +30,7 @@ class NewProfileActivity : AppCompatActivity() {
 
     Column(
         verticalArrangement = Arrangement.SpaceEvenly,
-        horizontalGravity = Alignment.CenterHorizontally,
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxSize()) {
       Button(onClick = this@NewProfileActivity::newAccount, enabled = !creatingAccount) {
         Text(getString(R.string.new_account))
@@ -48,7 +48,7 @@ class NewProfileActivity : AppCompatActivity() {
     createNewProfile()
     GlobalState.creatingAccount.value = false
 
-    startActivity(Intent(this, MainActivity::class.java))
+    startActivity(Intent(this, DashboardActivity::class.java))
     finish()
   }
 

@@ -1,35 +1,34 @@
 package viska.database
 
-import com.couchbase.lite.Database
+import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
+import viska.couchbase.ChatroomService
+import viska.couchbase.MessageService
+import viska.couchbase.PeerService
 import viska.transaction.TransactionOuterClass
-import viska.util.uuidFromBytes
 
-class TransactionManager(private val database: Database) {
+class TransactionManager
+    @Inject
+    constructor(
+        private val chatroomService: ChatroomService,
+        private val messageService: MessageService,
+        private val peerService: PeerService,
+    ) {
+
   suspend fun commit(transactions: Flow<TransactionOuterClass.Transaction>) {
     transactions.collect { transaction ->
       when (transaction.packet.operation) {
         TransactionOuterClass.Operation.ADD -> {
           when (transaction.packet.payloadCase) {
-            TransactionOuterClass.Packet.PayloadCase.MESSAGE -> {
-              val document =
-                  Message.fromPayload(
-                      uuidFromBytes(transaction.packet.key.toByteArray()),
-                      transaction.packet.message)
-              database.save(document)
-            }
-            TransactionOuterClass.Packet.PayloadCase.CHATROOM -> {
-              val document =
-                  Chatroom.fromPayload(
-                      transaction.packet.key.toByteArray(), transaction.packet.chatroom)
-              database.save(document)
-            }
-            TransactionOuterClass.Packet.PayloadCase.PEER -> {
-              val document =
-                  Peer.fromPayload(transaction.packet.key.toByteArray(), transaction.packet.peer)
-              database.save(document)
-            }
+            TransactionOuterClass.Packet.PayloadCase.MESSAGE ->
+                messageService.commit(
+                    transaction.packet.key.toByteArray(), transaction.packet.message)
+            TransactionOuterClass.Packet.PayloadCase.CHATROOM ->
+                chatroomService.commit(
+                    transaction.packet.key.toByteArray(), transaction.packet.chatroom)
+            TransactionOuterClass.Packet.PayloadCase.PEER ->
+                peerService.commit(transaction.packet.key.toByteArray(), transaction.packet.peer)
             else -> {
               throw BadTransactionException("Empty payload")
             }
@@ -38,11 +37,11 @@ class TransactionManager(private val database: Database) {
         TransactionOuterClass.Operation.DELETE -> {
           when (transaction.packet.type) {
             TransactionOuterClass.PayloadType.MESSAGE ->
-                database.getMessage(uuidFromBytes(transaction.packet.key.toByteArray()))?.delete()
+                messageService.delete(transaction.packet.key.toByteArray())
             TransactionOuterClass.PayloadType.CHATROOM ->
-                database.getChatroom(transaction.packet.key.toByteArray())?.delete()
+                chatroomService.delete(transaction.packet.key.toByteArray())
             TransactionOuterClass.PayloadType.PEER ->
-                database.getPeer(transaction.packet.key.toByteArray())?.delete()
+                peerService.delete(transaction.packet.key.toByteArray())
             else -> throw BadTransactionException("Unrecognized payload type")
           }
         }

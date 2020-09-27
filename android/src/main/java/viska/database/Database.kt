@@ -7,10 +7,14 @@ import androidx.preference.PreferenceManager
 import com.couchbase.lite.Database
 import java.nio.file.Files
 import org.bson.BsonBinary
+import viska.database.Module.display_id
+import viska.database.Module.hash
 
 const val LOG_TAG = "viska.database"
 
-const val MIME_ACCOUNT_ID = "application/viska-account-id"
+const val MIME_ID = "application/viska-id"
+
+const val MIME_TEXT = "text/*"
 
 fun Database.initialize() {
   TODO()
@@ -23,8 +27,8 @@ fun Context.createNewProfile() {
   val certificate = bundle.asDocument().getBinary("certificate").data
   val key = bundle.asDocument().getBinary("key").data
 
-  val accountId = viska.pki.Module.hash(BsonBinary(certificate))?.asBinary()?.data
-  val displayAccountId = viska.pki.Module.display_id(BsonBinary(accountId))!!.asString().value
+  val accountId = hash(BsonBinary(certificate))?.asBinary()?.data
+  val displayAccountId = display_id(BsonBinary(accountId))!!.asString().value
   Log.i(LOG_TAG, "Generated account $displayAccountId")
 
   val profileDir = filesDir.toPath().resolve("account").resolve(displayAccountId)

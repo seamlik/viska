@@ -1,7 +1,5 @@
 <resources>
-  <string name="about">About</string>
   <string name="app">Viska</string>
-  <string name="avatar">Avatar</string>
   <string name="chatrooms">Chatrooms</string>
   <string
     name="dialog_description_exit"

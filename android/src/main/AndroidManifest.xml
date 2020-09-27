@@ -14,7 +14,10 @@
     android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar"
     tools:replace="android:label"
   >
-    <activity android:launchMode="singleInstance" android:name=".MainActivity">
+    <activity
+      android:launchMode="singleInstance"
+      android:name=".DashboardActivity"
+    >
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
