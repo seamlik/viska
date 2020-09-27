@@ -56,10 +56,6 @@ android {
 }
 
 spotless {
-  java {
-    googleJavaFormat('1.9')
-    target '**/*.java'
-  }
   kotlin {
     ktfmt('0.18')
     target '**/*.kt'
