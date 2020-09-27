@@ -1,4 +1,4 @@
-PRETTIER_ARGS = --ignore-path .gitignore --plugin=@prettier/plugin-xml .
+PRETTIER_ARGS = --ignore-path .gitignore .
 
 verify:
 	cargo test --package viska
@@ -23,3 +23,7 @@ riko:
 .PHONY: prettier
 prettier:
 	prettier --write $(PRETTIER_ARGS)
+
+.PHONY: install-prettier
+install-prettier:
+	npm install --global prettier @prettier/plugin-xml
