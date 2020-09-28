@@ -43,8 +43,13 @@ class MessageService
   fun commit(messageId: ByteArray, payload: TransactionOuterClass.Message) {
     val document = MutableDocument(documentId(messageId))
 
-    document.setBlob(
-        "content", Blob(payload.mime.ifEmpty { "text/plain" }, payload.content.toByteArray()))
+    payload.attachment?.also { attachment ->
+      document.setBlob(
+          "attachment",
+          Blob(attachment.mime ?: "", attachment.content.toByteArray() ?: ByteArray(0)),
+      )
+    }
+    document.setString("content", payload.content ?: "")
     document.setDate(
         "time", Date.from(Instant.ofEpochSecond(payload.time.seconds, payload.time.nanos.toLong())))
 

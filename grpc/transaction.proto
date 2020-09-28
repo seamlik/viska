@@ -41,14 +41,19 @@ enum PayloadType {
 }
 
 message Message {
-  bytes content = 1;
-  string mime = 2;
+  string content = 1;
+  Blob attachment = 2;
   bytes sender = 3;
   google.protobuf.Timestamp time = 4;
   repeated bytes recipients = 5;
 
   // Message ID which is a UUID.
   bytes id = 6;
+}
+
+message Blob {
+  string mime = 1;
+  bytes content = 2;
 }
 
 // Chatroom.
