@@ -46,9 +46,6 @@ message Message {
   bytes sender = 3;
   google.protobuf.Timestamp time = 4;
   repeated bytes recipients = 5;
-
-  // Message ID which is a UUID.
-  bytes id = 6;
 }
 
 message Blob {

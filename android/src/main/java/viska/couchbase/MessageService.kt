@@ -28,6 +28,7 @@ import viska.database.BadTransactionException
 import viska.database.DatabaseCorruptedException
 import viska.database.Message
 import viska.database.Module.display_id
+import viska.database.Module.message_id
 import viska.database.ProfileService
 import viska.transaction.TransactionOuterClass
 
@@ -43,6 +44,11 @@ class MessageService
       documentId(display_id(BsonBinary(messageId))!!.asString().value)
 
   fun commit(messageId: ByteArray, payload: TransactionOuterClass.Message) {
+    val messageIdCalculated = message_id(BsonBinary(payload.toByteArray()))!!.asBinary().data!!
+    if (!messageIdCalculated.contentEquals(messageId)) {
+      throw BadTransactionException("Mismatch Message ID")
+    }
+
     val messageIdText = documentId(messageId)
 
     val document = MutableDocument(messageIdText)
