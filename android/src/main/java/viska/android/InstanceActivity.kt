@@ -2,14 +2,26 @@ package viska.android
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
+import dagger.hilt.android.AndroidEntryPoint
+import java.lang.IllegalStateException
+import javax.inject.Inject
+import viska.database.ProfileService
 
+@AndroidEntryPoint
 abstract class InstanceActivity : AppCompatActivity() {
+
+  @Inject lateinit var profileService: ProfileService
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+
+    if (!profileService.hasActiveAccount) {
+      startActivity(Intent(this, NewProfileActivity::class.java))
+      finish()
+      throw IllegalStateException("No active account, switching to NewProfileActivity")
+    }
 
     startForegroundService(Intent(this, DaemonService::class.java))
 
@@ -20,11 +32,5 @@ abstract class InstanceActivity : AppCompatActivity() {
             finish()
           }
         })
-  }
-
-  protected fun moveToNewProfileActivity() {
-    Log.i(javaClass.simpleName, "No active account, switching to NewProfileActivity")
-    startActivity(Intent(this, NewProfileActivity::class.java))
-    finish()
   }
 }

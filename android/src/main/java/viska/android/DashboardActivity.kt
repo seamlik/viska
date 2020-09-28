@@ -47,13 +47,11 @@ import viska.couchbase.VcardService
 import viska.database.Chatroom
 import viska.database.Message
 import viska.database.Peer
-import viska.database.ProfileService
 import viska.database.Vcard
 
 @AndroidEntryPoint
 class DashboardActivity : InstanceActivity() {
 
-  @Inject lateinit var profileService: ProfileService
   @Inject lateinit var chatroomService: ChatroomService
   @Inject lateinit var vcardService: VcardService
   @Inject lateinit var peerService: PeerService
@@ -62,10 +60,6 @@ class DashboardActivity : InstanceActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-
-    if (!profileService.hasActiveAccount) {
-      return moveToNewProfileActivity()
-    }
 
     setContent {
       MaterialTheme {
@@ -82,11 +76,6 @@ class DashboardActivity : InstanceActivity() {
         ExitDialog(viewModel)
       }
     }
-  }
-
-  override fun onDestroy() {
-    profileService.close()
-    super.onDestroy()
   }
 
   private fun exitApp() {

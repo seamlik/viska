@@ -46,8 +46,6 @@ class DaemonService : Service() {
 
   override fun onDestroy() {
     grpcServer.shutdown()
-    profileService.close()
-
     super.onDestroy()
   }
 

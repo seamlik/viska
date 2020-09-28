@@ -26,12 +26,10 @@ import javax.inject.Inject
 import viska.couchbase.ChatroomService
 import viska.couchbase.MessageService
 import viska.database.Message
-import viska.database.ProfileService
 
 @AndroidEntryPoint
 class ChatroomActivity : InstanceActivity() {
 
-  @Inject lateinit var profileService: ProfileService
   @Inject lateinit var chatroomService: ChatroomService
   @Inject lateinit var messageService: MessageService
 
@@ -55,11 +53,6 @@ class ChatroomActivity : InstanceActivity() {
         }
       }
     }
-  }
-
-  override fun onDestroy() {
-    profileService.close()
-    super.onDestroy()
   }
 
   private val chatroomId: String

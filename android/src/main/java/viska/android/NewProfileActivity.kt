@@ -15,9 +15,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
 import androidx.ui.tooling.preview.Preview
-import viska.database.createNewProfile
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import viska.database.ProfileService
 
+@AndroidEntryPoint
 class NewProfileActivity : AppCompatActivity() {
+
+  @Inject lateinit var profileService: ProfileService
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContent { Ui() }
@@ -45,7 +51,7 @@ class NewProfileActivity : AppCompatActivity() {
 
   private fun newAccount() {
     GlobalState.creatingAccount.value = true
-    createNewProfile()
+    profileService.createProfile()
     GlobalState.creatingAccount.value = false
 
     startActivity(Intent(this, DashboardActivity::class.java))
