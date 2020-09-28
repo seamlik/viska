@@ -69,11 +69,8 @@ enum PeerRole {
   // Will be denied upon TLS connection.
   BLOCKED = 0;
 
-  // Will only be allowed for sending roster
-  UNKNOWN = 1;
-
   // Will be allowed for all interaction between peers.
-  FRIEND = 2;
+  FRIEND = 1;
 }
 
 // Account ID.
