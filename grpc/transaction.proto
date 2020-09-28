@@ -16,7 +16,12 @@ message Transaction {
 message Packet {
   Operation operation = 1;
   bytes key = 2;
+
+  // Indicates which kind of database entry to delete.
+  //
+  // Present only when `operation` is `DELETE`.
   PayloadType type = 3;
+
   oneof payload {
     Message message = 10;
     Chatroom chatroom = 11;
