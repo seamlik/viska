@@ -61,6 +61,7 @@ spotless {
   kotlin {
     ktfmt('0.18')
     target '**/*.kt'
+    targetExclude '**/viska/android/composable.kt'
   }
 }
 

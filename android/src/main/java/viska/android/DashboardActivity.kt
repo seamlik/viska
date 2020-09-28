@@ -3,16 +3,12 @@ package viska.android
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
-import androidx.compose.foundation.Box
 import androidx.compose.foundation.Icon
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Text
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Stack
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.preferredSize
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumnFor
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Divider
@@ -35,9 +31,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.ContextAmbient
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.res.stringResource
@@ -249,29 +243,6 @@ private fun DrawerContent(
         modifier = Modifier.clickable(onClick = { viewModel.exitDialogActive = true }),
         icon = { Icon(Icons.Default.ExitToApp) },
         text = { Text(stringResource(R.string.exit)) })
-  }
-}
-
-@Composable
-private fun DrawerNavigationItem(
-    selected: Boolean,
-    icon: @Composable () -> Unit,
-    text: @Composable () -> Unit,
-    onClick: () -> Unit,
-) {
-  Stack {
-    if (selected) {
-      Box(
-          modifier = Modifier.width(4.dp).height(24.dp).align(Alignment.CenterStart),
-          shape = RectangleShape,
-          backgroundColor = MaterialTheme.colors.onBackground,
-      )
-    }
-    ListItem(
-        modifier = Modifier.clickable(onClick = onClick),
-        icon = icon,
-        text = text,
-    )
   }
 }
 
