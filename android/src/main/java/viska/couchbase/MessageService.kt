@@ -12,20 +12,21 @@ import com.couchbase.lite.Expression
 import com.couchbase.lite.Meta
 import com.couchbase.lite.MutableArray
 import com.couchbase.lite.MutableDocument
+import com.couchbase.lite.OrderBy
 import com.couchbase.lite.Ordering
 import com.couchbase.lite.QueryBuilder
 import com.couchbase.lite.SelectResult
+import dagger.Lazy
 import java.time.Instant
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.bson.BsonArray
 import org.bson.BsonBinary
+import viska.database.BadTransactionException
 import viska.database.DatabaseCorruptedException
 import viska.database.Message
-import viska.database.Module.chatroom_id
 import viska.database.Module.display_id
 import viska.database.ProfileService
 import viska.transaction.TransactionOuterClass
@@ -34,6 +35,7 @@ class MessageService
     @Inject
     constructor(
         private val profileService: ProfileService,
+        private val chatroomService: Lazy<ChatroomService>,
     ) {
 
   private fun documentId(messageId: String) = "Message:${messageId.toUpperCase(Locale.ROOT)}"
@@ -41,7 +43,9 @@ class MessageService
       documentId(display_id(BsonBinary(messageId))!!.asString().value)
 
   fun commit(messageId: ByteArray, payload: TransactionOuterClass.Message) {
-    val document = MutableDocument(documentId(messageId))
+    val messageIdText = documentId(messageId)
+
+    val document = MutableDocument(messageIdText)
 
     payload.attachment?.also { attachment ->
       document.setBlob(
@@ -50,25 +54,35 @@ class MessageService
       )
     }
     document.setString("content", payload.content ?: "")
-    document.setDate(
-        "time", Date.from(Instant.ofEpochSecond(payload.time.seconds, payload.time.nanos.toLong())))
 
-    val sender = display_id(BsonBinary(payload.sender.toByteArray()))!!.asString().value
-    document.setString("sender", sender)
+    val time = Instant.ofEpochSecond(payload.time.seconds, payload.time.nanos.toLong())
+    document.setDate("time", Date.from(time))
+
+    val sender = payload.sender.toByteArray() ?: ByteArray(0)
+    if (sender.isEmpty()) {
+      throw BadTransactionException("No sender")
+    }
+    val senderText = display_id(BsonBinary(sender))!!.asString().value
+    document.setString("sender", senderText)
 
     val recipients =
         payload.recipientsList.map { display_id(BsonBinary(it.toByteArray()))!!.asString().value }
     document.setArray("recipients", MutableArray(recipients))
 
-    // TODO: Create chatroom when receiving message
-    val chatroomMembers = payload.recipientsList.map { it.toByteArray() }.toMutableList()
-    chatroomMembers.add(payload.sender.toByteArray())
-    val chatroomMembersBson = BsonArray(chatroomMembers.map { BsonBinary(it) })
-    val chatroomId = chatroom_id(chatroomMembersBson)!!
-    val chatroomIdText = display_id(chatroomId)!!.asString().value
-    document.setString("chatroom-id", chatroomIdText)
+    val chatroomMembers =
+        payload
+            .recipientsList
+            .filterNotNull()
+            .map { it.toByteArray() ?: ByteArray(0) }
+            .toMutableSet()
+    chatroomMembers.add(sender)
 
-    profileService.database.save(document)
+    profileService.database.inBatch {
+      val chatroom = chatroomService.get().updateForMessage(chatroomMembers, messageIdText, time)
+      document.setString("chatroom-id", chatroom.chatroomId)
+
+      profileService.database.save(document)
+    }
   }
 
   fun getMessage(messageId: String): Message? {
@@ -90,26 +104,30 @@ class MessageService
                   ?.toSet()
                   ?: emptySet())
 
-  private fun watchChatroomMessages(
-      chatroomId: String, action: (List<Message>) -> Unit
-  ): AutoCloseable {
+  private fun queryChatroomMessages(chatroomId: String): OrderBy {
     val chatroomIdNormalized = chatroomId.toUpperCase(Locale.ROOT)
-    val query =
-        QueryBuilder.select(SelectResult.all())
-            .from(DataSource.database(profileService.database))
-            .where(
-                Meta.id
-                    .like(Expression.string("Message:%"))
-                    .and(
-                        Expression.property("chatroom-id")
-                            .equalTo(Expression.string(chatroomIdNormalized))))
-            .orderBy(Ordering.property("time").descending())
+    return QueryBuilder.select(SelectResult.all())
+        .from(DataSource.database(profileService.database))
+        .where(
+            Meta.id
+                .like(Expression.string("Message:%"))
+                .and(
+                    Expression.property("chatroom-id")
+                        .equalTo(Expression.string(chatroomIdNormalized))))
+        .orderBy(Ordering.property("time").descending())
+  }
+
+  private fun watchChatroomMessages(
+      chatroomId: String,
+      action: (List<Message>) -> Unit,
+  ): AutoCloseable {
+    val query = queryChatroomMessages(chatroomId)
     val token =
         query.addChangeListener { change ->
           if (change.error != null) {
             Log.e(
                 MessageService::class.java.canonicalName,
-                "Error querying messages of chatroom $chatroomIdNormalized",
+                "Error querying messages of chatroom $chatroomId",
                 change.error)
           } else {
             action(change.results.allResults().map { it.toMessage() })
@@ -130,4 +148,7 @@ class MessageService
   fun delete(messageId: ByteArray) {
     TODO()
   }
+
+  fun getChatroomLatestMessage(chatroomId: String) =
+      queryChatroomMessages(chatroomId).limit(Expression.intValue(1)).execute().next()?.toMessage()
 }

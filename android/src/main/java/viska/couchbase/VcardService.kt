@@ -45,4 +45,6 @@ class VcardService @Inject constructor(private val profileService: ProfileServic
     onDispose { token.close() }
     return result
   }
+
+  fun get(accountId: String) = profileService.database.getDocument(documentId(accountId))?.toVcard()
 }

@@ -5,7 +5,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.onDispose
 import androidx.compose.runtime.remember
 import com.couchbase.lite.Array
-import com.couchbase.lite.Blob
 import com.couchbase.lite.DataSource
 import com.couchbase.lite.Database
 import com.couchbase.lite.DictionaryInterface
@@ -15,14 +14,19 @@ import com.couchbase.lite.MutableArray
 import com.couchbase.lite.MutableDocument
 import com.couchbase.lite.QueryBuilder
 import com.couchbase.lite.SelectResult
+import dagger.Lazy
+import java.lang.IllegalArgumentException
+import java.time.Instant
+import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import org.bson.BsonArray
 import org.bson.BsonBinary
 import viska.database.Chatroom
 import viska.database.DatabaseCorruptedException
-import viska.database.MIME_ID
+import viska.database.Module.chatroom_id
 import viska.database.Module.display_id
 import viska.database.ProfileService
 import viska.transaction.TransactionOuterClass
@@ -31,7 +35,8 @@ class ChatroomService
     @Inject
     constructor(
         private val profileService: ProfileService,
-        private val messageService: MessageService,
+        private val messageService: Lazy<MessageService>,
+        private val vcardService: VcardService,
     ) {
 
   private fun documentId(chatroomId: String) = "Chatroom:${chatroomId.toUpperCase(Locale.ROOT)}"
@@ -90,7 +95,7 @@ class ChatroomService
         if (latestMessageId.isBlank()) {
           null
         } else {
-          messageService.getMessage(latestMessageId)
+          messageService.get().getMessage(latestMessageId)
         }
     val chatroomId =
         getString("chatroom-id")?.run {
@@ -102,9 +107,8 @@ class ChatroomService
         name = getString("name") ?: "",
         members =
             (getArray("members") as Array?)
-                ?.filterIsInstance(Blob::class.java)
-                ?.filterNot { it.length() == 0L }
-                ?.map { it.content ?: ByteArray(0) }
+                ?.filterIsInstance(String::class.java)
+                ?.filter { it.isNotEmpty() }
                 ?.toSet()
                 ?: emptySet(),
         latestMessage = latestMessage,
@@ -118,8 +122,14 @@ class ChatroomService
 
     document.setString("name", payload.name)
     document.setArray(
-        "members", MutableArray(payload.membersList.map { Blob(MIME_ID, it.toByteArray()) }))
+        "members",
+        MutableArray(
+            payload.membersList.map {
+              display_id(BsonBinary(it.toByteArray()))!!.asString().value!!
+            }),
+    )
     document.setString("chatroom-id", display_id(BsonBinary(chatroomId))!!.asString().value)
+    document.setDate("time-updated", Date())
     // TODO
 
     profileService.database.save(document)
@@ -129,5 +139,48 @@ class ChatroomService
 
   fun delete(chatroomId: ByteArray) {
     TODO()
+  }
+
+  fun updateForMessage(members: Set<ByteArray>, messageId: String, messageTime: Instant): Chatroom {
+    if (members.isEmpty()) {
+      throw IllegalArgumentException("Empty room")
+    }
+
+    val chatroomIdBson = chatroom_id(BsonArray(members.map { BsonBinary(it) }))!!.asBinary()!!
+    val chatroomIdText = display_id(chatroomIdBson)!!.asString().value!!
+
+    return profileService.database.getDocument(chatroomIdText)?.toMutable()?.let { document ->
+      // Assign latest message to the chatroom if it's newer
+      messageService.get().getChatroomLatestMessage(chatroomIdText)?.let { latestMessage ->
+        if (document.getDate("time-updated")?.toInstant()?.isBefore(latestMessage.time) != false) {
+          document.setDate("time-updated", Date.from(latestMessage.time))
+        }
+        profileService.database.save(document)
+      }
+      return@let document.toChatroom()
+    }
+        ?: createForMessage(members, chatroomIdText, messageId, messageTime)
+  }
+
+  private fun createForMessage(
+      members: Set<ByteArray>,
+      chatroomId: String,
+      latestMessageId: String,
+      latestMessageTime: Instant
+  ): Chatroom {
+    val document = MutableDocument(documentId(chatroomId))
+
+    document.setString("chatroom-id", chatroomId)
+    document.setString("latest-message-id", latestMessageId)
+    document.setDate("time-updated", Date.from(latestMessageTime))
+
+    val membersText = members.map { display_id(BsonBinary(it))!!.asString().value!! }
+    document.setArray("members", MutableArray(membersText))
+
+    val name = membersText.joinToString(" | ") { vcardService.get(it)?.name ?: it }
+    document.setString("name", name)
+
+    profileService.database.save(document)
+    return document.toChatroom()
   }
 }

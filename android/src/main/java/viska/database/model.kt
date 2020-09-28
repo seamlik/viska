@@ -7,7 +7,7 @@ import viska.android.R
 
 data class Chatroom(
     val name: String,
-    val members: Set<ByteArray>,
+    val members: Set<String>,
     val latestMessage: Message? = null,
     val timeUpdated: Instant,
     val chatroomId: String,
