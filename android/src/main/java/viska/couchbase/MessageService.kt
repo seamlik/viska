@@ -136,7 +136,7 @@ class MessageService
                 "Error querying messages of chatroom $chatroomId",
                 change.error)
           } else {
-            action(change.results.allResults().map { it.toMessage() })
+            action(change.results?.allResults()?.map { it.toMessage() } ?: emptyList())
           }
         }
     query.execute()

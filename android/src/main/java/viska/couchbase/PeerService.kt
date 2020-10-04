@@ -62,7 +62,7 @@ class PeerService @Inject constructor(private val profileService: ProfileService
           if (change.error != null) {
             Log.e(ChatroomService::class.java.canonicalName, "Error querying roster", change.error)
           } else {
-            result.value = change.results.allResults().map { it.toPeer() }
+            result.value = change.results?.allResults()?.map { it.toPeer() } ?: emptyList()
           }
         }
     onDispose { query.removeChangeListener(token) }
