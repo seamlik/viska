@@ -25,7 +25,6 @@ message Packet {
   oneof payload {
     Message message = 10;
     Chatroom chatroom = 11;
-    Peer peer = 12;
   }
 }
 
@@ -59,25 +58,6 @@ message Chatroom {
   string name = 1;
 
   repeated bytes members = 2;
-}
-
-// Peer.
-//
-// Account ID is indicated in the `key` field of a `Packet`.
-message Peer {
-  // Custom name given by the user.
-  string name = 1;
-
-  PeerRole role = 2;
-}
-
-// Peer role.
-enum PeerRole {
-  // Will be denied upon TLS connection.
-  BLOCKED = 0;
-
-  // Will be allowed for all interaction between peers.
-  FRIEND = 1;
 }
 
 // Account ID.

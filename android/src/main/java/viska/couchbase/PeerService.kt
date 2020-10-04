@@ -6,7 +6,6 @@ import androidx.compose.runtime.onDispose
 import com.couchbase.lite.DataSource
 import com.couchbase.lite.DictionaryInterface
 import com.couchbase.lite.Expression
-import com.couchbase.lite.Meta
 import com.couchbase.lite.MutableDocument
 import com.couchbase.lite.QueryBuilder
 import com.couchbase.lite.SelectResult
@@ -14,23 +13,26 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import viska.database.Database
+import viska.database.Database.Peer
 import viska.database.DatabaseCorruptedException
-import viska.database.Peer
 import viska.database.ProfileService
 import viska.database.displayId
-import viska.transaction.TransactionOuterClass
+import viska.database.toBinaryId
+import viska.database.toProtobufByteString
 
 class PeerService @Inject constructor(private val profileService: ProfileService) {
 
-  private fun documentId(accountId: String) = "Peer:${accountId.toUpperCase(Locale.ROOT)}"
+  private fun documentId(accountId: String) = "${TYPE}:${accountId.toUpperCase(Locale.ROOT)}"
 
-  fun commit(accountId: ByteArray, payload: TransactionOuterClass.Peer) {
-    val accountIdText = accountId.displayId()
-    val document = MutableDocument(documentId(accountIdText))
+  fun commit(payload: Peer) {
+    val accountId = payload.accountId.toByteArray().displayId()
+    val document = MutableDocument(documentId(accountId))
 
+    document.setString("type", TYPE)
     document.setString("name", payload.name)
     document.setString("role", payload.role.name)
-    document.setString("accountId", accountIdText)
+    document.setString("accountId", accountId)
 
     profileService.database.save(document)
   }
@@ -40,22 +42,22 @@ class PeerService @Inject constructor(private val profileService: ProfileService
     if (accountId.isBlank()) {
       throw DatabaseCorruptedException("account-id")
     }
-    return Peer(name = getString("name") ?: "", accountId = accountId)
+    return Peer.newBuilder()
+        .setAccountId(accountId.toBinaryId().toProtobufByteString())
+        .setName(getString("name") ?: "")
+        .build()
   }
 
   @Composable
   fun watchRoster(): StateFlow<List<Peer>> {
     val result = MutableStateFlow(emptyList<Peer>())
+    val isPeer = Expression.property("type").equalTo(Expression.string(TYPE))
+    val roleIsFriend =
+        Expression.property("role").equalTo(Expression.string(Database.PeerRole.FRIEND.name))
     val query =
         QueryBuilder.select(SelectResult.all())
             .from(DataSource.database(profileService.database))
-            .where(
-                Meta.id
-                    .like(Expression.string("Peer:%"))
-                    .and(
-                        Expression.property("role")
-                            .equalTo(
-                                Expression.string(TransactionOuterClass.PeerRole.FRIEND.name))))
+            .where(isPeer.and(roleIsFriend))
     val token =
         query.addChangeListener { change ->
           if (change.error != null) {
@@ -72,3 +74,5 @@ class PeerService @Inject constructor(private val profileService: ProfileService
     TODO()
   }
 }
+
+private const val TYPE = "Peer"

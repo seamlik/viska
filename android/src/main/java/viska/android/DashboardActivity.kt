@@ -45,9 +45,9 @@ import viska.couchbase.ChatroomService
 import viska.couchbase.PeerService
 import viska.couchbase.VcardService
 import viska.database.Chatroom
+import viska.database.Database.Peer
 import viska.database.Database.Vcard
 import viska.database.Message
-import viska.database.Peer
 
 @AndroidEntryPoint
 class DashboardActivity : InstanceActivity() {
@@ -277,7 +277,10 @@ private fun ChatroomItem(chatroom: Chatroom) {
 
 @Preview
 @Composable
-private fun PreviewRosterItem() = RosterItem(Peer(name = "A friend", accountId = "xxx"))
+private fun PreviewRosterItem() {
+  val peer = Peer.newBuilder().setName("A friend").build()
+  RosterItem(peer)
+}
 
 @Composable
 private fun RosterItem(peer: Peer) {

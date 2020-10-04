@@ -45,5 +45,3 @@ data class Message(
 }
 
 data class Blob(val content: ByteArray, val type: String)
-
-data class Peer(val name: String, val accountId: String)

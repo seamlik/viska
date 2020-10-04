@@ -7,6 +7,7 @@ package viska.database;
 message TransactionPayload {
   oneof content {
     Vcard add_vcard = 1;
+    Peer add_peer = 2;
   }
 }
 
@@ -20,4 +21,21 @@ message Vcard {
 message Blob {
   string type = 1;
   bytes content = 2;
+}
+
+message Peer {
+  bytes account_id = 1;
+
+  // Custom name given by the user.
+  string name = 2;
+
+  PeerRole role = 3;
+}
+
+enum PeerRole {
+  // Peer in the black list.
+  BLOCKED = 0;
+
+  // Peer in the roster.
+  FRIEND = 1;
 }
