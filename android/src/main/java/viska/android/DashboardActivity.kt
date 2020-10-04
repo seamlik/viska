@@ -45,9 +45,9 @@ import viska.couchbase.ChatroomService
 import viska.couchbase.PeerService
 import viska.couchbase.VcardService
 import viska.database.Chatroom
+import viska.database.Database.Vcard
 import viska.database.Message
 import viska.database.Peer
-import viska.database.Vcard
 
 @AndroidEntryPoint
 class DashboardActivity : InstanceActivity() {

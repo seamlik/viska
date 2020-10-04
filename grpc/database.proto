@@ -1,0 +1,17 @@
+// Database schemas
+
+syntax = "proto3";
+
+package viska.database;
+
+message Vcard {
+  bytes account_id = 1;
+  string name = 2;
+  Blob photo = 3;
+  double time_updated = 4;
+}
+
+message Blob {
+  string type = 1;
+  bytes content = 2;
+}

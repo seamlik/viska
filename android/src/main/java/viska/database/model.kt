@@ -46,7 +46,4 @@ data class Message(
 
 data class Blob(val content: ByteArray, val type: String)
 
-data class Vcard(
-    val name: String, val accountId: String, val photo: Blob?, val timeUpdated: Instant?)
-
 data class Peer(val name: String, val accountId: String)

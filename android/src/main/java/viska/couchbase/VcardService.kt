@@ -8,9 +8,12 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import viska.database.Database.Blob
+import viska.database.Database.Vcard
 import viska.database.DatabaseCorruptedException
 import viska.database.ProfileService
-import viska.database.Vcard
+import viska.database.toBinaryId
+import viska.database.toProtobufByteString
 
 class VcardService @Inject constructor(private val profileService: ProfileService) {
 
@@ -22,11 +25,18 @@ class VcardService @Inject constructor(private val profileService: ProfileServic
       throw DatabaseCorruptedException("account-id")
     }
 
-    return Vcard(
-        name = getString("name") ?: "",
-        timeUpdated = getDate("time-updated")?.toInstant(),
-        photo = getBlob("photo")?.toBlob(),
-        accountId = accountId)
+    val builder = Vcard.newBuilder()
+    builder.name = getString("name") ?: ""
+    builder.accountId = accountId.toBinaryId().toProtobufByteString()
+    builder.timeUpdated = getDouble("time-updated")
+    getBlob("photo")?.let { photo ->
+      builder.photo =
+          Blob.newBuilder()
+              .setType(photo.contentType)
+              .setContent(photo.content!!.toProtobufByteString())
+              .build()
+    }
+    return builder.build()
   }
 
   fun watchVcard(accountId: String, action: (Vcard?) -> Unit): AutoCloseable {
