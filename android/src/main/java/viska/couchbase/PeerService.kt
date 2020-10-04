@@ -14,11 +14,10 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.bson.BsonBinary
 import viska.database.DatabaseCorruptedException
-import viska.database.Module.display_id
 import viska.database.Peer
 import viska.database.ProfileService
+import viska.database.displayId
 import viska.transaction.TransactionOuterClass
 
 class PeerService @Inject constructor(private val profileService: ProfileService) {
@@ -26,7 +25,7 @@ class PeerService @Inject constructor(private val profileService: ProfileService
   private fun documentId(accountId: String) = "Peer:${accountId.toUpperCase(Locale.ROOT)}"
 
   fun commit(accountId: ByteArray, payload: TransactionOuterClass.Peer) {
-    val accountIdText = display_id(BsonBinary(accountId))!!.asString().value!!
+    val accountIdText = accountId.displayId()
     val document = MutableDocument(documentId(accountIdText))
 
     document.setString("name", payload.name)

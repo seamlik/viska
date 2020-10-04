@@ -27,8 +27,8 @@ import org.bson.BsonBinary
 import viska.database.Chatroom
 import viska.database.DatabaseCorruptedException
 import viska.database.Module.chatroom_id
-import viska.database.Module.display_id
 import viska.database.ProfileService
+import viska.database.displayId
 import viska.transaction.TransactionOuterClass
 
 class ChatroomService
@@ -40,8 +40,7 @@ class ChatroomService
     ) {
 
   private fun documentId(chatroomId: String) = "Chatroom:${chatroomId.toUpperCase(Locale.ROOT)}"
-  private fun documentId(chatroomId: ByteArray) =
-      documentId(display_id(BsonBinary(chatroomId))!!.asString().value)
+  private fun documentId(chatroomId: ByteArray) = "Chatroom:${chatroomId.displayId()}"
 
   private fun watchChatrooms(action: (List<Chatroom>) -> Unit): AutoCloseable {
     // TODO: Order by latest message
@@ -57,7 +56,7 @@ class ChatroomService
                 "Error querying list of chatrooms",
                 change.error)
           } else {
-            action(change.results.allResults().map { it.toChatroom() })
+            action(change.results?.allResults()?.map { it.toChatroom() } ?: emptyList())
           }
         }
     query.execute()
@@ -123,12 +122,9 @@ class ChatroomService
     document.setString("name", payload.name)
     document.setArray(
         "members",
-        MutableArray(
-            payload.membersList.map {
-              display_id(BsonBinary(it.toByteArray()))!!.asString().value!!
-            }),
+        MutableArray(payload.membersList.map { it.toByteArray().displayId() }),
     )
-    document.setString("chatroom-id", display_id(BsonBinary(chatroomId))!!.asString().value)
+    document.setString("chatroom-id", chatroomId.displayId())
     document.setDate("time-updated", Date())
     // TODO
 
@@ -147,7 +143,7 @@ class ChatroomService
     }
 
     val chatroomIdBson = chatroom_id(BsonArray(members.map { BsonBinary(it) }))!!.asBinary()!!
-    val chatroomIdText = display_id(chatroomIdBson)!!.asString().value!!
+    val chatroomIdText = chatroomIdBson.asBinary().data.displayId()
 
     return profileService.database.getDocument(chatroomIdText)?.toMutable()?.let { document ->
       // Assign latest message to the chatroom if it's newer
@@ -174,7 +170,7 @@ class ChatroomService
     document.setString("latest-message-id", latestMessageId)
     document.setDate("time-updated", Date.from(latestMessageTime))
 
-    val membersText = members.map { display_id(BsonBinary(it))!!.asString().value!! }
+    val membersText = members.map { it.displayId() }
     document.setArray("members", MutableArray(membersText))
 
     val name = membersText.joinToString(" | ") { vcardService.get(it)?.name ?: it }

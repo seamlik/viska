@@ -13,7 +13,6 @@ async-trait = "0.1"
 blake3 = { version = "0.3", features = ["pure"] }
 bytes = "0.5"
 futures = "0.3"
-hex = "0.4"
 http = "0"
 jni = "0.17"
 log = "0.4"

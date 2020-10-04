@@ -69,8 +69,8 @@ class ProfileService @Inject constructor(@ApplicationContext private val context
     val certificate = bundle.asDocument().getBinary("certificate").data
     val key = bundle.asDocument().getBinary("key").data
 
-    val accountId = Module.hash(BsonBinary(certificate))?.asBinary()?.data
-    val accountIdText = Module.display_id(BsonBinary(accountId))!!.asString().value
+    val accountId = Module.hash(BsonBinary(certificate))?.asBinary()?.data!!
+    val accountIdText = accountId.displayId()
     Log.i(LOG_TAG, "Generated account $accountIdText")
 
     val profileDir = context.filesDir.toPath().resolve("account").resolve(accountIdText)

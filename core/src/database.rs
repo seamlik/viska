@@ -1,6 +1,5 @@
 use crate::transaction::Message;
 use blake3::Hasher;
-use hex::FromHexError;
 use prost::DecodeError;
 use prost::Message as _;
 use prost_types::Timestamp;
@@ -14,18 +13,6 @@ use std::collections::BTreeSet;
 pub fn hash(src: &ByteBuf) -> ByteBuf {
     let raw_hash: [u8; 32] = blake3::hash(src).into();
     ByteBuf::from(raw_hash)
-}
-
-/// Encodes a binary ID (e.g. account ID) in the unified representation.
-#[riko::fun]
-pub fn display_id(id: &ByteBuf) -> String {
-    hex::encode_upper(id)
-}
-
-/// Decodes a binary ID (e.g. account ID) from the unified representation.
-#[riko::fun]
-pub fn parse_id(id: &String) -> Result<ByteBuf, FromHexError> {
-    hex::decode(id).map(ByteBuf::from)
 }
 
 /// Calculates the ID of a chatroom based on the account ID of its members.

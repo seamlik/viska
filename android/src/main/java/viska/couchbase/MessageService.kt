@@ -27,9 +27,9 @@ import org.bson.BsonBinary
 import viska.database.BadTransactionException
 import viska.database.DatabaseCorruptedException
 import viska.database.Message
-import viska.database.Module.display_id
 import viska.database.Module.message_id
 import viska.database.ProfileService
+import viska.database.displayId
 import viska.transaction.TransactionOuterClass
 
 class MessageService
@@ -40,8 +40,7 @@ class MessageService
     ) {
 
   private fun documentId(messageId: String) = "Message:${messageId.toUpperCase(Locale.ROOT)}"
-  private fun documentId(messageId: ByteArray) =
-      documentId(display_id(BsonBinary(messageId))!!.asString().value)
+  private fun documentId(messageId: ByteArray) = "Message:${messageId.displayId()}"
 
   fun commit(messageId: ByteArray, payload: TransactionOuterClass.Message) {
     val messageIdCalculated = message_id(BsonBinary(payload.toByteArray()))!!.asBinary().data!!
@@ -68,11 +67,10 @@ class MessageService
     if (sender.isEmpty()) {
       throw BadTransactionException("No sender")
     }
-    val senderText = display_id(BsonBinary(sender))!!.asString().value
+    val senderText = sender.displayId()
     document.setString("sender", senderText)
 
-    val recipients =
-        payload.recipientsList.map { display_id(BsonBinary(it.toByteArray()))!!.asString().value }
+    val recipients = payload.recipientsList.map { it.toByteArray().displayId() }
     document.setArray("recipients", MutableArray(recipients))
 
     val chatroomMembers =
