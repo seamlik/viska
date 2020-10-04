@@ -1,0 +1,10 @@
+// Common definitions.
+
+syntax = "proto3";
+
+package viska.common;
+
+message Blob {
+  string type = 1;
+  bytes content = 2;
+}

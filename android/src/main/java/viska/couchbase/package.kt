@@ -1,5 +1,13 @@
 package viska.couchbase
 
-import viska.database.Blob
+import com.couchbase.lite.Blob
+import viska.common.Common
+import viska.database.toProtobufByteString
 
-fun com.couchbase.lite.Blob.toBlob() = Blob(content = content ?: ByteArray(0), type = contentType)
+fun Blob.toBlob() =
+    Common.Blob.newBuilder()
+        .setType(contentType)
+        .setContent(content?.toProtobufByteString())
+        .build()
+
+fun Common.Blob.toCouchbaseBlob() = Blob(type, content.toByteArray())

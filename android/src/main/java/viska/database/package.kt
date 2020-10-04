@@ -1,7 +1,7 @@
 package viska.database
 
-import com.couchbase.lite.Blob
 import com.google.protobuf.ByteString
+import java.time.Instant
 import org.apache.commons.codec.binary.Hex
 
 /** The canonical way to encode a binary ID into text. */
@@ -12,4 +12,4 @@ fun String.toBinaryId() = Hex.decodeHex(this) ?: ByteArray(0)
 
 fun ByteArray.toProtobufByteString(): ByteString = ByteString.copyFrom(this)
 
-fun Database.Blob.toCouchbaseBlob() = Blob(type, content.toByteArray())
+fun Instant.toFloat() = epochSecond + nano / 1000000000.0

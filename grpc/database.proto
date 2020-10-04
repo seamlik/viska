@@ -4,23 +4,22 @@ syntax = "proto3";
 
 package viska.database;
 
+import "changelog.proto";
+import "common.proto";
+
 message TransactionPayload {
   oneof content {
     Vcard add_vcard = 1;
     Peer add_peer = 2;
+    Message add_message = 3;
   }
 }
 
 message Vcard {
   bytes account_id = 1;
   string name = 2;
-  Blob photo = 3;
+  viska.common.Blob photo = 3;
   double time_updated = 4;
-}
-
-message Blob {
-  string type = 1;
-  bytes content = 2;
 }
 
 message Peer {
@@ -38,4 +37,10 @@ enum PeerRole {
 
   // Peer in the roster.
   FRIEND = 1;
+}
+
+message Message {
+  viska.changelog.Message inner = 1;
+  bytes message_id = 2;
+  bytes chatroom_id = 3;
 }

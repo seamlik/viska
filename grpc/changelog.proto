@@ -1,0 +1,15 @@
+// Changelog to the database for distributed synchronization.
+
+syntax = "proto3";
+
+package viska.changelog;
+
+import "common.proto";
+
+message Message {
+  double time = 1;
+  bytes sender = 2;
+  repeated bytes recipients = 3;
+  string content = 4;
+  viska.common.Blob attachment = 5;
+}

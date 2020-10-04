@@ -1,129 +1,115 @@
 package viska.couchbase
 
+import android.content.res.Resources
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.onDispose
 import androidx.compose.runtime.remember
+import androidx.core.content.MimeTypeFilter
 import com.couchbase.lite.Array
-import com.couchbase.lite.Blob
 import com.couchbase.lite.DataSource
 import com.couchbase.lite.DictionaryInterface
 import com.couchbase.lite.Expression
-import com.couchbase.lite.Meta
 import com.couchbase.lite.MutableArray
 import com.couchbase.lite.MutableDocument
 import com.couchbase.lite.OrderBy
 import com.couchbase.lite.Ordering
 import com.couchbase.lite.QueryBuilder
 import com.couchbase.lite.SelectResult
-import dagger.Lazy
-import java.time.Instant
-import java.util.Date
+import com.google.protobuf.ByteString
 import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.bson.BsonBinary
+import viska.android.R
+import viska.changelog.Changelog
 import viska.database.BadTransactionException
+import viska.database.Database
 import viska.database.DatabaseCorruptedException
-import viska.database.Message
 import viska.database.Module.message_id
 import viska.database.ProfileService
 import viska.database.displayId
-import viska.transaction.TransactionOuterClass
+import viska.database.toBinaryId
+import viska.database.toProtobufByteString
 
-class MessageService
-    @Inject
-    constructor(
-        private val profileService: ProfileService,
-        private val chatroomService: Lazy<ChatroomService>,
-    ) {
+class MessageService @Inject constructor(private val profileService: ProfileService) {
 
   private fun documentId(messageId: String) = "Message:${messageId.toUpperCase(Locale.ROOT)}"
   private fun documentId(messageId: ByteArray) = "Message:${messageId.displayId()}"
 
-  fun commit(messageId: ByteArray, payload: TransactionOuterClass.Message) {
-    val messageIdCalculated = message_id(BsonBinary(payload.toByteArray()))!!.asBinary().data!!
-    if (!messageIdCalculated.contentEquals(messageId)) {
-      throw BadTransactionException("Mismatch Message ID")
+  fun commit(payload: Database.Message) {
+    val messageId = message_id(BsonBinary(payload.inner.toByteArray()))!!.asBinary().data!!.displayId()
+    val document = MutableDocument(documentId(messageId))
+
+    document.setString("type", TYPE)
+    document.setString("content", payload.inner.content ?: "")
+    document.setDouble("time", payload.inner.time)
+    document.setString("chatroom-id", payload.chatroomId.toByteArray().displayId())
+    document.setString("message-id", messageId)
+    payload.inner.attachment?.let { attachment ->
+      document.setBlob("attachment", attachment.toCouchbaseBlob())
     }
 
-    val messageIdText = documentId(messageId)
-
-    val document = MutableDocument(messageIdText)
-
-    payload.attachment?.also { attachment ->
-      document.setBlob(
-          "attachment",
-          Blob(attachment.mime ?: "", attachment.content.toByteArray() ?: ByteArray(0)),
-      )
-    }
-    document.setString("content", payload.content ?: "")
-
-    val time = Instant.ofEpochSecond(payload.time.seconds, payload.time.nanos.toLong())
-    document.setDate("time", Date.from(time))
-
-    val sender = payload.sender.toByteArray() ?: ByteArray(0)
+    val sender = payload.inner.sender.toByteArray() ?: ByteArray(0)
     if (sender.isEmpty()) {
       throw BadTransactionException("No sender")
     }
     val senderText = sender.displayId()
     document.setString("sender", senderText)
 
-    val recipients = payload.recipientsList.map { it.toByteArray().displayId() }
+    val recipients = payload.inner.recipientsList.map { it.toByteArray().displayId() }
     document.setArray("recipients", MutableArray(recipients))
 
-    val chatroomMembers =
-        payload
-            .recipientsList
-            .filterNotNull()
-            .map { it.toByteArray() ?: ByteArray(0) }
-            .toMutableSet()
-    chatroomMembers.add(sender)
-
-    profileService.database.inBatch {
-      val chatroom = chatroomService.get().updateForMessage(chatroomMembers, messageIdText, time)
-      document.setString("chatroom-id", chatroom.chatroomId)
-
-      profileService.database.save(document)
-    }
+    profileService.database.save(document)
   }
 
-  fun getMessage(messageId: String): Message? {
+  fun getMessage(messageId: String): Database.Message? {
     val database = profileService.database
     return database.getDocument(documentId(messageId))?.toMessage()
   }
 
-  private fun DictionaryInterface.toMessage() =
-      Message(
-          content = getString("content") ?: "",
-          attachment = getBlob("attachment")?.toBlob(),
-          time = getDate("time")?.toInstant() ?: throw DatabaseCorruptedException("time"),
-          chatroomId = getString("chatroom-id") ?: throw DatabaseCorruptedException("chatroom-id"),
-          sender = getString("sender") ?: throw DatabaseCorruptedException("sender"),
-          recipients =
-              (getArray("recipients") as Array?)
-                  ?.map { (it as String?) ?: "" }
-                  ?.filter(String::isNotBlank)
-                  ?.toSet()
-                  ?: emptySet())
+  private fun DictionaryInterface.toMessage(): Database.Message {
+    val builderInner = Changelog.Message.newBuilder()
+
+    builderInner.content = getString("content") ?: ""
+    builderInner.time = getDouble("time")
+    builderInner.sender =
+        getString("sender")?.toBinaryId()?.toProtobufByteString()
+            ?: throw DatabaseCorruptedException("sender")
+
+    val recipients =
+        (getArray("recipients") as Array?)
+            ?.map { (it as String?)?.toBinaryId()?.toProtobufByteString() ?: ByteString.EMPTY }
+            ?.filterNot(ByteString::isEmpty)
+            ?.toList()
+            ?: emptySet()
+    builderInner.addAllRecipients(recipients)
+
+    getBlob("attachment")?.let { attachment -> builderInner.attachment = attachment.toBlob() }
+
+    return Database.Message.newBuilder()
+        .setInner(builderInner.build())
+        .setChatroomId(
+            getString("chatroom-id")?.toBinaryId()?.toProtobufByteString()
+                ?: throw DatabaseCorruptedException("chatroom-id"))
+        .build()
+  }
 
   private fun queryChatroomMessages(chatroomId: String): OrderBy {
     val chatroomIdNormalized = chatroomId.toUpperCase(Locale.ROOT)
+    val isMessage = Expression.property("type").equalTo(Expression.string(TYPE))
+    val inChatroom =
+        Expression.property("chatroom-id").equalTo(Expression.string(chatroomIdNormalized))
     return QueryBuilder.select(SelectResult.all())
         .from(DataSource.database(profileService.database))
-        .where(
-            Meta.id
-                .like(Expression.string("Message:%"))
-                .and(
-                    Expression.property("chatroom-id")
-                        .equalTo(Expression.string(chatroomIdNormalized))))
+        .where(isMessage.and(inChatroom))
         .orderBy(Ordering.property("time").descending())
   }
 
   private fun watchChatroomMessages(
       chatroomId: String,
-      action: (List<Message>) -> Unit,
+      action: (List<Database.Message>) -> Unit,
   ): AutoCloseable {
     val query = queryChatroomMessages(chatroomId)
     val token =
@@ -142,8 +128,8 @@ class MessageService
   }
 
   @Composable
-  fun watchChatroomMessages(chatroomId: String): StateFlow<List<Message>> {
-    val result = remember { MutableStateFlow(emptyList<Message>()) }
+  fun watchChatroomMessages(chatroomId: String): StateFlow<List<Database.Message>> {
+    val result = remember { MutableStateFlow(emptyList<Database.Message>()) }
     val token = remember { watchChatroomMessages(chatroomId) { result.value = it } }
     onDispose { token.close() }
     return result
@@ -156,3 +142,26 @@ class MessageService
   fun getChatroomLatestMessage(chatroomId: String) =
       queryChatroomMessages(chatroomId).limit(Expression.intValue(1)).execute().next()?.toMessage()
 }
+
+private const val TYPE = "Message"
+
+/** Generates a text previewing the content of this {@link Message}. */
+fun Changelog.Message.preview(resources: Resources) =
+    if (content.isBlank()) {
+      when {
+        MimeTypeFilter.matches(attachment?.type, "image/*") -> {
+          resources.getString(R.string.placeholder_image)
+        }
+        MimeTypeFilter.matches(attachment?.type, "audio/*") -> {
+          resources.getString(R.string.placeholder_audio)
+        }
+        MimeTypeFilter.matches(attachment?.type, "video/*") -> {
+          resources.getString(R.string.placeholder_video)
+        }
+        else -> {
+          resources.getString(R.string.placeholder_other)
+        }
+      }
+    } else {
+      content
+    }

@@ -41,13 +41,16 @@ import androidx.ui.tooling.preview.Preview
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.Instant
 import javax.inject.Inject
+import viska.changelog.Changelog
 import viska.couchbase.ChatroomService
 import viska.couchbase.PeerService
 import viska.couchbase.VcardService
+import viska.couchbase.preview
 import viska.database.Chatroom
+import viska.database.Database.Message
 import viska.database.Database.Peer
 import viska.database.Database.Vcard
-import viska.database.Message
+import viska.database.toFloat
 
 @AndroidEntryPoint
 class DashboardActivity : InstanceActivity() {
@@ -238,18 +241,13 @@ private fun DrawerContent(
 @Composable
 @Preview
 private fun PreviewChatroomItem() {
+  val message =
+      Changelog.Message.newBuilder().setContent("Ahoj").setTime(Instant.now().toFloat()).build()
   val chatroom =
       Chatroom(
           name = "A room",
           members = emptySet(),
-          latestMessage =
-              Message(
-                  content = "Ahoj",
-                  time = Instant.now(),
-                  chatroomId = "",
-                  sender = "",
-                  recipients = emptySet(),
-              ),
+          latestMessage = Message.newBuilder().setInner(message).build(),
           timeUpdated = Instant.now(),
           chatroomId = "xxx",
       )
@@ -270,7 +268,7 @@ private fun ChatroomItem(chatroom: Chatroom) {
       icon = { Image(asset = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
       text = { Text(maxLines = 1, text = chatroom.name) },
       secondaryText = {
-        Text(maxLines = 3, text = chatroom.latestMessage?.preview(context.resources) ?: "")
+        Text(maxLines = 3, text = chatroom.latestMessage?.inner?.preview(context.resources) ?: "")
       },
   )
 }

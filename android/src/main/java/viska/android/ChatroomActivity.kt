@@ -25,7 +25,7 @@ import java.lang.IllegalArgumentException
 import javax.inject.Inject
 import viska.couchbase.ChatroomService
 import viska.couchbase.MessageService
-import viska.database.Message
+import viska.database.Database.Message
 
 @AndroidEntryPoint
 class ChatroomActivity : InstanceActivity() {
@@ -81,5 +81,5 @@ class ChatroomActivity : InstanceActivity() {
 private fun MessageItem(message: Message) {
   ListItem(
       icon = { Image(asset = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
-      text = { Text(text = message.content) })
+      text = { Text(text = message.inner.content) })
 }
