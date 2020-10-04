@@ -5,12 +5,12 @@ import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.flow.Flow
 import viska.database.BadTransactionException
+import viska.database.Database.TransactionPayload
 import viska.database.TransactionManager
-import viska.transaction.TransactionOuterClass
 
 class PlatformDaemon(private val transactionManager: TransactionManager) :
     PlatformGrpcKt.PlatformCoroutineImplBase() {
-  override suspend fun commit(requests: Flow<TransactionOuterClass.Transaction>): Empty {
+  override suspend fun commitTransaction(requests: Flow<TransactionPayload>): Empty {
     try {
       transactionManager.commit(requests)
     } catch (e: BadTransactionException) {

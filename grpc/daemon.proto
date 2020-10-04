@@ -4,12 +4,13 @@ syntax = "proto3";
 
 package viska.daemon;
 
+import "database.proto";
 import "google/protobuf/empty.proto";
 import "transaction.proto";
 
 // Services provided by the application and the operating system.
 service Platform {
-  rpc Commit(stream viska.transaction.Transaction) returns (google.protobuf.Empty) {}
+  rpc CommitTransaction(stream viska.database.TransactionPayload) returns (google.protobuf.Empty) {}
 
   // Accepts an incoming chat message from a peer.
   rpc AcceptMessage(viska.transaction.Message) returns (google.protobuf.Empty) {}

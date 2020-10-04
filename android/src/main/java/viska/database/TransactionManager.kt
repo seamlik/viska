@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.collect
 import viska.couchbase.ChatroomService
 import viska.couchbase.MessageService
 import viska.couchbase.PeerService
-import viska.transaction.TransactionOuterClass
+import viska.couchbase.VcardService
 
 class TransactionManager
     @Inject
@@ -14,38 +14,19 @@ class TransactionManager
         private val chatroomService: ChatroomService,
         private val messageService: MessageService,
         private val peerService: PeerService,
+        private val vcardService: VcardService,
     ) {
 
-  suspend fun commit(transactions: Flow<TransactionOuterClass.Transaction>) {
-    transactions.collect { transaction ->
-      when (transaction.packet.operation) {
-        TransactionOuterClass.Operation.ADD -> {
-          when (transaction.packet.payloadCase) {
-            TransactionOuterClass.Packet.PayloadCase.MESSAGE ->
-                messageService.commit(
-                    transaction.packet.key.toByteArray(), transaction.packet.message)
-            TransactionOuterClass.Packet.PayloadCase.CHATROOM ->
-                chatroomService.commit(
-                    transaction.packet.key.toByteArray(), transaction.packet.chatroom)
-            TransactionOuterClass.Packet.PayloadCase.PEER ->
-                peerService.commit(transaction.packet.key.toByteArray(), transaction.packet.peer)
-            else -> {
-              throw BadTransactionException("Empty payload")
-            }
-          }
+  suspend fun commit(payloads: Flow<Database.TransactionPayload>) {
+    // TODO: Batch operation
+    payloads.collect { payload ->
+      when (payload.contentCase) {
+        Database.TransactionPayload.ContentCase.ADD_VCARD -> {
+          vcardService.commit(payload.addVcard)
         }
-        TransactionOuterClass.Operation.DELETE -> {
-          when (transaction.packet.type) {
-            TransactionOuterClass.PayloadType.MESSAGE ->
-                messageService.delete(transaction.packet.key.toByteArray())
-            TransactionOuterClass.PayloadType.CHATROOM ->
-                chatroomService.delete(transaction.packet.key.toByteArray())
-            TransactionOuterClass.PayloadType.PEER ->
-                peerService.delete(transaction.packet.key.toByteArray())
-            else -> throw BadTransactionException("Unrecognized payload type")
-          }
+        else -> {
+          throw BadTransactionException("Empty payload")
         }
-        else -> throw BadTransactionException("Unrecognized operation")
       }
     }
   }

@@ -1,5 +1,6 @@
 package viska.database
 
+import com.couchbase.lite.Blob
 import com.google.protobuf.ByteString
 import org.apache.commons.codec.binary.Hex
 
@@ -10,3 +11,5 @@ fun ByteArray.displayId() = Hex.encodeHexString(this, false) ?: ""
 fun String.toBinaryId() = Hex.decodeHex(this) ?: ByteArray(0)
 
 fun ByteArray.toProtobufByteString(): ByteString = ByteString.copyFrom(this)
+
+fun Database.Blob.toCouchbaseBlob() = Blob(type, content.toByteArray())

@@ -4,6 +4,12 @@ syntax = "proto3";
 
 package viska.database;
 
+message TransactionPayload {
+  oneof content {
+    Vcard add_vcard = 1;
+  }
+}
+
 message Vcard {
   bytes account_id = 1;
   string name = 2;
