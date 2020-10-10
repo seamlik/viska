@@ -1,8 +1,8 @@
 package viska.android
 
-import androidx.compose.foundation.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Stack
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.ListItem
@@ -20,13 +20,15 @@ fun DrawerNavigationItem(
     text: @Composable () -> Unit,
     onClick: () -> Unit,
 ) {
-  Stack {
+  Box {
     if (selected) {
       Box(
-          modifier = Modifier.width(4.dp).height(24.dp).align(Alignment.CenterStart),
-          shape = RectangleShape,
-          backgroundColor = MaterialTheme.colors.onBackground,
-      )
+          modifier =
+              Modifier.width(4.dp)
+                  .height(24.dp)
+                  .background(MaterialTheme.colors.onBackground, RectangleShape)
+                  .align(Alignment.CenterStart),
+          children = {})
     }
     ListItem(
         modifier = Modifier.clickable(onClick = onClick),

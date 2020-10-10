@@ -79,7 +79,7 @@ class ChatroomService
   private fun watchChatroom(chatroomId: String, action: (Chatroom) -> Unit): AutoCloseable {
     val documentId = documentId(chatroomId)
     val token =
-        profileService.database.addDocumentChangeListener(documentId) { change ->
+        profileService.database.addDocumentChangeListener(documentId) { _ ->
           action(profileService.database.getDocument(documentId).toChatroom())
         }
     return DocumentChangeToken(token, profileService.database)
