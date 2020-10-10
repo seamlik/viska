@@ -26,6 +26,7 @@ import javax.inject.Inject
 import viska.couchbase.ChatroomService
 import viska.couchbase.MessageService
 import viska.database.Database.Message
+import viska.database.displayId
 
 @AndroidEntryPoint
 class ChatroomActivity : InstanceActivity() {
@@ -48,7 +49,8 @@ class ChatroomActivity : InstanceActivity() {
 
         val messages by messageService.watchChatroomMessages(chatroomId).collectAsState()
 
-        Scaffold(topBar = { TopAppBar(title = { Text(text = chatroom?.name ?: "") }) }) { _ ->
+        Scaffold(topBar = { TopAppBar(title = { Text(text = chatroom?.inner?.name ?: "") }) }) {
+        _ ->
           LazyColumnFor(messages) { MessageItem(it) }
         }
       }
@@ -66,10 +68,15 @@ class ChatroomActivity : InstanceActivity() {
 
   companion object {
 
-    fun start(source: Context, chatroomId: String) {
+    fun start(source: Context, chatroomId: ByteArray) {
       // Will be like:
       // viska://chatroom/87956192a8143476909113cda0d4077e092e26e10cc7dac43e68f694ea68a036
-      val uri = Uri.Builder().scheme("viska").authority("chatroom").appendPath(chatroomId).build()
+      val uri =
+          Uri.Builder()
+              .scheme("viska")
+              .authority("chatroom")
+              .appendPath(chatroomId.displayId())
+              .build()
       val intent = Intent(source, ChatroomActivity::class.java)
       intent.data = uri
       source.startActivity(intent)

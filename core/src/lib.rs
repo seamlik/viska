@@ -4,6 +4,7 @@
 #[riko::ignore]
 pub mod bridge;
 
+pub mod changelog;
 pub mod daemon;
 pub mod database;
 mod endpoint;
@@ -12,10 +13,6 @@ mod packet;
 pub mod pki;
 pub mod proto;
 mod util;
-
-pub mod transaction {
-    tonic::include_proto!("viska.transaction");
-}
 
 use crate::endpoint::CertificateVerifier;
 use endpoint::ConnectionInfo;

@@ -28,9 +28,10 @@ impl Handler for PeerHandler {
     async fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
         match &window.request.payload {
             Some(Payload::Message(message)) => {
+                let message_id: [u8; 32] = message.message_id().into();
                 let mut platform = PlatformClient::create(self.platform_grpc_port).await?;
                 platform
-                    .accept_message(message.clone())
+                    .notify_message(message_id.to_vec())
                     .await
                     .map(|_| Response::default())
                     .map_err(From::from)

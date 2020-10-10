@@ -1,15 +1,26 @@
 // Changelog to the database for distributed synchronization.
+//
+// This package defines data models that uniquely describe objects that are synchronized or sent
+// between peers.
 
 syntax = "proto3";
 
 package viska.changelog;
-
-import "common.proto";
 
 message Message {
   double time = 1;
   bytes sender = 2;
   repeated bytes recipients = 3;
   string content = 4;
-  viska.common.Blob attachment = 5;
+  Blob attachment = 5;
+}
+
+message Chatroom {
+  string name = 1;
+  repeated bytes members = 2;
+}
+
+message Blob {
+  string mime = 1;
+  bytes content = 2;
 }

@@ -1,8 +1,8 @@
 tonic::include_proto!("viska.daemon");
 
+use crate::database::Chatroom;
+use crate::database::TransactionPayload;
 use crate::endpoint::CertificateVerifier;
-use crate::transaction::Message;
-use crate::transaction::Transaction;
 use async_trait::async_trait;
 use node_client::NodeClient;
 use node_server::NodeServer;
@@ -19,6 +19,16 @@ use tonic::transport::Server;
 use tonic::Status;
 use tonic::Streaming;
 use tower::Service;
+
+pub(crate) struct PlatformConnector {
+    grpc_port: u16,
+}
+
+impl PlatformConnector {
+    pub async fn connect(&self) -> PlatformClient<Channel> {
+        todo!()
+    }
+}
 
 trait GrpcService<S>
 where
@@ -79,20 +89,34 @@ impl DummyPlatform {
 
 #[async_trait]
 impl Platform for DummyPlatform {
-    async fn commit(
+    async fn commit_transaction(
         &self,
-        _: tonic::Request<Streaming<Transaction>>,
+        _: tonic::Request<Streaming<TransactionPayload>>,
     ) -> Result<tonic::Response<()>, Status> {
         log::info!("Committing a transaction");
         Ok(tonic::Response::new(()))
     }
 
-    async fn accept_message(
+    async fn notify_message(
         &self,
-        _: tonic::Request<Message>,
+        message_id: tonic::Request<Vec<u8>>,
     ) -> Result<tonic::Response<()>, Status> {
-        log::info!("Received a message");
+        log::info!(
+            "Received a message {}",
+            hex::encode_upper(message_id.get_ref())
+        );
         Ok(tonic::Response::new(()))
+    }
+
+    async fn find_chatroom_by_id(
+        &self,
+        chatroom_id: tonic::Request<Vec<u8>>,
+    ) -> Result<tonic::Response<Chatroom>, Status> {
+        log::info!(
+            "Finding chatroom {}",
+            hex::encode_upper(chatroom_id.get_ref())
+        );
+        Ok(tonic::Response::new(Default::default()))
     }
 }
 

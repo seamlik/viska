@@ -1,13 +1,13 @@
 package viska.couchbase
 
 import com.couchbase.lite.Blob
-import viska.common.Common
+import viska.changelog.Changelog
 import viska.database.toProtobufByteString
 
 fun Blob.toBlob() =
-    Common.Blob.newBuilder()
-        .setType(contentType)
+    Changelog.Blob.newBuilder()
+        .setMime(contentType)
         .setContent(content?.toProtobufByteString())
         .build()
 
-fun Common.Blob.toCouchbaseBlob() = Blob(type, content.toByteArray())
+fun Changelog.Blob.toCouchbaseBlob() = Blob(mime, content.toByteArray())

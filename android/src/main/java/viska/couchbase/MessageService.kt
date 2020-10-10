@@ -21,13 +21,11 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.bson.BsonBinary
 import viska.android.R
 import viska.changelog.Changelog
 import viska.database.BadTransactionException
 import viska.database.Database
 import viska.database.DatabaseCorruptedException
-import viska.database.Module.message_id
 import viska.database.ProfileService
 import viska.database.displayId
 import viska.database.toBinaryId
@@ -36,10 +34,9 @@ import viska.database.toProtobufByteString
 class MessageService @Inject constructor(private val profileService: ProfileService) {
 
   private fun documentId(messageId: String) = "Message:${messageId.toUpperCase(Locale.ROOT)}"
-  private fun documentId(messageId: ByteArray) = "Message:${messageId.displayId()}"
 
   fun commit(payload: Database.Message) {
-    val messageId = message_id(BsonBinary(payload.inner.toByteArray()))!!.asBinary().data!!.displayId()
+    val messageId = payload.messageId.toByteArray().displayId()
     val document = MutableDocument(documentId(messageId))
 
     document.setString("type", TYPE)
@@ -149,13 +146,13 @@ private const val TYPE = "Message"
 fun Changelog.Message.preview(resources: Resources) =
     if (content.isBlank()) {
       when {
-        MimeTypeFilter.matches(attachment?.type, "image/*") -> {
+        MimeTypeFilter.matches(attachment?.mime, "image/*") -> {
           resources.getString(R.string.placeholder_image)
         }
-        MimeTypeFilter.matches(attachment?.type, "audio/*") -> {
+        MimeTypeFilter.matches(attachment?.mime, "audio/*") -> {
           resources.getString(R.string.placeholder_audio)
         }
-        MimeTypeFilter.matches(attachment?.type, "video/*") -> {
+        MimeTypeFilter.matches(attachment?.mime, "video/*") -> {
           resources.getString(R.string.placeholder_video)
         }
         else -> {

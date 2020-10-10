@@ -14,35 +14,32 @@ import com.couchbase.lite.MutableArray
 import com.couchbase.lite.MutableDocument
 import com.couchbase.lite.QueryBuilder
 import com.couchbase.lite.SelectResult
-import dagger.Lazy
-import java.lang.IllegalArgumentException
+import com.google.protobuf.ByteString
 import java.time.Instant
-import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.bson.BsonArray
-import org.bson.BsonBinary
-import viska.database.Chatroom
+import viska.changelog.Changelog
+import viska.database.Database.Chatroom
+import viska.database.Database.Message
 import viska.database.DatabaseCorruptedException
-import viska.database.Module.chatroom_id
 import viska.database.ProfileService
 import viska.database.displayId
-import viska.transaction.TransactionOuterClass
+import viska.database.toBinaryId
+import viska.database.toFloat
+import viska.database.toProtobufByteString
 
 class ChatroomService
     @Inject
     constructor(
         private val profileService: ProfileService,
-        private val messageService: Lazy<MessageService>,
-        private val vcardService: VcardService,
+        private val messageService: MessageService,
     ) {
 
   private fun documentId(chatroomId: String) = "Chatroom:${chatroomId.toUpperCase(Locale.ROOT)}"
-  private fun documentId(chatroomId: ByteArray) = "Chatroom:${chatroomId.displayId()}"
 
-  private fun watchChatrooms(action: (List<Chatroom>) -> Unit): AutoCloseable {
+  private fun watchChatrooms(action: (List<ChatroomQueryResult>) -> Unit): AutoCloseable {
     // TODO: Order by latest message
     val query =
         QueryBuilder.select(SelectResult.all())
@@ -56,7 +53,15 @@ class ChatroomService
                 "Error querying list of chatrooms",
                 change.error)
           } else {
-            action(change.results?.allResults()?.map { it.toChatroom() } ?: emptyList())
+            action(
+                change.results?.allResults()?.map { result ->
+                  val chatroom = result.toChatroom()
+                  val latestMessage =
+                      messageService.getChatroomLatestMessage(result.getString("chatroom-id")!!)
+                  ChatroomQueryResult(chatroom, latestMessage)
+                }
+                    ?: emptyList(),
+            )
           }
         }
     query.execute()
@@ -64,8 +69,8 @@ class ChatroomService
   }
 
   @Composable
-  fun watchChatrooms(): StateFlow<List<Chatroom>> {
-    val result = remember { MutableStateFlow(emptyList<Chatroom>()) }
+  fun watchChatrooms(): StateFlow<List<ChatroomQueryResult>> {
+    val result = remember { MutableStateFlow(emptyList<ChatroomQueryResult>()) }
     val token = remember { watchChatrooms { result.value = it } }
     onDispose { token.close() }
     return result
@@ -89,44 +94,47 @@ class ChatroomService
   }
 
   private fun DictionaryInterface.toChatroom(): Chatroom {
-    val latestMessageId = getString("latest-message-id") ?: ""
-    val latestMessage =
-        if (latestMessageId.isBlank()) {
-          null
-        } else {
-          messageService.get().getMessage(latestMessageId)
-        }
     val chatroomId =
-        getString("chatroom-id")?.run {
-          ifBlank { throw DatabaseCorruptedException("chatroom-id") }
-        }
-            ?: ""
+        getString("chatroom-id")
+            ?.run { ifBlank { throw DatabaseCorruptedException("chatroom-id") } }
+            ?.toBinaryId()
+            ?.toProtobufByteString()
+            ?: throw DatabaseCorruptedException("chatroom-id")
 
-    return Chatroom(
-        name = getString("name") ?: "",
-        members =
-            (getArray("members") as Array?)
-                ?.filterIsInstance(String::class.java)
-                ?.filter { it.isNotEmpty() }
-                ?.toSet()
-                ?: emptySet(),
-        latestMessage = latestMessage,
-        timeUpdated = getDate("time-updated")?.toInstant()
-                ?: throw DatabaseCorruptedException("time-updated"),
-        chatroomId = chatroomId)
+    val builderInner = Changelog.Chatroom.newBuilder()
+    builderInner.name = getString("name") ?: ""
+
+    val members =
+        (getArray("members") as Array?)
+            ?.filterIsInstance(String::class.java)
+            ?.filter { it.isNotEmpty() }
+            ?.map { it.toBinaryId().toProtobufByteString() }
+            ?: emptyList()
+    builderInner.addAllMembers(members)
+
+    return Chatroom.newBuilder()
+        .setInner(builderInner.build())
+        .setLatestMessageId(
+            getString("latest-message-id")?.toBinaryId()?.toProtobufByteString()
+                ?: ByteString.EMPTY)
+        .setTimeUpdated(getDouble("time-updated"))
+        .setChatroomId(chatroomId)
+        .build()
   }
 
-  fun commit(chatroomId: ByteArray, payload: TransactionOuterClass.Chatroom) {
+  fun commit(payload: Chatroom) {
+    val chatroomId = payload.chatroomId.toByteArray().displayId()
     val document = MutableDocument(documentId(chatroomId))
 
-    document.setString("name", payload.name)
+    document.setString("type", TYPE)
+    document.setString("name", payload.inner.name)
     document.setArray(
         "members",
-        MutableArray(payload.membersList.map { it.toByteArray().displayId() }),
+        MutableArray(payload.inner.membersList.map { it.toByteArray().displayId() }),
     )
-    document.setString("chatroom-id", chatroomId.displayId())
-    document.setDate("time-updated", Date())
-    // TODO
+    document.setString("chatroom-id", chatroomId)
+    document.setDouble("time-updated", Instant.now().toFloat())
+    document.setString("latest-message-id", payload.latestMessageId.toByteArray().displayId())
 
     profileService.database.save(document)
   }
@@ -136,47 +144,8 @@ class ChatroomService
   fun delete(chatroomId: ByteArray) {
     TODO()
   }
-
-  fun updateForMessage(members: Set<ByteArray>, messageId: String, messageTime: Instant): Chatroom {
-    if (members.isEmpty()) {
-      throw IllegalArgumentException("Empty room")
-    }
-
-    val chatroomIdBson = chatroom_id(BsonArray(members.map { BsonBinary(it) }))!!.asBinary()!!
-    val chatroomIdText = chatroomIdBson.asBinary().data.displayId()
-
-    return profileService.database.getDocument(chatroomIdText)?.toMutable()?.let { document ->
-      // Assign latest message to the chatroom if it's newer
-      messageService.get().getChatroomLatestMessage(chatroomIdText)?.let { latestMessage ->
-        if (document.getDate("time-updated")?.toInstant()?.isBefore(latestMessage.time) != false) {
-          document.setDate("time-updated", Date.from(latestMessage.time))
-        }
-        profileService.database.save(document)
-      }
-      return@let document.toChatroom()
-    }
-        ?: createForMessage(members, chatroomIdText, messageId, messageTime)
-  }
-
-  private fun createForMessage(
-      members: Set<ByteArray>,
-      chatroomId: String,
-      latestMessageId: String,
-      latestMessageTime: Instant
-  ): Chatroom {
-    val document = MutableDocument(documentId(chatroomId))
-
-    document.setString("chatroom-id", chatroomId)
-    document.setString("latest-message-id", latestMessageId)
-    document.setDate("time-updated", Date.from(latestMessageTime))
-
-    val membersText = members.map { it.displayId() }
-    document.setArray("members", MutableArray(membersText))
-
-    val name = membersText.joinToString(" | ") { vcardService.get(it)?.name ?: it }
-    document.setString("name", name)
-
-    profileService.database.save(document)
-    return document.toChatroom()
-  }
 }
+
+private const val TYPE = "Chatroom"
+
+data class ChatroomQueryResult(val chatroom: Chatroom, val latestMessage: Message?)

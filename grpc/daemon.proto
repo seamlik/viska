@@ -6,14 +6,18 @@ package viska.daemon;
 
 import "database.proto";
 import "google/protobuf/empty.proto";
-import "transaction.proto";
+import "google/protobuf/wrappers.proto";
 
 // Services provided by the application and the operating system.
 service Platform {
   rpc CommitTransaction(stream viska.database.TransactionPayload) returns (google.protobuf.Empty) {}
 
-  // Accepts an incoming chat message from a peer.
-  rpc AcceptMessage(viska.transaction.Message) returns (google.protobuf.Empty) {}
+  // Notifies that a new chat message has been received.
+  //
+  // The parameter is a message ID.
+  rpc NotifyMessage(google.protobuf.BytesValue) returns (google.protobuf.Empty) {}
+
+  rpc FindChatroomById(google.protobuf.BytesValue) returns (viska.database.Chatroom) {}
 }
 
 // Represents a Node

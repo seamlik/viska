@@ -5,13 +5,13 @@ syntax = "proto3";
 package viska.proto;
 
 import "google/protobuf/empty.proto";
-import "transaction.proto";
+import "changelog.proto";
 
 // Incoming request from another node.
 message Request {
   oneof payload {
     google.protobuf.Empty ping = 1;
-    viska.transaction.Message message = 2;
+    viska.changelog.Message message = 2;
   }
 }
 

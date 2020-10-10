@@ -42,12 +42,13 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.time.Instant
 import javax.inject.Inject
 import viska.changelog.Changelog
+import viska.couchbase.ChatroomQueryResult
 import viska.couchbase.ChatroomService
 import viska.couchbase.PeerService
 import viska.couchbase.VcardService
 import viska.couchbase.preview
-import viska.database.Chatroom
-import viska.database.Database.Message
+import viska.database.Database
+import viska.database.Database.Chatroom
 import viska.database.Database.Peer
 import viska.database.Database.Vcard
 import viska.database.toFloat
@@ -131,7 +132,7 @@ private fun PreviewPage() =
 @Composable
 private fun Page(
     viewModel: DashboardViewModel,
-    chatrooms: State<List<Chatroom>>,
+    chatrooms: State<List<ChatroomQueryResult>>,
     vcard: State<Vcard?>,
     accountId: String,
     roster: State<List<Peer>>
@@ -243,32 +244,30 @@ private fun DrawerContent(
 private fun PreviewChatroomItem() {
   val message =
       Changelog.Message.newBuilder().setContent("Ahoj").setTime(Instant.now().toFloat()).build()
-  val chatroom =
-      Chatroom(
-          name = "A room",
-          members = emptySet(),
-          latestMessage = Message.newBuilder().setInner(message).build(),
-          timeUpdated = Instant.now(),
-          chatroomId = "xxx",
+  val chatroom = Changelog.Chatroom.newBuilder().setName("A room").build()
+  val data =
+      ChatroomQueryResult(
+          Chatroom.newBuilder().setInner(chatroom).build(),
+          Database.Message.newBuilder().setInner(message).build(),
       )
-  MaterialTheme { ChatroomItem(chatroom) }
+  MaterialTheme { ChatroomItem(data) }
 }
 
 @Composable
-private fun ChatroomItem(chatroom: Chatroom) {
+private fun ChatroomItem(data: ChatroomQueryResult) {
   val context = ContextAmbient.current
   ListItem(
       modifier =
           Modifier.clickable(
               onClick = {
-                if (chatroom.members.isNotEmpty()) {
-                  ChatroomActivity.start(context, chatroom.chatroomId)
+                if (data.chatroom.inner.membersList.isNotEmpty()) {
+                  ChatroomActivity.start(context, data.chatroom.chatroomId.toByteArray())
                 }
               }),
       icon = { Image(asset = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
-      text = { Text(maxLines = 1, text = chatroom.name) },
+      text = { Text(maxLines = 1, text = data.chatroom.inner.name) },
       secondaryText = {
-        Text(maxLines = 3, text = chatroom.latestMessage?.inner?.preview(context.resources) ?: "")
+        Text(maxLines = 3, text = data.latestMessage?.inner?.preview(context.resources) ?: "")
       },
   )
 }

@@ -5,7 +5,6 @@ syntax = "proto3";
 package viska.database;
 
 import "changelog.proto";
-import "common.proto";
 
 message TransactionPayload {
   oneof content {
@@ -18,7 +17,7 @@ message TransactionPayload {
 message Vcard {
   bytes account_id = 1;
   string name = 2;
-  viska.common.Blob photo = 3;
+  viska.changelog.Blob photo = 3;
   double time_updated = 4;
 }
 
@@ -43,4 +42,11 @@ message Message {
   viska.changelog.Message inner = 1;
   bytes message_id = 2;
   bytes chatroom_id = 3;
+}
+
+message Chatroom {
+  viska.changelog.Chatroom inner = 1;
+  bytes chatroom_id = 2;
+  double time_updated = 3;
+  bytes latest_message_id = 4;
 }
