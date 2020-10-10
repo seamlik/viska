@@ -55,6 +55,9 @@ android {
     exclude '/META-INF/INDEX.LIST'
     merge '/META-INF/io.netty.versions.properties'
   }
+  lintOptions {
+    enable 'NewerVersionAvailable'
+  }
 }
 
 spotless {
