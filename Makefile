@@ -1,6 +1,6 @@
 PRETTIER_ARGS = --ignore-path .gitignore .
 
-verify:
+verify: riko
 	cargo test --package viska
 	gradle check
 	prettier --check $(PRETTIER_ARGS)
