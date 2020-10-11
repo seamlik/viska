@@ -28,7 +28,9 @@ impl Message {
     }
 
     pub fn chatroom_id(&self) -> ChatroomId {
-        todo!()
+        let recipients = self.recipients.iter().cloned();
+        let members = recipients.chain(std::iter::once(self.sender.clone()));
+        crate::database::chatroom::chatroom_id(members)
     }
 }
 
