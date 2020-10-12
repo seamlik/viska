@@ -42,6 +42,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.time.Instant
 import javax.inject.Inject
 import viska.changelog.Changelog
+import viska.changelog.Changelog.Peer
 import viska.couchbase.ChatroomQueryResult
 import viska.couchbase.ChatroomService
 import viska.couchbase.PeerService
@@ -49,7 +50,6 @@ import viska.couchbase.VcardService
 import viska.couchbase.preview
 import viska.database.Database
 import viska.database.Database.Chatroom
-import viska.database.Database.Peer
 import viska.database.Database.Vcard
 import viska.database.toFloat
 

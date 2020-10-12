@@ -9,6 +9,7 @@ pub mod daemon;
 pub mod database;
 mod endpoint;
 mod handler;
+mod mock_profile;
 mod packet;
 pub mod pki;
 pub mod proto;

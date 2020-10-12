@@ -7,6 +7,14 @@ syntax = "proto3";
 
 package viska.changelog;
 
+message ChangelogPayload {
+  oneof content {
+    Peer add_peer = 1;
+    Message add_message = 2;
+    Chatroom add_chatroom = 3;
+  }
+}
+
 message Message {
   double time = 1;
   bytes sender = 2;
@@ -23,4 +31,21 @@ message Chatroom {
 message Blob {
   string mime = 1;
   bytes content = 2;
+}
+
+message Peer {
+  bytes account_id = 1;
+
+  // Custom name given by the user.
+  string name = 2;
+
+  PeerRole role = 3;
+}
+
+enum PeerRole {
+  // Peer in the black list.
+  BLOCKED = 0;
+
+  // Peer in the roster.
+  FRIEND = 1;
 }

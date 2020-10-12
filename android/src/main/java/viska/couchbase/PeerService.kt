@@ -13,8 +13,8 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import viska.database.Database
-import viska.database.Database.Peer
+import viska.changelog.Changelog
+import viska.changelog.Changelog.Peer
 import viska.database.DatabaseCorruptedException
 import viska.database.ProfileService
 import viska.database.displayId
@@ -53,7 +53,7 @@ class PeerService @Inject constructor(private val profileService: ProfileService
     val result = MutableStateFlow(emptyList<Peer>())
     val isPeer = Expression.property("type").equalTo(Expression.string(TYPE))
     val roleIsFriend =
-        Expression.property("role").equalTo(Expression.string(Database.PeerRole.FRIEND.name))
+        Expression.property("role").equalTo(Expression.string(Changelog.PeerRole.FRIEND.name))
     val query =
         QueryBuilder.select(SelectResult.all())
             .from(DataSource.database(profileService.database))

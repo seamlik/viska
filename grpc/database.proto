@@ -9,7 +9,7 @@ import "changelog.proto";
 message TransactionPayload {
   oneof content {
     Vcard add_vcard = 1;
-    Peer add_peer = 2;
+    viska.changelog.Peer add_peer = 2;
     Message add_message = 3;
   }
 }
@@ -19,23 +19,6 @@ message Vcard {
   string name = 2;
   viska.changelog.Blob photo = 3;
   double time_updated = 4;
-}
-
-message Peer {
-  bytes account_id = 1;
-
-  // Custom name given by the user.
-  string name = 2;
-
-  PeerRole role = 3;
-}
-
-enum PeerRole {
-  // Peer in the black list.
-  BLOCKED = 0;
-
-  // Peer in the roster.
-  FRIEND = 1;
 }
 
 message Message {

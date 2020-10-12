@@ -10,11 +10,14 @@ targets = ["jni"]
 
 [dependencies]
 async-trait = "0.1"
+chrono = "0.4"
 blake3 = { version = "0.3", features = ["pure"] }
 bytes = "0.5"
+fake = "2"
 futures = "0.3"
 hex = "0.4"
 http = "0"
+itertools = "0.9"
 jni = "0.17"
 log = "0.4"
 quinn = "0.6.1"
