@@ -24,6 +24,15 @@ class TransactionManager
         Database.TransactionPayload.ContentCase.ADD_VCARD -> {
           vcardService.commit(payload.addVcard)
         }
+        Database.TransactionPayload.ContentCase.ADD_MESSAGE -> {
+          messageService.commit(payload.addMessage)
+        }
+        Database.TransactionPayload.ContentCase.ADD_PEER -> {
+          peerService.commit(payload.addPeer)
+        }
+        Database.TransactionPayload.ContentCase.ADD_CHATROOM -> {
+          chatroomService.commit(payload.addChatroom)
+        }
         else -> {
           throw BadTransactionException("Empty payload")
         }
