@@ -14,7 +14,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import viska.changelog.Changelog
-import viska.changelog.Changelog.Peer
+import viska.database.Database.Peer
 import viska.database.DatabaseCorruptedException
 import viska.database.ProfileService
 import viska.database.displayId
@@ -26,12 +26,12 @@ class PeerService @Inject constructor(private val profileService: ProfileService
   private fun documentId(accountId: String) = "${TYPE}:${accountId.toUpperCase(Locale.ROOT)}"
 
   fun commit(payload: Peer) {
-    val accountId = payload.accountId.toByteArray().displayId()
+    val accountId = payload.inner.accountId.toByteArray().displayId()
     val document = MutableDocument(documentId(accountId))
 
     document.setString("type", TYPE)
-    document.setString("name", payload.name)
-    document.setString("role", payload.role.name)
+    document.setString("name", payload.inner.name)
+    document.setString("role", payload.inner.role.name)
     document.setString("accountId", accountId)
 
     profileService.database.save(document)
@@ -42,10 +42,12 @@ class PeerService @Inject constructor(private val profileService: ProfileService
     if (accountId.isBlank()) {
       throw DatabaseCorruptedException("account-id")
     }
-    return Peer.newBuilder()
-        .setAccountId(accountId.toBinaryId().toProtobufByteString())
-        .setName(getString("name") ?: "")
-        .build()
+    val inner =
+        Changelog.Peer.newBuilder()
+            .setAccountId(accountId.toBinaryId().toProtobufByteString())
+            .setName(getString("name") ?: "")
+            .build()
+    return Peer.newBuilder().setInner(inner).build()
   }
 
   @Composable

@@ -42,7 +42,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.time.Instant
 import javax.inject.Inject
 import viska.changelog.Changelog
-import viska.changelog.Changelog.Peer
 import viska.couchbase.ChatroomQueryResult
 import viska.couchbase.ChatroomService
 import viska.couchbase.PeerService
@@ -50,6 +49,7 @@ import viska.couchbase.VcardService
 import viska.couchbase.preview
 import viska.database.Database
 import viska.database.Database.Chatroom
+import viska.database.Database.Peer
 import viska.database.Database.Vcard
 import viska.database.toFloat
 
@@ -275,7 +275,8 @@ private fun ChatroomItem(data: ChatroomQueryResult) {
 @Preview
 @Composable
 private fun PreviewRosterItem() {
-  val peer = Peer.newBuilder().setName("A friend").build()
+  val inner = Changelog.Peer.newBuilder().setName("A friend").build()
+  val peer = Peer.newBuilder().setInner(inner).build()
   RosterItem(peer)
 }
 
@@ -284,6 +285,6 @@ private fun RosterItem(peer: Peer) {
   ListItem(
       modifier = Modifier.clickable(onClick = {}),
       icon = { Image(asset = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
-      text = { Text(maxLines = 1, text = peer.name) },
+      text = { Text(maxLines = 1, text = peer.inner.name) },
   )
 }
