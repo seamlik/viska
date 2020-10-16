@@ -31,7 +31,7 @@ import viska.database.displayId
 import viska.database.toBinaryId
 import viska.database.toProtobufByteString
 
-class MessageService @Inject constructor(private val profileService: ProfileService) {
+class MessageRepository @Inject constructor(private val profileService: ProfileService) {
 
   private fun documentId(messageId: String) = "Message:${messageId.toUpperCase(Locale.ROOT)}"
 
@@ -113,7 +113,7 @@ class MessageService @Inject constructor(private val profileService: ProfileServ
         query.addChangeListener { change ->
           if (change.error != null) {
             Log.e(
-                MessageService::class.java.canonicalName,
+                MessageRepository::class.java.canonicalName,
                 "Error querying messages of chatroom $chatroomId",
                 change.error)
           } else {

@@ -3,18 +3,18 @@ package viska.database
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import viska.couchbase.ChatroomService
-import viska.couchbase.MessageService
-import viska.couchbase.PeerService
-import viska.couchbase.VcardService
+import viska.couchbase.ChatroomRepository
+import viska.couchbase.MessageRepository
+import viska.couchbase.PeerRepository
+import viska.couchbase.VcardRepository
 
 class TransactionManager
     @Inject
     constructor(
-        private val chatroomService: ChatroomService,
-        private val messageService: MessageService,
-        private val peerService: PeerService,
-        private val vcardService: VcardService,
+        private val chatroomRepository: ChatroomRepository,
+        private val messageRepository: MessageRepository,
+        private val peerRepository: PeerRepository,
+        private val vcardRepository: VcardRepository,
     ) {
 
   suspend fun commit(payloads: Flow<Database.TransactionPayload>) {
@@ -22,16 +22,16 @@ class TransactionManager
     payloads.collect { payload ->
       when (payload.contentCase) {
         Database.TransactionPayload.ContentCase.ADD_VCARD -> {
-          vcardService.commit(payload.addVcard)
+          vcardRepository.commit(payload.addVcard)
         }
         Database.TransactionPayload.ContentCase.ADD_MESSAGE -> {
-          messageService.commit(payload.addMessage)
+          messageRepository.commit(payload.addMessage)
         }
         Database.TransactionPayload.ContentCase.ADD_PEER -> {
-          peerService.commit(payload.addPeer)
+          peerRepository.commit(payload.addPeer)
         }
         Database.TransactionPayload.ContentCase.ADD_CHATROOM -> {
-          chatroomService.commit(payload.addChatroom)
+          chatroomRepository.commit(payload.addChatroom)
         }
         else -> {
           throw BadTransactionException("Empty payload")

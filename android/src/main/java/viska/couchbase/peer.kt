@@ -21,7 +21,7 @@ import viska.database.displayId
 import viska.database.toBinaryId
 import viska.database.toProtobufByteString
 
-class PeerService @Inject constructor(private val profileService: ProfileService) {
+class PeerRepository @Inject constructor(private val profileService: ProfileService) {
 
   private fun documentId(accountId: String) = "${TYPE}:${accountId.toUpperCase(Locale.ROOT)}"
 
@@ -63,7 +63,8 @@ class PeerService @Inject constructor(private val profileService: ProfileService
     val token =
         query.addChangeListener { change ->
           if (change.error != null) {
-            Log.e(ChatroomService::class.java.canonicalName, "Error querying roster", change.error)
+            Log.e(
+                ChatroomRepository::class.java.canonicalName, "Error querying roster", change.error)
           } else {
             result.value = change.results?.allResults()?.map { it.toPeer() } ?: emptyList()
           }

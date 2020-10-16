@@ -23,16 +23,16 @@ import androidx.compose.ui.unit.dp
 import dagger.hilt.android.AndroidEntryPoint
 import java.lang.IllegalArgumentException
 import javax.inject.Inject
-import viska.couchbase.ChatroomService
-import viska.couchbase.MessageService
+import viska.couchbase.ChatroomRepository
+import viska.couchbase.MessageRepository
 import viska.database.Database.Message
 import viska.database.displayId
 
 @AndroidEntryPoint
 class ChatroomActivity : InstanceActivity() {
 
-  @Inject lateinit var chatroomService: ChatroomService
-  @Inject lateinit var messageService: MessageService
+  @Inject lateinit var chatroomRepository: ChatroomRepository
+  @Inject lateinit var messageRepository: MessageRepository
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -41,13 +41,13 @@ class ChatroomActivity : InstanceActivity() {
 
     setContent {
       MaterialTheme {
-        val chatroom by chatroomService.watchChatroom(chatroomId).collectAsState()
+        val chatroom by chatroomRepository.watchChatroom(chatroomId).collectAsState()
         if (chatroom == null) {
           finish()
           return@MaterialTheme
         }
 
-        val messages by messageService.watchChatroomMessages(chatroomId).collectAsState()
+        val messages by messageRepository.watchChatroomMessages(chatroomId).collectAsState()
 
         Scaffold(topBar = { TopAppBar(title = { Text(text = chatroom?.inner?.name ?: "") }) }) {
         _ ->

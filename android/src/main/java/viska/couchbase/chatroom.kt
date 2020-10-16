@@ -30,11 +30,11 @@ import viska.database.toBinaryId
 import viska.database.toFloat
 import viska.database.toProtobufByteString
 
-class ChatroomService
+class ChatroomRepository
     @Inject
     constructor(
         private val profileService: ProfileService,
-        private val messageService: MessageService,
+        private val messageRepository: MessageRepository,
     ) {
 
   private fun documentId(chatroomId: String) = "Chatroom:${chatroomId.toUpperCase(Locale.ROOT)}"
@@ -49,7 +49,7 @@ class ChatroomService
         query.addChangeListener { change ->
           if (change.error != null) {
             Log.e(
-                ChatroomService::class.java.canonicalName,
+                ChatroomRepository::class.java.canonicalName,
                 "Error querying list of chatrooms",
                 change.error)
           } else {
@@ -57,7 +57,7 @@ class ChatroomService
                 change.results?.allResults()?.map { result ->
                   val chatroom = result.toChatroom()
                   val latestMessage =
-                      messageService.getChatroomLatestMessage(result.getString("chatroom-id")!!)
+                      messageRepository.getChatroomLatestMessage(result.getString("chatroom-id")!!)
                   ChatroomQueryResult(chatroom, latestMessage)
                 }
                     ?: emptyList(),

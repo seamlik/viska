@@ -16,7 +16,7 @@ import viska.database.displayId
 import viska.database.toBinaryId
 import viska.database.toProtobufByteString
 
-class VcardService @Inject constructor(private val profileService: ProfileService) {
+class VcardRepository @Inject constructor(private val profileService: ProfileService) {
 
   private fun documentId(accountId: String) = "Vcard:${accountId.toUpperCase(Locale.ROOT)}"
   private fun documentId(accountId: ByteArray) = "Vcard:${accountId.displayId()}"

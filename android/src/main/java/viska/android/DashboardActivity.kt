@@ -43,9 +43,9 @@ import java.time.Instant
 import javax.inject.Inject
 import viska.changelog.Changelog
 import viska.couchbase.ChatroomQueryResult
-import viska.couchbase.ChatroomService
-import viska.couchbase.PeerService
-import viska.couchbase.VcardService
+import viska.couchbase.ChatroomRepository
+import viska.couchbase.PeerRepository
+import viska.couchbase.VcardRepository
 import viska.couchbase.preview
 import viska.database.Database
 import viska.database.Database.Chatroom
@@ -56,9 +56,9 @@ import viska.database.toFloat
 @AndroidEntryPoint
 class DashboardActivity : InstanceActivity() {
 
-  @Inject lateinit var chatroomService: ChatroomService
-  @Inject lateinit var vcardService: VcardService
-  @Inject lateinit var peerService: PeerService
+  @Inject lateinit var chatroomRepository: ChatroomRepository
+  @Inject lateinit var vcardRepository: VcardRepository
+  @Inject lateinit var peerRepository: PeerRepository
 
   private val viewModel by viewModels<DashboardViewModel>()
 
@@ -67,9 +67,9 @@ class DashboardActivity : InstanceActivity() {
 
     setContent {
       MaterialTheme {
-        val chatrooms = chatroomService.watchChatrooms()
-        val vcard = vcardService.watchVcard(profileService.accountId)
-        val roster = peerService.watchRoster()
+        val chatrooms = chatroomRepository.watchChatrooms()
+        val vcard = vcardRepository.watchVcard(profileService.accountId)
+        val roster = peerRepository.watchRoster()
 
         Page(
             viewModel = viewModel,
