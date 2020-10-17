@@ -1,10 +1,12 @@
 use crate::daemon::platform_client::PlatformClient;
-use crate::daemon::GrpcClient;
 use crate::packet::ResponseWindow;
 use crate::proto::request::Payload;
 use crate::proto::Response;
 use async_trait::async_trait;
+use std::sync::Arc;
 use thiserror::Error;
+use tokio::sync::Mutex;
+use tonic::transport::Channel;
 use tonic::Status;
 
 #[derive(Error, Debug)]
@@ -19,8 +21,8 @@ pub trait Handler {
     async fn handle(&self, window: &ResponseWindow) -> Result<Response, Error>;
 }
 
-pub struct PeerHandler {
-    pub platform_grpc_port: u16,
+pub(crate) struct PeerHandler {
+    pub platform: Arc<Mutex<PlatformClient<Channel>>>,
 }
 
 #[async_trait]
@@ -29,8 +31,9 @@ impl Handler for PeerHandler {
         match &window.request.payload {
             Some(Payload::Message(message)) => {
                 let message_id: [u8; 32] = message.message_id().into();
-                let mut platform = PlatformClient::create(self.platform_grpc_port).await?;
-                platform
+                self.platform
+                    .lock()
+                    .await
                     .notify_message(message_id.to_vec())
                     .await
                     .map(|_| Response::default())

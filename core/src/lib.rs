@@ -1,10 +1,11 @@
+#![feature(once_cell)]
 #![feature(proc_macro_hygiene)]
 
 #[path = "../../target/riko/viska.rs"]
 #[riko::ignore]
 pub mod bridge;
 
-pub mod changelog;
+mod changelog;
 pub mod daemon;
 pub mod database;
 mod endpoint;
@@ -15,6 +16,8 @@ pub mod pki;
 pub mod proto;
 mod util;
 
+use crate::daemon::platform_client::PlatformClient;
+use crate::daemon::GrpcClient;
 use crate::endpoint::CertificateVerifier;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
@@ -32,13 +35,47 @@ use prost::Message as _;
 use proto::Request;
 use proto::Response;
 use quinn::ReadToEndError;
+use serde_bytes::ByteBuf;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fmt::Formatter;
+use std::lazy::SyncLazy;
 use std::net::SocketAddr;
+use std::sync::atomic::AtomicI32;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::Mutex;
 use thiserror::Error;
+use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
+use tonic::transport::Channel;
 use uuid::Uuid;
+
+static CURRENT_NODE_HANDLE: AtomicI32 = AtomicI32::new(0);
+static NODES: SyncLazy<Mutex<HashMap<i32, Node>>> = SyncLazy::new(|| Default::default());
+static TOKIO: SyncLazy<Mutex<Runtime>> = SyncLazy::new(|| Mutex::new(Runtime::new().unwrap()));
+
+#[riko::fun]
+pub fn start(
+    certificate: ByteBuf,
+    key: ByteBuf,
+    platform_grpc_port: u16,
+) -> Result<i32, EndpointError> {
+    let handle = CURRENT_NODE_HANDLE.fetch_add(1, Ordering::SeqCst);
+    let (node, _) = TOKIO.lock().unwrap().block_on(Node::start(
+        &certificate,
+        &key,
+        platform_grpc_port,
+        false,
+    ))?;
+    NODES.lock().unwrap().insert(handle, node);
+    Ok(handle)
+}
+
+#[riko::fun]
+pub fn stop(handle: i32) {
+    NODES.lock().unwrap().remove(&handle);
+}
 
 /// The protagonist.
 pub struct Node {
@@ -51,20 +88,26 @@ impl Node {
     ///
     /// The returned [Future] is a handle for awaiting all operations. Everything is running once
     /// this method finishes.
-    pub fn start(
+    pub async fn start(
         certificate: &[u8],
         key: &[u8],
         platform_grpc_port: u16,
         enable_certificate_verification: bool,
     ) -> Result<(Self, JoinHandle<()>), EndpointError> {
+        let account_id = certificate.id();
         let certificate_verifier = Arc::new(CertificateVerifier {
             enabled: enable_certificate_verification,
-            account_id: certificate.id(),
+            account_id,
             peer_whitelist: Default::default(),
         });
 
+        let platform = Arc::new(tokio::sync::Mutex::new(
+            PlatformClient::<Channel>::create(platform_grpc_port).await?,
+        ));
+
         // Start gRPC server
-        let node_grpc_port = daemon::StandardNode::start(certificate_verifier.clone());
+        let node_grpc_port =
+            daemon::StandardNode::start(certificate_verifier.clone(), platform.clone(), account_id);
 
         let config = endpoint::Config { certificate, key };
         let (window_sender, window_receiver) =
@@ -77,7 +120,9 @@ impl Node {
             {
                 Box::new(DeviceHandler)
             } else {
-                Box::new(PeerHandler { platform_grpc_port })
+                Box::new(PeerHandler {
+                    platform: platform.clone(),
+                })
             };
             async move {
                 let response = match handler.handle(&window).await {
@@ -225,7 +270,8 @@ pub enum ConnectionError {
 #[error("Failed to start a QUIC endpoint")]
 pub enum EndpointError {
     CryptoMaterial(#[from] quinn::ParseError),
-    TlsConfiguration(#[from] rustls::TLSError),
+    Grpc(#[from] tonic::transport::Error),
     Quic(#[from] quinn::EndpointError),
     Socket(#[from] std::io::Error),
+    TlsConfiguration(#[from] rustls::TLSError),
 }

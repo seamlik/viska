@@ -1,8 +1,12 @@
 tonic::include_proto!("viska.daemon");
 
+use crate::changelog::ChangelogMerger;
 use crate::database::Chatroom;
+use crate::database::Message;
+use crate::database::Peer;
 use crate::database::TransactionPayload;
 use crate::endpoint::CertificateVerifier;
+use crate::pki::CertificateId;
 use async_trait::async_trait;
 use node_client::NodeClient;
 use node_server::NodeServer;
@@ -11,24 +15,16 @@ use platform_server::Platform;
 use platform_server::PlatformServer;
 use std::error::Error;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use tonic::body::BoxBody;
 use tonic::transport::Body;
 use tonic::transport::Channel;
 use tonic::transport::NamedService;
 use tonic::transport::Server;
+use tonic::Code;
 use tonic::Status;
 use tonic::Streaming;
 use tower::Service;
-
-pub(crate) struct PlatformConnector {
-    grpc_port: u16,
-}
-
-impl PlatformConnector {
-    pub async fn connect(&self) -> PlatformClient<Channel> {
-        todo!()
-    }
-}
 
 trait GrpcService<S>
 where
@@ -72,6 +68,28 @@ impl GrpcClient for PlatformClient<Channel> {
 impl GrpcClient for NodeClient<Channel> {
     async fn create(port: u16) -> Result<Self, tonic::transport::Error> {
         Self::connect(format!("http://[::1]:{}", port)).await
+    }
+}
+
+/// Nullable gRPC response.
+///
+/// If error status is [NotFound](Code::NotFound), the resposne can be seen as [None].
+pub trait NullableResponse<T: prost::Message> {
+    fn unwrap_response(self) -> Result<Option<T>, Status>;
+}
+
+impl<T: prost::Message> NullableResponse<T> for Result<tonic::Response<T>, Status> {
+    fn unwrap_response(self) -> Result<Option<T>, Status> {
+        match self {
+            Ok(response) => Ok(Some(response.into_inner())),
+            Err(status) => {
+                if let Code::NotFound = status.code() {
+                    Ok(None)
+                } else {
+                    Err(status)
+                }
+            }
+        }
     }
 }
 
@@ -133,13 +151,25 @@ impl Platform for DummyPlatform {
 
 pub(crate) struct StandardNode {
     verifier: Arc<CertificateVerifier>,
+    platform: Arc<Mutex<PlatformClient<Channel>>>,
+    account_id: CertificateId,
+    changelog_merger: Arc<ChangelogMerger>,
 }
 
 impl<T: node_server::Node> GrpcService<NodeServer<T>> for StandardNode {}
 
 impl StandardNode {
-    pub fn start(verifier: Arc<CertificateVerifier>) -> u16 {
-        let instance = Self { verifier };
+    pub fn start(
+        verifier: Arc<CertificateVerifier>,
+        platform: Arc<Mutex<PlatformClient<Channel>>>,
+        account_id: CertificateId,
+    ) -> u16 {
+        let instance = Self {
+            changelog_merger: Arc::new(ChangelogMerger::new(platform.clone())),
+            verifier,
+            platform,
+            account_id,
+        };
         Self::spawn_server(NodeServer::new(instance))
     }
 }

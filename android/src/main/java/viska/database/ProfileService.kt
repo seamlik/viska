@@ -58,6 +58,18 @@ class ProfileService @Inject constructor(@ApplicationContext private val context
       }
     }
 
+  val key: ByteArray
+    get() {
+      val account = accountId
+      return if (account.isBlank()) {
+        ByteArray(0)
+      } else {
+        val path =
+            context.filesDir.toPath().resolve("account").resolve(accountId).resolve("key.der")
+        return Files.readAllBytes(path)
+      }
+    }
+
   val hasActiveAccount
     get() = _database != null
 
