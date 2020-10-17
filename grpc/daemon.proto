@@ -19,6 +19,8 @@ service Platform {
 
   rpc FindChatroomById(google.protobuf.BytesValue) returns (viska.database.Chatroom) {}
 
+  rpc FindPeerById(google.protobuf.BytesValue) returns (viska.database.Peer) {}
+
   rpc FindMessageById(google.protobuf.BytesValue) returns (viska.database.Message) {}
 }
 

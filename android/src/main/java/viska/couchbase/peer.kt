@@ -24,6 +24,7 @@ import viska.database.toProtobufByteString
 class PeerRepository @Inject constructor(private val profileService: ProfileService) {
 
   private fun documentId(accountId: String) = "${TYPE}:${accountId.toUpperCase(Locale.ROOT)}"
+  private fun documentId(accountId: ByteArray) = "${TYPE}:${accountId.displayId()}"
 
   fun commit(payload: Peer) {
     val accountId = payload.inner.accountId.toByteArray().displayId()
@@ -76,6 +77,9 @@ class PeerRepository @Inject constructor(private val profileService: ProfileServ
   fun delete(accountId: ByteArray) {
     TODO()
   }
+
+  fun findById(accountId: ByteArray) =
+      profileService.database.getDocument(documentId(accountId)).toPeer()
 }
 
 private const val TYPE = "Peer"
