@@ -34,4 +34,9 @@ service Node {
   // This list will be used when verifying the peer certificate of a TLS connection. Only peers
   // in this list are allowed to connect with the Node.
   rpc UpdatePeerWhitelist(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+
+  // Populates the database with mock data.
+  //
+  // This is useful for test purposes. Does nothing on release mode.
+  rpc PopulateMockData(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }

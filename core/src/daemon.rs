@@ -188,6 +188,27 @@ impl node_server::Node for StandardNode {
         &self,
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<()>, Status> {
-        unimplemented!()
+        todo!()
+    }
+
+    async fn populate_mock_data(
+        &self,
+        _: tonic::Request<()>,
+    ) -> Result<tonic::Response<()>, Status> {
+        let account_id_bytes = crate::database::bytes_from_hash(self.account_id.clone());
+        let (transaction, changelog) = crate::mock_profile::populate_data(&account_id_bytes);
+        let mut platform = self.platform.lock().await;
+
+        platform
+            .commit_transaction(futures::stream::iter(transaction))
+            .await?;
+
+        let transaction_after_changelog =
+            self.changelog_merger.commit(changelog.into_iter()).await?;
+        platform
+            .commit_transaction(futures::stream::iter(transaction_after_changelog))
+            .await?;
+
+        Ok(tonic::Response::new(()))
     }
 }
