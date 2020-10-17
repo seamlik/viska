@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.res.stringResource
 import androidx.ui.tooling.preview.Preview
 import com.google.protobuf.Empty
+import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +31,7 @@ import viska.database.ProfileService
 class NewProfileActivity : AppCompatActivity() {
 
   @Inject lateinit var profileService: ProfileService
-  @Inject lateinit var daemonService: DaemonService
+  @Inject lateinit var daemonService: Lazy<DaemonService>
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -56,7 +57,7 @@ class NewProfileActivity : AppCompatActivity() {
     profileService.createProfile()
     GlobalScope.launch(Dispatchers.IO) {
       try {
-        daemonService.nodeGrpcClient.populateMockData(Empty.getDefaultInstance())
+        daemonService.get().nodeGrpcClient.populateMockData(Empty.getDefaultInstance())
       } finally {
         GlobalState.creatingAccount.value = false
       }
