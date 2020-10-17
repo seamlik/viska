@@ -22,9 +22,7 @@ abstract class InstanceActivity : AppCompatActivity() {
     }
 
     if (!profileService.hasActiveAccount) {
-      startActivity(Intent(this, NewProfileActivity::class.java))
-      finish()
-      throw IllegalStateException("No active account, switching to NewProfileActivity")
+      return
     }
 
     startForegroundService(Intent(this, DaemonService::class.java))
@@ -39,6 +37,15 @@ abstract class InstanceActivity : AppCompatActivity() {
       INSTANCES.remove(this)
     }
     super.onDestroy()
+  }
+
+  /** Must be invoked by child classes at the earliest stage of [onCreate]. */
+  protected fun cancelIfNoActiveAccount() {
+    if (!profileService.hasActiveAccount) {
+      startActivity(Intent(this, NewProfileActivity::class.java))
+      finish()
+      return
+    }
   }
 
   companion object {

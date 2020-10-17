@@ -64,6 +64,7 @@ class DashboardActivity : InstanceActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    cancelIfNoActiveAccount()
 
     setContent {
       MaterialTheme {

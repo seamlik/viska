@@ -22,6 +22,10 @@ class DaemonService
   val nodeGrpcServerHandle: Int
 
   init {
+    if (!profileService.hasActiveAccount) {
+      throw IllegalStateException("Cannot start daemon without an active account")
+    }
+
     val localhost = "::1"
 
     // TODO: TLS

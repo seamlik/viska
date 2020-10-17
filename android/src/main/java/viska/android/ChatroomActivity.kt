@@ -36,6 +36,7 @@ class ChatroomActivity : InstanceActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    cancelIfNoActiveAccount()
 
     val chatroomId = chatroomId
 
