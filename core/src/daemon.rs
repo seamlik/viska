@@ -137,6 +137,14 @@ impl Platform for DummyPlatform {
         Ok(tonic::Response::new(Default::default()))
     }
 
+    async fn find_peer_by_id(
+        &self,
+        peer_id: tonic::Request<Vec<u8>>,
+    ) -> Result<tonic::Response<Peer>, Status> {
+        log::info!("Finding peer {}", hex::encode_upper(peer_id.get_ref()));
+        Ok(tonic::Response::new(Default::default()))
+    }
+
     async fn find_message_by_id(
         &self,
         message_id: tonic::Request<Vec<u8>>,
