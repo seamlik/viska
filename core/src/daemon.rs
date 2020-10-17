@@ -191,6 +191,15 @@ impl node_server::Node for StandardNode {
         todo!()
     }
 
+    #[cfg(not(debug_assertions))]
+    async fn populate_mock_data(
+        &self,
+        _: tonic::Request<()>,
+    ) -> Result<tonic::Response<()>, Status> {
+        Err(Status::unimplemented("Only in debug mode"))
+    }
+
+    #[cfg(debug_assertions)]
     async fn populate_mock_data(
         &self,
         _: tonic::Request<()>,

@@ -1,3 +1,5 @@
+#![cfg(debug_assertions)]
+
 use crate::changelog::ChangelogPayload;
 use crate::changelog::Message;
 use crate::changelog::Peer;
@@ -14,12 +16,6 @@ use fake::Fake;
 use itertools::Itertools;
 use rand::prelude::*;
 
-#[cfg(not(debug_assertions))]
-pub fn populate_data(account_id: &Vec<u8>) -> (Vec<TransactionPayload>, Vec<ChangelogPayload>) {
-    Default::default()
-}
-
-#[cfg(debug_assertions)]
 pub fn populate_data(account_id: &Vec<u8>) -> (Vec<TransactionPayload>, Vec<ChangelogPayload>) {
     let num_friends = 16;
     let num_messages = 128;
