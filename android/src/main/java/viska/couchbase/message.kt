@@ -34,6 +34,7 @@ import viska.database.toProtobufByteString
 class MessageRepository @Inject constructor(private val profileService: ProfileService) {
 
   private fun documentId(messageId: String) = "Message:${messageId.toUpperCase(Locale.ROOT)}"
+  private fun documentId(messageId: ByteArray) = "Message:${messageId.displayId()}"
 
   fun commit(payload: Database.Message) {
     val messageId = payload.messageId.toByteArray().displayId()
@@ -138,6 +139,9 @@ class MessageRepository @Inject constructor(private val profileService: ProfileS
 
   fun getChatroomLatestMessage(chatroomId: String) =
       queryChatroomMessages(chatroomId).limit(Expression.intValue(1)).execute().next()?.toMessage()
+
+  fun findById(messageId: ByteArray) =
+      profileService.database.getDocument(documentId(messageId)).toMessage()
 }
 
 private const val TYPE = "Message"
