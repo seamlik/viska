@@ -6,7 +6,6 @@ import androidx.compose.runtime.onDispose
 import androidx.compose.runtime.remember
 import com.couchbase.lite.Array
 import com.couchbase.lite.DataSource
-import com.couchbase.lite.Database
 import com.couchbase.lite.DictionaryInterface
 import com.couchbase.lite.Expression
 import com.couchbase.lite.Meta
@@ -38,6 +37,7 @@ class ChatroomRepository
     ) {
 
   private fun documentId(chatroomId: String) = "Chatroom:${chatroomId.toUpperCase(Locale.ROOT)}"
+  private fun documentId(chatroomId: ByteArray) = "Chatroom:${chatroomId.displayId()}"
 
   private fun watchChatrooms(action: (List<ChatroomQueryResult>) -> Unit): AutoCloseable {
     // TODO: Order by latest message
@@ -139,7 +139,8 @@ class ChatroomRepository
     profileService.database.save(document)
   }
 
-  fun Database.getChatroom(chatroomId: String) = getDocument(documentId(chatroomId))?.toChatroom()
+  fun findById(chatroomId: ByteArray) =
+      profileService.database.getDocument(documentId(chatroomId)).toChatroom()
 
   fun delete(chatroomId: ByteArray) {
     TODO()
