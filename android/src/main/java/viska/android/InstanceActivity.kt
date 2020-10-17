@@ -5,8 +5,8 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-import viska.database.ProfileService
 import kotlin.IllegalStateException
+import viska.database.ProfileService
 
 @AndroidEntryPoint
 abstract class InstanceActivity : AppCompatActivity() {
@@ -18,7 +18,8 @@ abstract class InstanceActivity : AppCompatActivity() {
 
     if (GlobalState.creatingAccount.value) {
       finish()
-      throw IllegalStateException("Launching an InstanceActivity is forbidden during account creation")
+      throw IllegalStateException(
+          "Launching an InstanceActivity is forbidden during account creation")
     }
 
     if (!profileService.hasActiveAccount) {
@@ -27,15 +28,11 @@ abstract class InstanceActivity : AppCompatActivity() {
 
     startForegroundService(Intent(this, DaemonService::class.java))
 
-    synchronized(INSTANCES) {
-      INSTANCES.add(this)
-    }
+    synchronized(INSTANCES) { INSTANCES.add(this) }
   }
 
   override fun onDestroy() {
-    synchronized(INSTANCES) {
-      INSTANCES.remove(this)
-    }
+    synchronized(INSTANCES) { INSTANCES.remove(this) }
     super.onDestroy()
   }
 
