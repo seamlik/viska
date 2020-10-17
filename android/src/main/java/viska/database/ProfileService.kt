@@ -83,7 +83,7 @@ class ProfileService @Inject constructor(@ApplicationContext private val context
 
     val accountId = Module.hash(BsonBinary(certificate))?.asBinary()?.data!!
     val accountIdText = accountId.displayId()
-    Log.i(LOG_TAG, "Generated account $accountIdText")
+    Log.i(this::class.java.simpleName, "Generated account $accountIdText")
 
     val profileDir = context.filesDir.toPath().resolve("account").resolve(accountIdText)
     Files.createDirectories(profileDir)

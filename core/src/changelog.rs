@@ -103,7 +103,6 @@ impl ChangelogMerger {
                     transaction.extend(self.message_service.update(message).await?);
                 }
                 None => return Err(Status::invalid_argument("Empty transaction payload")),
-                _ => todo!(),
             }
         }
         Ok(transaction)
