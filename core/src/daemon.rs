@@ -36,9 +36,8 @@ where
     S::Future: Send + 'static,
     S::Error: Into<Box<dyn Error + Send + Sync>> + Send,
 {
-    fn spawn_server(service: S) -> u16 {
+    fn spawn_server(service: S, port: u16) -> u16 {
         // TODO: TLS
-        let port = crate::util::random_port();
         log::info!("{} serving at port {}", std::any::type_name::<S>(), port);
         let task = async move {
             Server::builder()
@@ -101,7 +100,7 @@ impl<T: Platform> GrpcService<PlatformServer<T>> for DummyPlatform {}
 impl DummyPlatform {
     /// Starts the gRPC server in the background and returns the port to access it.
     pub fn start() -> u16 {
-        Self::spawn_server(PlatformServer::new(Self))
+        Self::spawn_server(PlatformServer::new(Self), crate::util::random_port())
     }
 }
 
@@ -171,6 +170,7 @@ impl StandardNode {
         verifier: Arc<CertificateVerifier>,
         platform: Arc<Mutex<PlatformClient<Channel>>>,
         account_id: CertificateId,
+        node_grpc_port: u16,
     ) -> u16 {
         let instance = Self {
             changelog_merger: Arc::new(ChangelogMerger::new(platform.clone())),
@@ -178,7 +178,7 @@ impl StandardNode {
             platform,
             account_id,
         };
-        Self::spawn_server(NodeServer::new(instance))
+        Self::spawn_server(NodeServer::new(instance), node_grpc_port)
     }
 }
 

@@ -47,6 +47,7 @@ class DaemonService
                 BsonBinary(profileService.certificate),
                 BsonBinary(profileService.key),
                 BsonInt32(platformGrpcServer.port),
+                BsonInt32(nodeGrpcPort),
             )!!
             .asInt32()
             .value

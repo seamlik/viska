@@ -14,7 +14,7 @@ mod mock_profile;
 mod packet;
 pub mod pki;
 pub mod proto;
-mod util;
+pub mod util;
 
 use crate::daemon::platform_client::PlatformClient;
 use crate::daemon::GrpcClient;
@@ -55,32 +55,44 @@ static CURRENT_NODE_HANDLE: AtomicI32 = AtomicI32::new(0);
 static NODES: SyncLazy<Mutex<HashMap<i32, Node>>> = SyncLazy::new(|| Default::default());
 static TOKIO: SyncLazy<Mutex<Runtime>> = SyncLazy::new(|| Mutex::new(Runtime::new().unwrap()));
 
+/// Starts a [Node].
+///
+/// # Returns
+///
+/// The handle for use with [stop].
 #[riko::fun]
 pub fn start(
     certificate: ByteBuf,
     key: ByteBuf,
     platform_grpc_port: u16,
+    node_grpc_port: u16,
 ) -> Result<i32, EndpointError> {
     let handle = CURRENT_NODE_HANDLE.fetch_add(1, Ordering::SeqCst);
     let (node, _) = TOKIO.lock().unwrap().block_on(Node::start(
         &certificate,
         &key,
         platform_grpc_port,
-        false,
+        node_grpc_port,
+        true,
     ))?;
     NODES.lock().unwrap().insert(handle, node);
     Ok(handle)
 }
 
+/// Stops a [Node].
+///
+/// # Parameters
+///
+/// * `handle`: The handle returned from [start].
 #[riko::fun]
 pub fn stop(handle: i32) {
+    log::info!("Stopping Node");
     NODES.lock().unwrap().remove(&handle);
 }
 
 /// The protagonist.
 pub struct Node {
     connection_manager: Arc<ConnectionManager>,
-    grpc_port: u16,
 }
 
 impl Node {
@@ -92,6 +104,7 @@ impl Node {
         certificate: &[u8],
         key: &[u8],
         platform_grpc_port: u16,
+        node_grpc_port: u16,
         enable_certificate_verification: bool,
     ) -> Result<(Self, JoinHandle<()>), EndpointError> {
         let account_id = certificate.id();
@@ -106,8 +119,12 @@ impl Node {
         ));
 
         // Start gRPC server
-        let node_grpc_port =
-            daemon::StandardNode::start(certificate_verifier.clone(), platform.clone(), account_id);
+        daemon::StandardNode::start(
+            certificate_verifier.clone(),
+            platform.clone(),
+            account_id,
+            node_grpc_port,
+        );
 
         let config = endpoint::Config { certificate, key };
         let (window_sender, window_receiver) =
@@ -155,22 +172,11 @@ impl Node {
         }));
 
         println!("Started Viska node with account {}", account_id.to_hex());
-        Ok((
-            Self {
-                connection_manager,
-                grpc_port: node_grpc_port,
-            },
-            task,
-        ))
+        Ok((Self { connection_manager }, task))
     }
 
     pub async fn connect(&self, addr: &SocketAddr) -> Result<Arc<Connection>, ConnectionError> {
         self.connection_manager.clone().connect(addr).await
-    }
-
-    /// Gets the port to its gRPC server.
-    pub fn grpc_port(&self) -> u16 {
-        self.grpc_port
     }
 }
 

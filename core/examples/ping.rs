@@ -19,12 +19,15 @@ async fn main() -> anyhow::Result<()> {
 
     let dummy_cert_bundle = viska::pki::new_certificate();
     let platform_grpc_port = DummyPlatform::start();
+    let node_grpc_port = viska::util::random_port();
     let (node, _) = Node::start(
         &dummy_cert_bundle.certificate,
         &dummy_cert_bundle.key,
         platform_grpc_port,
+        node_grpc_port,
         false,
-    )?;
+    )
+    .await?;
 
     let connection = node.connect(&cli.destination).await?;
     let mut counter = 0_u32;
