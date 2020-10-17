@@ -1,6 +1,7 @@
 tonic::include_proto!("viska.database");
 
 pub(crate) mod chatroom;
+pub(crate) mod message;
 
 use blake3::Hash;
 use chrono::prelude::*;

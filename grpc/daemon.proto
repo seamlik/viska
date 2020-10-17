@@ -18,6 +18,8 @@ service Platform {
   rpc NotifyMessage(google.protobuf.BytesValue) returns (google.protobuf.Empty) {}
 
   rpc FindChatroomById(google.protobuf.BytesValue) returns (viska.database.Chatroom) {}
+
+  rpc FindMessageById(google.protobuf.BytesValue) returns (viska.database.Message) {}
 }
 
 // Represents a Node

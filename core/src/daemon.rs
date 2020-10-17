@@ -118,6 +118,17 @@ impl Platform for DummyPlatform {
         );
         Ok(tonic::Response::new(Default::default()))
     }
+
+    async fn find_message_by_id(
+        &self,
+        message_id: tonic::Request<Vec<u8>>,
+    ) -> Result<tonic::Response<Message>, Status> {
+        log::info!(
+            "Finding message {}",
+            hex::encode_upper(message_id.get_ref())
+        );
+        Ok(tonic::Response::new(Default::default()))
+    }
 }
 
 pub(crate) struct StandardNode {
