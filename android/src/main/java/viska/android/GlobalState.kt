@@ -1,7 +1,7 @@
 package viska.android
 
-import androidx.lifecycle.MutableLiveData
+import kotlinx.coroutines.flow.MutableStateFlow
 
 object GlobalState {
-  val creatingAccount = MutableLiveData<Boolean>(false)
+  val creatingAccount = MutableStateFlow(false)
 }

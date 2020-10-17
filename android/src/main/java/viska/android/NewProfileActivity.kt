@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.Button
 import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
@@ -35,13 +35,14 @@ class NewProfileActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContent {
-      val creatingAccount by GlobalState.creatingAccount.observeAsState(false)
+      val creatingAccount by GlobalState.creatingAccount.collectAsState()
       Page(creatingAccount, this::newAccount, this::newMockProfile)
     }
   }
 
   private fun newAccount() {
     GlobalState.creatingAccount.value = true
+    InstanceActivity.finishAll()
     profileService.createProfile()
     GlobalState.creatingAccount.value = false
 
@@ -51,6 +52,7 @@ class NewProfileActivity : AppCompatActivity() {
 
   private fun newMockProfile() {
     GlobalState.creatingAccount.value = true
+    InstanceActivity.finishAll()
     profileService.createProfile()
     GlobalScope.launch(Dispatchers.IO) {
       try {
