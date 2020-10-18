@@ -22,9 +22,10 @@ pub fn populate_data(account_id: &Vec<u8>) -> (Vec<TransactionPayload>, Vec<Chan
 
     let mut changelog = Vec::<ChangelogPayload>::default();
 
+    log::info!("Generating Vcard");
     let vcards: Vec<Vcard> = (0..num_friends).map(|_| random_vcard()).collect();
 
-    // Populate Friends
+    log::info!("Generating friends");
     changelog.extend(
         vcards
             .iter()
@@ -34,7 +35,7 @@ pub fn populate_data(account_id: &Vec<u8>) -> (Vec<TransactionPayload>, Vec<Chan
             }),
     );
 
-    // Populate Messages
+    log::info!("Generating Messages");
     changelog.extend(
         (0..num_messages)
             .map(|_| random_messages(account_id, &vcards))

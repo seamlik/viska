@@ -206,14 +206,25 @@ impl node_server::Node for StandardNode {
     ) -> Result<tonic::Response<()>, Status> {
         let account_id_bytes = crate::database::bytes_from_hash(self.account_id.clone());
         let (transaction, changelog) = crate::mock_profile::populate_data(&account_id_bytes);
+        log::info!(
+            "Generated a transaction of {} entries and a changelog of {} entries",
+            transaction.len(),
+            changelog.len()
+        );
         let mut platform = self.platform.lock().await;
 
+        log::info!("Committing the mock Vcards as a transaction");
         platform
             .commit_transaction(futures::stream::iter(transaction))
             .await?;
 
+        log::info!("Merging changelog generated from `mock_profile`");
         let transaction_after_changelog =
             self.changelog_merger.commit(changelog.into_iter()).await?;
+        log::info!(
+            "Generated a transaction of {} entries after a changelog merge",
+            transaction_after_changelog.len()
+        );
         platform
             .commit_transaction(futures::stream::iter(transaction_after_changelog))
             .await?;
