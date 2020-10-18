@@ -23,16 +23,16 @@ import androidx.compose.ui.unit.dp
 import dagger.hilt.android.AndroidEntryPoint
 import java.lang.IllegalArgumentException
 import javax.inject.Inject
-import viska.couchbase.ChatroomRepository
-import viska.couchbase.MessageRepository
+import viska.couchbase.AndroidChatroomRepository
+import viska.couchbase.AndroidMessageRepository
 import viska.database.Database.Message
 import viska.database.displayId
 
 @AndroidEntryPoint
 class ChatroomActivity : InstanceActivity() {
 
-  @Inject lateinit var chatroomRepository: ChatroomRepository
-  @Inject lateinit var messageRepository: MessageRepository
+  @Inject lateinit var chatroomRepository: AndroidChatroomRepository
+  @Inject lateinit var messageRepository: AndroidMessageRepository
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
