@@ -1,21 +1,18 @@
 package viska.couchbase
 
-import android.util.Log
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.onDispose
 import com.couchbase.lite.DataSource
 import com.couchbase.lite.DictionaryInterface
 import com.couchbase.lite.Expression
 import com.couchbase.lite.MutableDocument
 import com.couchbase.lite.QueryBuilder
 import com.couchbase.lite.SelectResult
+import com.google.protobuf.ByteString
 import java.util.Locale
+import java.util.logging.Level
+import java.util.logging.Logger
 import javax.inject.Inject
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import viska.changelog.Changelog
 import viska.database.Database.Peer
-import viska.database.DatabaseCorruptedException
 import viska.database.ProfileService
 import viska.database.displayId
 import viska.database.toBinaryId
@@ -38,22 +35,20 @@ class PeerRepository @Inject constructor(private val profileService: ProfileServ
     profileService.database.save(document)
   }
 
-  private fun DictionaryInterface.toPeer(): Peer {
-    val accountId = getString("account-id") ?: ""
-    if (accountId.isBlank()) {
-      throw DatabaseCorruptedException("account-id")
-    }
+  protected fun DictionaryInterface.toPeer(): Peer {
     val inner =
         Changelog.Peer.newBuilder()
-            .setAccountId(accountId.toBinaryId().toProtobufByteString())
+            .setAccountId(
+                getString("account-id")?.toBinaryId()?.toProtobufByteString() ?: ByteString.EMPTY)
             .setName(getString("name") ?: "")
             .build()
     return Peer.newBuilder().setInner(inner).build()
   }
 
-  @Composable
-  fun watchRoster(): StateFlow<List<Peer>> {
-    val result = MutableStateFlow(emptyList<Peer>())
+  fun findById(accountId: ByteArray) =
+      profileService.database.getDocument(documentId(accountId)).toPeer()
+
+  fun watchRoster(action: (List<Peer>) -> Unit): AutoCloseable {
     val isPeer = Expression.property("type").equalTo(Expression.string(TYPE))
     val roleIsFriend =
         Expression.property("role").equalTo(Expression.string(Changelog.PeerRole.FRIEND.name))
@@ -64,22 +59,13 @@ class PeerRepository @Inject constructor(private val profileService: ProfileServ
     val token =
         query.addChangeListener { change ->
           if (change.error != null) {
-            Log.e(
-                ChatroomRepository::class.java.canonicalName, "Error querying roster", change.error)
+            Logger.getGlobal().log(Level.SEVERE, "Error querying roster", change.error)
           } else {
-            result.value = change.results?.allResults()?.map { it.toPeer() } ?: emptyList()
+            action(change.results?.allResults()?.map { it.toPeer() } ?: emptyList())
           }
         }
-    onDispose { query.removeChangeListener(token) }
-    return result
+    return LiveQueryToken(token, query)
   }
-
-  fun delete(accountId: ByteArray) {
-    TODO()
-  }
-
-  fun findById(accountId: ByteArray) =
-      profileService.database.getDocument(documentId(accountId)).toPeer()
 }
 
 private const val TYPE = "Peer"

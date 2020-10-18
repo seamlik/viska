@@ -1,6 +1,5 @@
 package viska.daemon
 
-import android.util.Log
 import com.google.protobuf.BytesValue
 import com.google.protobuf.Empty
 import io.grpc.Status

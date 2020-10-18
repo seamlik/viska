@@ -42,9 +42,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.time.Instant
 import javax.inject.Inject
 import viska.changelog.Changelog
+import viska.couchbase.AndroidPeerRepository
 import viska.couchbase.ChatroomQueryResult
 import viska.couchbase.ChatroomRepository
-import viska.couchbase.PeerRepository
 import viska.couchbase.VcardRepository
 import viska.couchbase.preview
 import viska.database.Database
@@ -58,7 +58,7 @@ class DashboardActivity : InstanceActivity() {
 
   @Inject lateinit var chatroomRepository: ChatroomRepository
   @Inject lateinit var vcardRepository: VcardRepository
-  @Inject lateinit var peerRepository: PeerRepository
+  @Inject lateinit var peerRepository: AndroidPeerRepository
 
   private val viewModel by viewModels<DashboardViewModel>()
 

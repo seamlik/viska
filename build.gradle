@@ -1,10 +1,12 @@
 buildscript {
   ext {
     VERSIONS = [
-      compose: '1.0.0-alpha04',
+      compose: '1.0.0-alpha05',
+      couchbaseLite: '2.8.0',
       grpcJava: '1.32.1',
       hilt: '2.29.1-alpha',
     ]
+    PROJECT_VERSION = '0.0.1'
   }
   repositories {
     google()
@@ -16,5 +18,23 @@ buildscript {
     classpath "com.google.dagger:hilt-android-gradle-plugin:${VERSIONS.hilt}"
     classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.13'
     classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.10'
+  }
+}
+
+subprojects {
+  apply plugin: 'com.diffplug.spotless'
+
+  repositories {
+    google()
+    jcenter()
+    mavenLocal()
+  }
+
+  spotless {
+    kotlin {
+      ktfmt('0.18')
+      target '**/*.kt'
+      targetExclude '**/viska/android/composable.kt'
+    }
   }
 }

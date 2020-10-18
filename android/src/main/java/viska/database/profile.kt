@@ -6,6 +6,11 @@ import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import com.couchbase.lite.Database
 import com.couchbase.lite.DatabaseConfiguration
+import dagger.Binds
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.ActivityComponent
+import dagger.hilt.android.components.ApplicationComponent
+import dagger.hilt.android.components.ServiceComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.nio.file.Files
 import javax.inject.Inject
@@ -13,10 +18,11 @@ import javax.inject.Singleton
 import org.bson.BsonBinary
 
 @Singleton
-class ProfileService @Inject constructor(@ApplicationContext private val context: Context) {
+class AndroidProfileService @Inject constructor(@ApplicationContext private val context: Context) :
+    ProfileService {
 
   private var _database = openDatabase(accountId)
-  val database: Database
+  override val database: Database
     get() = _database ?: error("No active account")
 
   private fun openDatabase(accountId: String): Database? {
@@ -38,10 +44,10 @@ class ProfileService @Inject constructor(@ApplicationContext private val context
     return config?.let { Database("main", it) }
   }
 
-  val accountId: String
+  override val accountId: String
     get() = PreferenceManager.getDefaultSharedPreferences(context).getString("active-account", "")!!
 
-  val certificate: ByteArray
+  override val certificate: ByteArray
     get() {
       val account = accountId
       return if (account.isBlank()) {
@@ -58,7 +64,7 @@ class ProfileService @Inject constructor(@ApplicationContext private val context
       }
     }
 
-  val key: ByteArray
+  override val key: ByteArray
     get() {
       val account = accountId
       return if (account.isBlank()) {
@@ -70,10 +76,10 @@ class ProfileService @Inject constructor(@ApplicationContext private val context
       }
     }
 
-  val hasActiveAccount
+  override val hasActiveAccount
     get() = _database != null
 
-  fun createProfile() {
+  override fun createProfile() {
     _database?.run { close() }
     _database = null
 
@@ -96,4 +102,10 @@ class ProfileService @Inject constructor(@ApplicationContext private val context
 
     _database = openDatabase(accountIdText)
   }
+}
+
+@dagger.Module
+@InstallIn(ServiceComponent::class, ActivityComponent::class, ApplicationComponent::class)
+abstract class ProfileServiceModule {
+  @Binds abstract fun bind(impl: AndroidProfileService): ProfileService
 }

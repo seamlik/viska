@@ -1,0 +1,7 @@
+apply plugin: 'kotlin'
+
+version = PROJECT_VERSION
+
+dependencies {
+  implementation project(':platform-jvm')
+}
