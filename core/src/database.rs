@@ -17,11 +17,16 @@ pub fn hash(src: &ByteBuf) -> ByteBuf {
     ByteBuf::from(raw_hash)
 }
 
-pub fn float_from_time(src: DateTime<Utc>) -> f64 {
+/// Serializes a timestamp to a floating point number.
+///
+/// By using a floating point number as the universal timestamp format, we can have arbitrary
+/// precision on the time value.
+pub(crate) fn float_from_time(src: DateTime<Utc>) -> f64 {
     src.timestamp() as f64 + src.timestamp_subsec_nanos() as f64 / 1_000_000_000.0
 }
 
-pub fn bytes_from_hash(src: Hash) -> Vec<u8> {
+/// Converts a [Hash] to bytes.
+pub(crate) fn bytes_from_hash(src: Hash) -> Vec<u8> {
     let raw_hash: [u8; 32] = src.into();
     raw_hash.to_vec()
 }
