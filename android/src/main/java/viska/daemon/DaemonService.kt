@@ -48,7 +48,7 @@ class DaemonService
                 BsonBinary(profileService.key),
                 BsonInt32(platformGrpcServer.port),
                 BsonInt32(nodeGrpcPort),
-            )!!
+            )
             .asInt32()
             .value
     val channel = ManagedChannelBuilder.forAddress(localhost, nodeGrpcPort).usePlaintext().build()

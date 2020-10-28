@@ -83,11 +83,11 @@ class AndroidProfileService @Inject constructor(@ApplicationContext private val 
     _database?.run { close() }
     _database = null
 
-    val bundle = viska.pki.Module.new_certificate()!!
+    val bundle = viska.pki.Module.new_certificate()
     val certificate = bundle.asDocument().getBinary("certificate").data
     val key = bundle.asDocument().getBinary("key").data
 
-    val accountId = Module.hash(BsonBinary(certificate))?.asBinary()?.data!!
+    val accountId = Module.hash(BsonBinary(certificate)).asBinary()?.data!!
     val accountIdText = accountId.displayId()
     Log.i(this::class.java.simpleName, "Generated account $accountIdText")
 
