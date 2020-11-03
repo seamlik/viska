@@ -69,5 +69,5 @@ dependencies {
   implementation 'riko:riko-runtime-jni:0.0.1'
   implementation project(':platform-jvm')
   kapt "com.google.dagger:hilt-android-compiler:${VERSIONS.hilt}"
-  testImplementation 'junit:junit:4.13'
+  testImplementation 'junit:junit:4.13.1'
 }

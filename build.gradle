@@ -3,7 +3,7 @@ buildscript {
     VERSIONS = [
       compose: '1.0.0-alpha05',
       couchbaseLite: '2.8.0',
-      grpcJava: '1.32.1',
+      grpcJava: '1.32.2',
       hilt: '2.29.1-alpha',
     ]
     PROJECT_VERSION = '0.0.1'
@@ -13,7 +13,7 @@ buildscript {
     jcenter()
   }
   dependencies {
-    classpath 'com.android.tools.build:gradle:4.2.0-alpha13'
+    classpath 'com.android.tools.build:gradle:4.2.0-alpha15'
     classpath 'com.diffplug.spotless:spotless-plugin-gradle:5.6.1'
     classpath "com.google.dagger:hilt-android-gradle-plugin:${VERSIONS.hilt}"
     classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.13'
