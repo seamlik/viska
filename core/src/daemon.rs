@@ -6,8 +6,6 @@ use crate::database::Chatroom;
 use crate::database::Database;
 use crate::database::Message;
 use crate::database::Peer;
-use crate::database::Storage;
-use crate::database::TransactionError;
 use crate::database::TransactionPayload;
 use crate::endpoint::CertificateVerifier;
 use crate::pki::CertificateId;
@@ -162,7 +160,7 @@ impl Platform for DummyPlatform {
 
 pub(crate) struct StandardNode {
     verifier: Arc<CertificateVerifier>,
-    database: Database,
+    database: Arc<Database>,
     account_id: CertificateId,
 }
 
@@ -173,11 +171,8 @@ impl StandardNode {
         verifier: Arc<CertificateVerifier>,
         account_id: CertificateId,
         node_grpc_port: u16,
+        database: Arc<Database>,
     ) -> rusqlite::Result<()> {
-        let database_config = crate::database::Config {
-            storage: Storage::InMemory,
-        };
-        let database = Database::create(database_config)?;
         let instance = Self {
             verifier,
             database,

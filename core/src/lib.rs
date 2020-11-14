@@ -16,8 +16,8 @@ pub mod pki;
 pub mod proto;
 pub mod util;
 
-use crate::daemon::platform_client::PlatformClient;
-use crate::daemon::GrpcClient;
+use crate::database::Database;
+use crate::database::Storage;
 use crate::endpoint::CertificateVerifier;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
@@ -48,7 +48,6 @@ use std::sync::Mutex;
 use thiserror::Error;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
-use tonic::transport::Channel;
 use uuid::Uuid;
 
 static CURRENT_NODE_HANDLE: AtomicI32 = AtomicI32::new(0);
@@ -64,17 +63,14 @@ static TOKIO: SyncLazy<Mutex<Runtime>> = SyncLazy::new(|| Mutex::new(Runtime::ne
 pub fn start(
     certificate: ByteBuf,
     key: ByteBuf,
-    platform_grpc_port: u16,
     node_grpc_port: u16,
 ) -> Result<i32, EndpointError> {
     let handle = CURRENT_NODE_HANDLE.fetch_add(1, Ordering::SeqCst);
-    let (node, _) = TOKIO.lock().unwrap().block_on(Node::start(
-        &certificate,
-        &key,
-        platform_grpc_port,
-        node_grpc_port,
-        true,
-    ))?;
+    let (node, _) =
+        TOKIO
+            .lock()
+            .unwrap()
+            .block_on(Node::start(&certificate, &key, node_grpc_port, true))?;
     NODES.lock().unwrap().insert(handle, node);
     Ok(handle)
 }
@@ -103,7 +99,6 @@ impl Node {
     pub async fn start(
         certificate: &[u8],
         key: &[u8],
-        platform_grpc_port: u16,
         node_grpc_port: u16,
         enable_certificate_verification: bool,
     ) -> Result<(Self, JoinHandle<()>), EndpointError> {
@@ -114,12 +109,18 @@ impl Node {
             peer_whitelist: Default::default(),
         });
 
-        let platform = Arc::new(tokio::sync::Mutex::new(
-            PlatformClient::<Channel>::create(platform_grpc_port).await?,
-        ));
+        let database_config = crate::database::Config {
+            storage: Storage::InMemory,
+        };
+        let database = Arc::new(Database::create(database_config)?);
 
         // Start gRPC server
-        daemon::StandardNode::start(certificate_verifier.clone(), account_id, node_grpc_port)?;
+        daemon::StandardNode::start(
+            certificate_verifier.clone(),
+            account_id,
+            node_grpc_port,
+            database.clone(),
+        )?;
 
         let config = endpoint::Config { certificate, key };
         let (window_sender, window_receiver) =
@@ -133,11 +134,11 @@ impl Node {
                 Box::new(DeviceHandler)
             } else {
                 Box::new(PeerHandler {
-                    platform: platform.clone(),
+                    database: database.clone(),
                 })
             };
             async move {
-                let response = match handler.handle(&window).await {
+                let response = match handler.handle(&window) {
                     Ok(r) => r,
                     Err(err) => err.into(),
                 };
