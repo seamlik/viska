@@ -1,10 +1,12 @@
-#![cfg(debug_assertions)]
-
+use crate::changelog::ChangelogMerger;
 use crate::changelog::ChangelogPayload;
 use crate::changelog::Message;
 use crate::changelog::Peer;
 use crate::changelog::PeerRole;
+use crate::database::vcard::VcardService;
+use crate::database::Database;
 use crate::database::Vcard;
+use crate::pki::CertificateId;
 use chrono::prelude::*;
 use chrono::Duration;
 use chrono::LocalResult;
@@ -14,6 +16,42 @@ use fake::faker::name::en::Name;
 use fake::Fake;
 use itertools::Itertools;
 use rand::prelude::*;
+use std::sync::Arc;
+
+pub(crate) struct MockProfileService {
+    pub database: Arc<Database>,
+    pub account_id: CertificateId,
+}
+
+impl MockProfileService {
+    #[cfg(not(debug_assertions))]
+    pub fn populate_mock_data(&self) -> rusqlite::Result<()> {
+        unimplemented!()
+    }
+
+    #[cfg(debug_assertions)]
+    pub fn populate_mock_data(&self) -> rusqlite::Result<()> {
+        let account_id_bytes = crate::database::bytes_from_hash(self.account_id);
+        let (vcards, changelog) = crate::mock_profile::populate_data(&account_id_bytes);
+        log::info!(
+            "Generated {} entries of vCard and {} entries of changelog",
+            vcards.len(),
+            changelog.len()
+        );
+
+        let mut sqlite = self.database.connection.lock().unwrap();
+        let transaction = sqlite.transaction()?;
+
+        log::info!("Committing the mock Vcards as a transaction");
+        VcardService::save(&transaction, vcards.into_iter())?;
+
+        log::info!("Merging changelog generated from `mock_profile`");
+        ChangelogMerger::commit(&transaction, changelog.into_iter())?;
+
+        transaction.commit()?;
+        Ok(())
+    }
+}
 
 pub fn populate_data(account_id: &Vec<u8>) -> (Vec<Vcard>, Vec<ChangelogPayload>) {
     let num_friends = 16;

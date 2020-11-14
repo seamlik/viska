@@ -37,13 +37,20 @@ pub(crate) fn bytes_from_hash(src: Hash) -> Vec<u8> {
     raw_hash.to_vec()
 }
 
-pub(crate) struct Config {
+#[derive(Default)]
+pub struct Config {
     pub storage: Storage,
 }
 
-pub(crate) enum Storage {
+pub enum Storage {
     InMemory,
     OnDisk(PathBuf),
+}
+
+impl Default for Storage {
+    fn default() -> Self {
+        Self::InMemory
+    }
 }
 
 pub(crate) struct Database {

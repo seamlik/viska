@@ -1,14 +1,11 @@
 tonic::include_proto!("viska.daemon");
 
-use crate::changelog::ChangelogMerger;
-use crate::database::vcard::VcardService;
 use crate::database::Chatroom;
-use crate::database::Database;
 use crate::database::Message;
 use crate::database::Peer;
 use crate::database::TransactionPayload;
 use crate::endpoint::CertificateVerifier;
-use crate::pki::CertificateId;
+use crate::mock_profile::MockProfileService;
 use async_trait::async_trait;
 use node_client::NodeClient;
 use node_server::NodeServer;
@@ -160,8 +157,7 @@ impl Platform for DummyPlatform {
 
 pub(crate) struct StandardNode {
     verifier: Arc<CertificateVerifier>,
-    database: Arc<Database>,
-    account_id: CertificateId,
+    mock_profile_service: Arc<MockProfileService>,
 }
 
 impl<T: node_server::Node> GrpcService<NodeServer<T>> for StandardNode {}
@@ -169,14 +165,12 @@ impl<T: node_server::Node> GrpcService<NodeServer<T>> for StandardNode {}
 impl StandardNode {
     pub fn start(
         verifier: Arc<CertificateVerifier>,
-        account_id: CertificateId,
         node_grpc_port: u16,
-        database: Arc<Database>,
+        mock_profile_service: Arc<MockProfileService>,
     ) -> rusqlite::Result<()> {
         let instance = Self {
             verifier,
-            database,
-            account_id,
+            mock_profile_service,
         };
         Self::spawn_server(NodeServer::new(instance), node_grpc_port);
         Ok(())
@@ -205,31 +199,9 @@ impl node_server::Node for StandardNode {
         &self,
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<()>, Status> {
-        let account_id_bytes = crate::database::bytes_from_hash(self.account_id);
-        let (vcards, changelog) = crate::mock_profile::populate_data(&account_id_bytes);
-        log::info!(
-            "Generated {} entries of vCard and {} entries of changelog",
-            vcards.len(),
-            changelog.len()
-        );
-
-        let mut sqlite = self.database.connection.lock().unwrap();
-        let transaction = sqlite
-            .transaction()
+        self.mock_profile_service
+            .populate_mock_data()
             .map_err(IntoTonicStatus::into_tonic_status)?;
-
-        log::info!("Committing the mock Vcards as a transaction");
-        VcardService::save(&transaction, vcards.into_iter())
-            .map_err(IntoTonicStatus::into_tonic_status)?;
-
-        log::info!("Merging changelog generated from `mock_profile`");
-        ChangelogMerger::commit(&transaction, changelog.into_iter())
-            .map_err(IntoTonicStatus::into_tonic_status)?;
-
-        transaction
-            .commit()
-            .map_err(IntoTonicStatus::into_tonic_status)?;
-
         Ok(tonic::Response::new(()))
     }
 }

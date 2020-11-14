@@ -6,7 +6,6 @@ use std::net::SocketAddr;
 use std::time::Instant;
 use structopt::StructOpt;
 use tokio::time::Duration;
-use viska::daemon::DummyPlatform;
 use viska::proto::request::Payload;
 use viska::proto::Request;
 use viska::Node;
@@ -18,14 +17,13 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::from_args();
 
     let dummy_cert_bundle = viska::pki::new_certificate();
-    let platform_grpc_port = DummyPlatform::start();
     let node_grpc_port = viska::util::random_port();
     let (node, _) = Node::start(
         &dummy_cert_bundle.certificate,
         &dummy_cert_bundle.key,
-        platform_grpc_port,
         node_grpc_port,
         false,
+        Default::default(),
     )
     .await?;
 

@@ -17,8 +17,8 @@ pub mod proto;
 pub mod util;
 
 use crate::database::Database;
-use crate::database::Storage;
 use crate::endpoint::CertificateVerifier;
+use crate::mock_profile::MockProfileService;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
 use endpoint::LocalEndpoint;
@@ -66,11 +66,13 @@ pub fn start(
     node_grpc_port: u16,
 ) -> Result<i32, EndpointError> {
     let handle = CURRENT_NODE_HANDLE.fetch_add(1, Ordering::SeqCst);
-    let (node, _) =
-        TOKIO
-            .lock()
-            .unwrap()
-            .block_on(Node::start(&certificate, &key, node_grpc_port, true))?;
+    let (node, _) = TOKIO.lock().unwrap().block_on(Node::start(
+        &certificate,
+        &key,
+        node_grpc_port,
+        true,
+        Default::default(),
+    ))?;
     NODES.lock().unwrap().insert(handle, node);
     Ok(handle)
 }
@@ -89,6 +91,7 @@ pub fn stop(handle: i32) {
 /// The protagonist.
 pub struct Node {
     connection_manager: Arc<ConnectionManager>,
+    mock_profile_service: Arc<MockProfileService>,
 }
 
 impl Node {
@@ -101,6 +104,7 @@ impl Node {
         key: &[u8],
         node_grpc_port: u16,
         enable_certificate_verification: bool,
+        database_config: database::Config,
     ) -> Result<(Self, JoinHandle<()>), EndpointError> {
         let account_id = certificate.id();
         let certificate_verifier = Arc::new(CertificateVerifier {
@@ -109,17 +113,17 @@ impl Node {
             peer_whitelist: Default::default(),
         });
 
-        let database_config = crate::database::Config {
-            storage: Storage::InMemory,
-        };
         let database = Arc::new(Database::create(database_config)?);
+        let mock_profile_service = Arc::new(MockProfileService {
+            database: database.clone(),
+            account_id,
+        });
 
         // Start gRPC server
         daemon::StandardNode::start(
             certificate_verifier.clone(),
-            account_id,
             node_grpc_port,
-            database.clone(),
+            mock_profile_service.clone(),
         )?;
 
         let config = endpoint::Config { certificate, key };
@@ -168,11 +172,21 @@ impl Node {
         }));
 
         println!("Started Viska node with account {}", account_id.to_hex());
-        Ok((Self { connection_manager }, task))
+        Ok((
+            Self {
+                connection_manager,
+                mock_profile_service,
+            },
+            task,
+        ))
     }
 
     pub async fn connect(&self, addr: &SocketAddr) -> Result<Arc<Connection>, ConnectionError> {
         self.connection_manager.clone().connect(addr).await
+    }
+
+    pub fn populate_mock_data(&self) -> rusqlite::Result<()> {
+        self.mock_profile_service.populate_mock_data()
     }
 }
 
