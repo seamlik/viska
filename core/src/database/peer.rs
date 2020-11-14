@@ -3,8 +3,8 @@ use rusqlite::Transaction;
 pub struct PeerService;
 
 impl PeerService {
-    pub fn save<'t>(
-        transaction: &'t Transaction,
+    pub fn save(
+        transaction: &'_ Transaction,
         payload: crate::changelog::Peer,
     ) -> rusqlite::Result<()> {
         let sql = r#"

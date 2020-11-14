@@ -64,7 +64,7 @@ impl ChatroomService {
         Ok(())
     }
 
-    fn save<'t>(transaction: &'t Transaction, payload: super::Chatroom) -> rusqlite::Result<()> {
+    fn save(transaction: &'_ Transaction, payload: super::Chatroom) -> rusqlite::Result<()> {
         let inner = payload.inner.unwrap();
 
         let mut members = Vec::<u8>::default();
@@ -93,8 +93,8 @@ impl ChatroomService {
         Ok(())
     }
 
-    pub fn update<'t>(
-        transaction: &'t Transaction,
+    pub fn update(
+        transaction: &'_ Transaction,
         payload: crate::changelog::Chatroom,
     ) -> rusqlite::Result<()> {
         let chatroom_id = super::bytes_from_hash(payload.id());

@@ -51,7 +51,7 @@ use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 static CURRENT_NODE_HANDLE: AtomicI32 = AtomicI32::new(0);
-static NODES: SyncLazy<Mutex<HashMap<i32, Node>>> = SyncLazy::new(|| Default::default());
+static NODES: SyncLazy<Mutex<HashMap<i32, Node>>> = SyncLazy::new(Default::default);
 static TOKIO: SyncLazy<Mutex<Runtime>> = SyncLazy::new(|| Mutex::new(Runtime::new().unwrap()));
 
 /// Starts a [Node].

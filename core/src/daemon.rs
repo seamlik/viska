@@ -205,7 +205,7 @@ impl node_server::Node for StandardNode {
         &self,
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<()>, Status> {
-        let account_id_bytes = crate::database::bytes_from_hash(self.account_id.clone());
+        let account_id_bytes = crate::database::bytes_from_hash(self.account_id);
         let (vcards, changelog) = crate::mock_profile::populate_data(&account_id_bytes);
         log::info!(
             "Generated {} entries of vCard and {} entries of changelog",

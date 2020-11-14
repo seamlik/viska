@@ -6,7 +6,7 @@ use rusqlite::Transaction;
 pub(crate) struct MessageService;
 
 impl MessageService {
-    fn save<'t>(transaction: &'t Transaction, payload: super::Message) -> rusqlite::Result<()> {
+    fn save(transaction: &'_ Transaction, payload: super::Message) -> rusqlite::Result<()> {
         let inner = payload.inner.unwrap();
         let (attachment, attachment_mime) = inner
             .attachment
@@ -46,8 +46,8 @@ impl MessageService {
         Ok(())
     }
 
-    pub fn update<'t>(
-        transaction: &'t Transaction,
+    pub fn update(
+        transaction: &'_ Transaction,
         payload: crate::changelog::Message,
     ) -> rusqlite::Result<()> {
         // Update chatroom

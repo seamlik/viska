@@ -59,8 +59,8 @@ pub fn chatroom_id(members: impl Iterator<Item = Vec<u8>>) -> ChatroomId {
 pub(crate) struct ChangelogMerger;
 
 impl ChangelogMerger {
-    pub fn commit<'t>(
-        transaction: &'t Transaction,
+    pub fn commit(
+        transaction: &'_ Transaction,
         payloads: impl Iterator<Item = ChangelogPayload>,
     ) -> rusqlite::Result<()> {
         for payload in payloads {
