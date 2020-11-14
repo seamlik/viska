@@ -1,56 +1,67 @@
 use super::chatroom::ChatroomService;
-use super::transaction_payload::Content;
-use super::TransactionPayload;
-use crate::daemon::platform_client::PlatformClient;
-use crate::daemon::NullableResponse;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tonic::transport::Channel;
-use tonic::IntoRequest;
-use tonic::Status;
+use super::BytesArray;
+use prost::Message as _;
+use rusqlite::Transaction;
 
-pub struct MessageService {
-    pub platform: Arc<Mutex<PlatformClient<Channel>>>,
-    pub chatroom_service: Arc<ChatroomService>,
-}
+pub(crate) struct MessageService;
 
 impl MessageService {
-    pub async fn update(
-        &self,
-        payload: crate::changelog::Message,
-    ) -> Result<Vec<TransactionPayload>, Status> {
-        let mut transaction = Vec::<TransactionPayload>::new();
+    fn save<'t>(transaction: &'t Transaction, payload: super::Message) -> rusqlite::Result<()> {
+        let inner = payload.inner.unwrap();
+        let (attachment, attachment_mime) = inner
+            .attachment
+            .map(|blob| (blob.content, blob.mime))
+            .unwrap_or_default();
 
-        // Update chatroom
-        if let Some(chatroom) = self.chatroom_service.update_for_message(&payload).await? {
-            transaction.push(TransactionPayload {
-                content: Some(Content::AddChatroom(chatroom)),
-            });
+        let mut recipients = Vec::<u8>::default();
+        BytesArray {
+            array: inner.recipients,
         }
+        .encode(&mut recipients)
+        .unwrap();
+
+        let sql = r#"
+            REPLACE INTO message (
+                message_id,
+                chatroom_id,
+                attachment,
+                attachment_mime,
+                content,
+                recipients,
+                sender,
+                time
+            ) VALUES (?);
+        "#;
+        let params = rusqlite::params![
+            payload.message_id,
+            payload.chatroom_id,
+            attachment,
+            attachment_mime,
+            inner.content,
+            recipients,
+            inner.sender,
+            inner.time,
+        ];
+        transaction.execute(sql, params)?;
+        Ok(())
+    }
+
+    pub fn update<'t>(
+        transaction: &'t Transaction,
+        payload: crate::changelog::Message,
+    ) -> rusqlite::Result<()> {
+        // Update chatroom
+        ChatroomService::update_for_message(transaction, &payload)?;
 
         // Update message
-        let message_id = crate::database::bytes_from_hash(payload.message_id());
-        let message = if let Some(mut message) = self
-            .platform
-            .lock()
-            .await
-            .find_message_by_id(message_id.clone().into_request())
-            .await
-            .unwrap_response()?
-        {
-            message.inner = payload.into();
-            message
-        } else {
-            super::Message {
-                message_id,
-                chatroom_id: crate::database::bytes_from_hash(payload.chatroom_id()),
-                inner: payload.into(),
-            }
+        let message_id = super::bytes_from_hash(payload.message_id());
+        let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
+        let message = super::Message {
+            message_id,
+            chatroom_id,
+            inner: payload.into(),
         };
-        transaction.push(TransactionPayload {
-            content: Some(Content::AddMessage(message)),
-        });
-
-        Ok(transaction)
+        MessageService::save(transaction, message)?;
+        Ok(())
     }
 }

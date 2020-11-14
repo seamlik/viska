@@ -1,24 +1,21 @@
-use super::transaction_payload::Content;
-use super::TransactionPayload;
-use crate::daemon::platform_client::PlatformClient;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tonic::transport::Channel;
-use tonic::Status;
+use rusqlite::Transaction;
 
-pub struct PeerService {
-    pub platform: Arc<Mutex<PlatformClient<Channel>>>,
-}
+pub struct PeerService;
 
 impl PeerService {
-    pub async fn update(
-        &self,
+    pub fn save<'t>(
+        transaction: &'t Transaction,
         payload: crate::changelog::Peer,
-    ) -> Result<Vec<TransactionPayload>, Status> {
-        Ok(vec![TransactionPayload {
-            content: Some(Content::AddPeer(super::Peer {
-                inner: Some(payload),
-            })),
-        }])
+    ) -> rusqlite::Result<()> {
+        let sql = r#"
+            REPLACE INTO peer (
+                account_id,
+                name,
+                role
+            ) VALUES (?);
+        "#;
+        let params = rusqlite::params![payload.account_id, payload.name, payload.role,];
+        transaction.execute(sql, params)?;
+        Ok(())
     }
 }

@@ -25,6 +25,7 @@ rand = "0.7"
 rcgen = "=0.8.0" # Bug generating bad DER format
 riko = { git = "https://github.com/seamlik/riko" }
 riko_runtime = { git = "https://github.com/seamlik/riko", features = ["riko_jni"] }
+rusqlite = { version = "0.24", features = ["bundled"] }
 rustls = { version = "0.17", features = ["dangerous_configuration", "quic"]}
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0"

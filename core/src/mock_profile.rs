@@ -4,7 +4,6 @@ use crate::changelog::ChangelogPayload;
 use crate::changelog::Message;
 use crate::changelog::Peer;
 use crate::changelog::PeerRole;
-use crate::database::TransactionPayload;
 use crate::database::Vcard;
 use chrono::prelude::*;
 use chrono::Duration;
@@ -16,7 +15,7 @@ use fake::Fake;
 use itertools::Itertools;
 use rand::prelude::*;
 
-pub fn populate_data(account_id: &Vec<u8>) -> (Vec<TransactionPayload>, Vec<ChangelogPayload>) {
+pub fn populate_data(account_id: &Vec<u8>) -> (Vec<Vcard>, Vec<ChangelogPayload>) {
     let num_friends = 16;
     let num_messages = 128;
 
@@ -47,17 +46,7 @@ pub fn populate_data(account_id: &Vec<u8>) -> (Vec<TransactionPayload>, Vec<Chan
             }),
     );
 
-    (
-        vcards
-            .into_iter()
-            .map(|vcard| TransactionPayload {
-                content: Some(crate::database::transaction_payload::Content::AddVcard(
-                    vcard,
-                )),
-            })
-            .collect(),
-        changelog,
-    )
+    (vcards, changelog)
 }
 
 fn random_messages(account_id: &Vec<u8>, friends: &[Vcard]) -> Message {
@@ -110,7 +99,6 @@ fn random_vcard() -> Vcard {
         account_id: random_account_id(),
         name: Name().fake(),
         photo: None,
-        time_updated: random_time(),
     }
 }
 

@@ -1,9 +1,13 @@
 tonic::include_proto!("viska.daemon");
 
 use crate::changelog::ChangelogMerger;
+use crate::database::vcard::VcardService;
 use crate::database::Chatroom;
+use crate::database::Database;
 use crate::database::Message;
 use crate::database::Peer;
+use crate::database::Storage;
+use crate::database::TransactionError;
 use crate::database::TransactionPayload;
 use crate::endpoint::CertificateVerifier;
 use crate::pki::CertificateId;
@@ -15,7 +19,6 @@ use platform_server::Platform;
 use platform_server::PlatformServer;
 use std::error::Error;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tonic::body::BoxBody;
 use tonic::transport::Body;
 use tonic::transport::Channel;
@@ -36,7 +39,7 @@ where
     S::Future: Send + 'static,
     S::Error: Into<Box<dyn Error + Send + Sync>> + Send,
 {
-    fn spawn_server(service: S, port: u16) -> u16 {
+    fn spawn_server(service: S, port: u16) {
         // TODO: TLS
         log::info!("{} serving at port {}", std::any::type_name::<S>(), port);
         let task = async move {
@@ -47,7 +50,6 @@ where
                 .expect("Failed to spawn gRPC server")
         };
         tokio::spawn(task);
-        port
     }
 }
 
@@ -100,7 +102,9 @@ impl<T: Platform> GrpcService<PlatformServer<T>> for DummyPlatform {}
 impl DummyPlatform {
     /// Starts the gRPC server in the background and returns the port to access it.
     pub fn start() -> u16 {
-        Self::spawn_server(PlatformServer::new(Self), crate::util::random_port())
+        let port = crate::util::random_port();
+        Self::spawn_server(PlatformServer::new(Self), port);
+        port
     }
 }
 
@@ -158,9 +162,8 @@ impl Platform for DummyPlatform {
 
 pub(crate) struct StandardNode {
     verifier: Arc<CertificateVerifier>,
-    platform: Arc<Mutex<PlatformClient<Channel>>>,
+    database: Database,
     account_id: CertificateId,
-    changelog_merger: Arc<ChangelogMerger>,
 }
 
 impl<T: node_server::Node> GrpcService<NodeServer<T>> for StandardNode {}
@@ -168,17 +171,20 @@ impl<T: node_server::Node> GrpcService<NodeServer<T>> for StandardNode {}
 impl StandardNode {
     pub fn start(
         verifier: Arc<CertificateVerifier>,
-        platform: Arc<Mutex<PlatformClient<Channel>>>,
         account_id: CertificateId,
         node_grpc_port: u16,
-    ) -> u16 {
+    ) -> rusqlite::Result<()> {
+        let database_config = crate::database::Config {
+            storage: Storage::InMemory,
+        };
+        let database = Database::create(database_config)?;
         let instance = Self {
-            changelog_merger: Arc::new(ChangelogMerger::new(platform.clone())),
             verifier,
-            platform,
+            database,
             account_id,
         };
-        Self::spawn_server(NodeServer::new(instance), node_grpc_port)
+        Self::spawn_server(NodeServer::new(instance), node_grpc_port);
+        Ok(())
     }
 }
 
@@ -205,30 +211,43 @@ impl node_server::Node for StandardNode {
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<()>, Status> {
         let account_id_bytes = crate::database::bytes_from_hash(self.account_id.clone());
-        let (transaction, changelog) = crate::mock_profile::populate_data(&account_id_bytes);
+        let (vcards, changelog) = crate::mock_profile::populate_data(&account_id_bytes);
         log::info!(
-            "Generated a transaction of {} entries and a changelog of {} entries",
-            transaction.len(),
+            "Generated {} entries of vCard and {} entries of changelog",
+            vcards.len(),
             changelog.len()
         );
-        let mut platform = self.platform.lock().await;
+
+        let mut sqlite = self.database.connection.lock().unwrap();
+        let transaction = sqlite
+            .transaction()
+            .map_err(IntoTonicStatus::into_tonic_status)?;
 
         log::info!("Committing the mock Vcards as a transaction");
-        platform
-            .commit_transaction(futures::stream::iter(transaction))
-            .await?;
+        VcardService::save(&transaction, vcards.into_iter())
+            .map_err(IntoTonicStatus::into_tonic_status)?;
 
         log::info!("Merging changelog generated from `mock_profile`");
-        let transaction_after_changelog =
-            self.changelog_merger.commit(changelog.into_iter()).await?;
-        log::info!(
-            "Generated a transaction of {} entries after a changelog merge",
-            transaction_after_changelog.len()
-        );
-        platform
-            .commit_transaction(futures::stream::iter(transaction_after_changelog))
-            .await?;
+        ChangelogMerger::commit(&transaction, changelog.into_iter())
+            .map_err(IntoTonicStatus::into_tonic_status)?;
+
+        transaction
+            .commit()
+            .map_err(IntoTonicStatus::into_tonic_status)?;
 
         Ok(tonic::Response::new(()))
+    }
+}
+
+trait IntoTonicStatus {
+    fn into_tonic_status(self) -> Status;
+}
+
+impl IntoTonicStatus for rusqlite::Error {
+    fn into_tonic_status(self) -> Status {
+        match self {
+            rusqlite::Error::QueryReturnedNoRows => Status::not_found(""),
+            _ => Status::internal(self.to_string()),
+        }
     }
 }

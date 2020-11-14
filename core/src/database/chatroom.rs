@@ -1,23 +1,16 @@
-use super::transaction_payload::Content;
-use super::TransactionPayload;
-use crate::changelog::Message;
-use crate::daemon::platform_client::PlatformClient;
-use crate::daemon::NullableResponse;
+use super::BytesArray;
 use chrono::Utc;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tonic::transport::Channel;
-use tonic::Request;
-use tonic::Status;
+use prost::Message as _;
+use rusqlite::types::FromSql;
+use rusqlite::Connection;
+use rusqlite::Transaction;
 
-pub struct ChatroomService {
-    pub platform: Arc<Mutex<PlatformClient<Channel>>>,
-}
+pub(crate) struct ChatroomService;
 
 impl ChatroomService {
     /// Creates a [Chatroom](super::Chatroom) when receiving or sending a message belonging to a
     /// non-existing [Chatroom](super::Chatroom).
-    fn create_for_message(&self, message: &Message) -> super::Chatroom {
+    fn create_for_message(message: &crate::changelog::Message) -> super::Chatroom {
         let mut members = message.recipients.clone();
         members.push(message.sender.clone());
 
@@ -38,57 +31,108 @@ impl ChatroomService {
     }
 
     /// Updates the [Chatroom](super::Chatroom) that is supposed to hold a new [Message].
-    ///
-    /// If no update should be written, returns a [None].
-    pub async fn update_for_message(
-        &self,
-        message: &Message,
-    ) -> Result<Option<super::Chatroom>, Status> {
-        let chatroom_id: [u8; 32] = message.chatroom_id().into();
-        if let Some(mut chatroom) = self
-            .platform
-            .lock()
-            .await
-            .find_chatroom_by_id(Request::new(chatroom_id.to_vec()))
-            .await
-            .unwrap_response()?
-        {
-            if message.time > chatroom.time_updated {
-                chatroom.time_updated = message.time;
-                Ok(Some(chatroom))
-            } else {
-                Ok(None)
+    pub fn update_for_message(
+        transaction: &Transaction,
+        message: &crate::changelog::Message,
+    ) -> rusqlite::Result<()> {
+        let chatroom_id = message.chatroom_id();
+        if let Some(time_updated) = ChatroomService::select_column_by_id(
+            transaction,
+            chatroom_id.as_bytes().as_ref(),
+            "time_updated",
+        )? {
+            if message.time > time_updated {
+                ChatroomService::update_time_updated_by_id(
+                    transaction,
+                    chatroom_id.as_bytes().as_ref(),
+                    time_updated,
+                )?;
             }
         } else {
-            Ok(Some(self.create_for_message(&message)))
+            ChatroomService::save(transaction, ChatroomService::create_for_message(message))?;
         }
+        Ok(())
     }
 
-    pub async fn update(
-        &self,
-        payload: crate::changelog::Chatroom,
-    ) -> Result<Vec<TransactionPayload>, Status> {
-        let chatroom_id = crate::database::bytes_from_hash(payload.id());
-        let chatroom = if let Some(mut chatroom) = self
-            .platform
-            .lock()
-            .await
-            .find_chatroom_by_id(Request::new(chatroom_id.clone()))
-            .await
-            .unwrap_response()?
-        {
-            chatroom.inner = payload.into();
-            chatroom
-        } else {
-            crate::database::Chatroom {
+    fn update_time_updated_by_id(
+        transaction: &Transaction,
+        chatroom_id: &[u8],
+        time_updated: f64,
+    ) -> rusqlite::Result<()> {
+        let sql = "UPDATE chatroom SET time_updated = ? WHERE chatroom_id = ?;";
+        transaction.execute(sql, rusqlite::params![time_updated, chatroom_id])?;
+        Ok(())
+    }
+
+    fn save<'t>(transaction: &'t Transaction, payload: super::Chatroom) -> rusqlite::Result<()> {
+        let inner = payload.inner.unwrap();
+
+        let mut members = Vec::<u8>::default();
+        BytesArray {
+            array: inner.members,
+        }
+        .encode(&mut members)
+        .unwrap();
+
+        let sql = r#"
+            REPLACE INTO chatroom (
                 chatroom_id,
-                time_updated: crate::database::float_from_time(Utc::now()),
-                inner: payload.into(),
-                ..Default::default()
-            }
-        };
-        Ok(vec![TransactionPayload {
-            content: Some(Content::AddChatroom(chatroom)),
-        }])
+                latest_message_id,
+                time_updated,
+                name,
+                members
+            ) VALUES (?);
+        "#;
+        let params = rusqlite::params![
+            payload.chatroom_id,
+            payload.time_updated,
+            inner.name,
+            members,
+        ];
+        transaction.execute(sql, params)?;
+        Ok(())
+    }
+
+    pub fn update<'t>(
+        transaction: &'t Transaction,
+        payload: crate::changelog::Chatroom,
+    ) -> rusqlite::Result<()> {
+        let chatroom_id = super::bytes_from_hash(payload.id());
+        let mut row: super::Chatroom = payload.into();
+
+        if let Some(latest_message_id) =
+            ChatroomService::select_column_by_id(transaction, &chatroom_id, "latest_message_id")?
+        {
+            row.latest_message_id = latest_message_id
+        }
+
+        ChatroomService::save(transaction, row)
+    }
+
+    fn select_column_by_id<T: FromSql>(
+        connection: &Connection,
+        chatroom_id: &[u8],
+        column: &str,
+    ) -> rusqlite::Result<Option<T>> {
+        let sql = format!(
+            "SELECT {} FROM chatroom WHERE chatroom_id = ? LIMIT 1",
+            column
+        );
+        super::unwrap_optional_row(connection.query_row(
+            &sql,
+            rusqlite::params![chatroom_id],
+            |row| row.get(0),
+        ))
+    }
+}
+
+impl From<crate::changelog::Chatroom> for super::Chatroom {
+    fn from(src: crate::changelog::Chatroom) -> Self {
+        Self {
+            chatroom_id: super::bytes_from_hash(src.id()),
+            latest_message_id: vec![],
+            time_updated: super::float_from_time(Utc::now()),
+            inner: src.into(),
+        }
     }
 }

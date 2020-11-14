@@ -1,12 +1,18 @@
+//! Database models and operations.
+
 tonic::include_proto!("viska.database");
 
 pub(crate) mod chatroom;
 pub(crate) mod message;
 pub(crate) mod peer;
+pub(crate) mod vcard;
 
 use blake3::Hash;
 use chrono::prelude::*;
+use rusqlite::Connection;
 use serde_bytes::ByteBuf;
+use std::path::PathBuf;
+use std::sync::Mutex;
 
 /// THE hash function (BLAKE3) universally used in the project.
 ///
@@ -29,4 +35,42 @@ pub(crate) fn float_from_time(src: DateTime<Utc>) -> f64 {
 pub(crate) fn bytes_from_hash(src: Hash) -> Vec<u8> {
     let raw_hash: [u8; 32] = src.into();
     raw_hash.to_vec()
+}
+
+pub(crate) struct Config {
+    pub storage: Storage,
+}
+
+pub(crate) enum Storage {
+    InMemory,
+    OnDisk(PathBuf),
+}
+
+pub(crate) struct Database {
+    pub connection: Mutex<Connection>,
+}
+
+impl Database {
+    pub fn create(config: Config) -> rusqlite::Result<Self> {
+        let mut connection = match config.storage {
+            Storage::InMemory => Connection::open_in_memory()?,
+            Storage::OnDisk(path) => Connection::open(path)?,
+        };
+
+        connection
+            .transaction()?
+            .execute_batch(include_str!("database/migration/genesis.sql"))?;
+
+        Ok(Self {
+            connection: connection.into(),
+        })
+    }
+}
+
+fn unwrap_optional_row<T>(result: rusqlite::Result<T>) -> rusqlite::Result<Option<T>> {
+    if let Err(rusqlite::Error::QueryReturnedNoRows) = result {
+        Ok(None)
+    } else {
+        result.map(|inner| inner.into())
+    }
 }

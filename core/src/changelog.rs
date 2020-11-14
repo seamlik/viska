@@ -1,18 +1,13 @@
 tonic::include_proto!("viska.changelog");
 
-use crate::daemon::platform_client::PlatformClient;
 use crate::database::chatroom::ChatroomService;
 use crate::database::message::MessageService;
 use crate::database::peer::PeerService;
-use crate::database::TransactionPayload;
 use blake3::Hash;
 use blake3::Hasher;
 use changelog_payload::Content;
+use rusqlite::Transaction;
 use std::collections::BTreeSet;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tonic::transport::Channel;
-use tonic::Status;
 
 type MessageId = Hash;
 
@@ -61,50 +56,27 @@ pub fn chatroom_id(members: impl Iterator<Item = Vec<u8>>) -> ChatroomId {
     hasher.finalize()
 }
 
-pub struct ChangelogMerger {
-    platform: Arc<Mutex<PlatformClient<Channel>>>,
-    chatroom_service: Arc<ChatroomService>,
-    peer_service: PeerService,
-    message_service: MessageService,
-}
+pub(crate) struct ChangelogMerger;
 
 impl ChangelogMerger {
-    pub fn new(platform: Arc<Mutex<PlatformClient<Channel>>>) -> Self {
-        let chatroom_service = Arc::new(ChatroomService {
-            platform: platform.clone(),
-        });
-        Self {
-            chatroom_service: chatroom_service.clone(),
-            peer_service: PeerService {
-                platform: platform.clone(),
-            },
-            message_service: MessageService {
-                platform: platform.clone(),
-                chatroom_service,
-            },
-            platform,
-        }
-    }
-
-    pub async fn commit(
-        &self,
+    pub fn commit<'t>(
+        transaction: &'t Transaction,
         payloads: impl Iterator<Item = ChangelogPayload>,
-    ) -> Result<Vec<TransactionPayload>, Status> {
-        let mut transaction = Vec::<TransactionPayload>::new();
+    ) -> rusqlite::Result<()> {
         for payload in payloads {
             match payload.content {
                 Some(Content::AddChatroom(chatroom)) => {
-                    transaction.extend(self.chatroom_service.update(chatroom).await?);
+                    ChatroomService::update(transaction, chatroom)?;
                 }
                 Some(Content::AddPeer(peer)) => {
-                    transaction.extend(self.peer_service.update(peer).await?);
+                    PeerService::save(transaction, peer)?;
                 }
                 Some(Content::AddMessage(message)) => {
-                    transaction.extend(self.message_service.update(message).await?);
+                    MessageService::update(transaction, message)?;
                 }
-                None => return Err(Status::invalid_argument("Empty transaction payload")),
+                None => todo!("Empty transaction payload"),
             }
         }
-        Ok(transaction)
+        Ok(())
     }
 }

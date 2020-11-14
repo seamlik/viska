@@ -19,7 +19,6 @@ message Vcard {
   bytes account_id = 1;
   string name = 2;
   viska.changelog.Blob photo = 3;
-  double time_updated = 4;
 }
 
 message Message {
@@ -37,4 +36,8 @@ message Chatroom {
 
 message Peer {
   viska.changelog.Peer inner = 1;
+}
+
+message BytesArray {
+  repeated bytes array = 1;
 }

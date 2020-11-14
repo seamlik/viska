@@ -119,12 +119,7 @@ impl Node {
         ));
 
         // Start gRPC server
-        daemon::StandardNode::start(
-            certificate_verifier.clone(),
-            platform.clone(),
-            account_id,
-            node_grpc_port,
-        );
+        daemon::StandardNode::start(certificate_verifier.clone(), account_id, node_grpc_port)?;
 
         let config = endpoint::Config { certificate, key };
         let (window_sender, window_receiver) =
@@ -279,5 +274,6 @@ pub enum EndpointError {
     Grpc(#[from] tonic::transport::Error),
     Quic(#[from] quinn::EndpointError),
     Socket(#[from] std::io::Error),
+    Sqlite(#[from] rusqlite::Error),
     TlsConfiguration(#[from] rustls::TLSError),
 }
