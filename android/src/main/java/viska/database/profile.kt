@@ -1,7 +1,6 @@
 package viska.database
 
 import android.content.Context
-import android.util.Log
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import com.couchbase.lite.Database
@@ -15,7 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.nio.file.Files
 import javax.inject.Inject
 import javax.inject.Singleton
-import org.bson.BsonBinary
+import org.bson.BsonString
 
 @Singleton
 class AndroidProfileService @Inject constructor(@ApplicationContext private val context: Context) :
@@ -83,18 +82,10 @@ class AndroidProfileService @Inject constructor(@ApplicationContext private val 
     _database?.run { close() }
     _database = null
 
-    val bundle = viska.pki.Module.new_certificate()
-    val certificate = bundle.asDocument().getBinary("certificate").data
-    val key = bundle.asDocument().getBinary("key").data
-
-    val accountId = Module.hash(BsonBinary(certificate)).asBinary()?.data!!
-    val accountIdText = accountId.displayId()
-    Log.i(this::class.java.simpleName, "Generated account $accountIdText")
-
-    val profileDir = context.filesDir.toPath().resolve("account").resolve(accountIdText)
+    val profileDir = context.filesDir.toPath().resolve("account")
     Files.createDirectories(profileDir)
-    Files.write(profileDir.resolve("certificate.der"), certificate)
-    Files.write(profileDir.resolve("key.der"), key)
+    val accountIdText =
+        Module.create_standard_profile(BsonString(profileDir.toString())).asString().value
 
     PreferenceManager.getDefaultSharedPreferences(context).edit(commit = true) {
       putString("active-account", accountIdText)
