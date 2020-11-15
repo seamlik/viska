@@ -1,11 +1,11 @@
-CREATE TABLE peer (
+CREATE TABLE IF NOT EXISTS peer (
   account_id BLOB PRIMARY KEY,
 
   name       TEXT,
   role       INTEGER NOT NULL
 );
 
-CREATE TABLE chatroom (
+CREATE TABLE IF NOT EXISTS chatroom (
   chatroom_id       BLOB PRIMARY KEY,
 
   latest_message_id BLOB,
@@ -16,7 +16,7 @@ CREATE TABLE chatroom (
   members           BLOB NOT NULL -- Protobuf viska.database.BytesArray of account IDs
 );
 
-CREATE TABLE message (
+CREATE TABLE IF NOT EXISTS message (
   message_id      BLOB PRIMARY KEY,
 
   chatroom_id     BLOB,
@@ -30,7 +30,7 @@ CREATE TABLE message (
   time            REAL NOT NULL
 );
 
-CREATE TABLE vcard (
+CREATE TABLE IF NOT EXISTS vcard (
   vcard_id   BLOB PRIMARY KEY,
 
   account_id BLOB,

@@ -26,7 +26,7 @@ pub(crate) struct MockProfileService {
 impl MockProfileService {
     #[cfg(not(debug_assertions))]
     pub fn populate_mock_data(&self) -> rusqlite::Result<()> {
-        unimplemented!()
+        unimplemented!("Only in debug mode")
     }
 
     #[cfg(debug_assertions)]

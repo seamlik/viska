@@ -5,7 +5,6 @@ use crate::database::Message;
 use crate::database::Peer;
 use crate::database::TransactionPayload;
 use crate::endpoint::CertificateVerifier;
-use crate::mock_profile::MockProfileService;
 use async_trait::async_trait;
 use node_client::NodeClient;
 use node_server::NodeServer;
@@ -157,21 +156,13 @@ impl Platform for DummyPlatform {
 
 pub(crate) struct StandardNode {
     verifier: Arc<CertificateVerifier>,
-    mock_profile_service: Arc<MockProfileService>,
 }
 
 impl<T: node_server::Node> GrpcService<NodeServer<T>> for StandardNode {}
 
 impl StandardNode {
-    pub fn start(
-        verifier: Arc<CertificateVerifier>,
-        node_grpc_port: u16,
-        mock_profile_service: Arc<MockProfileService>,
-    ) -> rusqlite::Result<()> {
-        let instance = Self {
-            verifier,
-            mock_profile_service,
-        };
+    pub fn start(verifier: Arc<CertificateVerifier>, node_grpc_port: u16) -> rusqlite::Result<()> {
+        let instance = Self { verifier };
         Self::spawn_server(NodeServer::new(instance), node_grpc_port);
         Ok(())
     }
@@ -184,25 +175,6 @@ impl node_server::Node for StandardNode {
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<()>, Status> {
         todo!()
-    }
-
-    #[cfg(not(debug_assertions))]
-    async fn populate_mock_data(
-        &self,
-        _: tonic::Request<()>,
-    ) -> Result<tonic::Response<()>, Status> {
-        Err(Status::unimplemented("Only in debug mode"))
-    }
-
-    #[cfg(debug_assertions)]
-    async fn populate_mock_data(
-        &self,
-        _: tonic::Request<()>,
-    ) -> Result<tonic::Response<()>, Status> {
-        self.mock_profile_service
-            .populate_mock_data()
-            .map_err(IntoTonicStatus::into_tonic_status)?;
-        Ok(tonic::Response::new(()))
     }
 }
 

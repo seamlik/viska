@@ -7,6 +7,7 @@ pub(crate) mod message;
 pub(crate) mod peer;
 pub(crate) mod vcard;
 
+use crate::mock_profile::MockProfileService;
 use crate::pki::Certificate;
 use blake3::Hash;
 use chrono::prelude::*;
@@ -66,9 +67,11 @@ impl Database {
             Storage::OnDisk(path) => Connection::open(path)?,
         };
 
-        connection
-            .transaction()?
-            .execute_batch(include_str!("database/migration/genesis.sql"))?;
+        log::info!("Beginning database migration");
+        let transaction = connection.transaction()?;
+        transaction.execute_batch(include_str!("database/migration/genesis.sql"))?;
+        transaction.commit()?;
+        log::info!("Finished database migration");
 
         Ok(Self {
             connection: connection.into(),
@@ -124,17 +127,45 @@ pub fn create_standard_profile(base_data_dir: PathBuf) -> Result<String, CreateP
     destination.push("certificate.der");
     std::fs::write(&destination, &bundle.certificate)?;
 
-    destination.set_file_name("key.der");
+    destination.pop();
+    destination.push("key.der");
     std::fs::write(&destination, &bundle.key)?;
 
-    destination.set_file_name("database");
+    destination.pop();
+    destination.push("database");
+    std::fs::create_dir_all(&destination)?;
     destination.push("main.db");
+
     let database_config = Config {
         storage: Storage::OnDisk(destination),
     };
     Database::create(database_config)?;
 
     Ok(account_id)
+}
+
+#[riko::fun]
+pub fn create_mock_profile(base_data_dir: PathBuf) -> Result<String, CreateProfileError> {
+    let account_id_text = create_standard_profile(base_data_dir.clone())?;
+    let mut destination = base_data_dir;
+    destination.push(&account_id_text);
+    destination.push("certificate.der");
+    let certificate = std::fs::read(&destination)?;
+    let account_id = certificate.id();
+
+    destination.pop();
+    destination.push("database");
+    destination.push("main.db");
+    let database_config = Config {
+        storage: Storage::OnDisk(destination),
+    };
+    let database = Database::create(database_config)?;
+    let mock_profile_service = MockProfileService {
+        account_id,
+        database: database.into(),
+    };
+    mock_profile_service.populate_mock_data()?;
+    Ok(account_id_text)
 }
 
 /// Error when failed to create a profile.
