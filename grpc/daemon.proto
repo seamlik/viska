@@ -34,4 +34,6 @@ service Node {
   // This list will be used when verifying the peer certificate of a TLS connection. Only peers
   // in this list are allowed to connect with the Node.
   rpc UpdatePeerWhitelist(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+
+  rpc WatchVcardById(google.protobuf.BytesValue) returns (stream viska.database.Vcard) {}
 }

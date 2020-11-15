@@ -38,26 +38,27 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.ui.tooling.preview.Preview
+import com.google.protobuf.BytesValue
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.Instant
 import javax.inject.Inject
 import viska.changelog.Changelog
 import viska.couchbase.AndroidChatroomRepository
 import viska.couchbase.AndroidPeerRepository
-import viska.couchbase.AndroidVcardRepository
 import viska.couchbase.ChatroomQueryResult
 import viska.couchbase.preview
 import viska.database.Database
 import viska.database.Database.Chatroom
 import viska.database.Database.Peer
 import viska.database.Database.Vcard
+import viska.database.toBinaryId
 import viska.database.toFloat
 
 @AndroidEntryPoint
 class DashboardActivity : InstanceActivity() {
 
   @Inject lateinit var chatroomRepository: AndroidChatroomRepository
-  @Inject lateinit var vcardRepository: AndroidVcardRepository
+  @Inject lateinit var daemonService: viska.daemon.DaemonService
   @Inject lateinit var peerRepository: AndroidPeerRepository
 
   private val viewModel by viewModels<DashboardViewModel>()
@@ -69,13 +70,16 @@ class DashboardActivity : InstanceActivity() {
     setContent {
       MaterialTheme {
         val chatrooms = chatroomRepository.watchChatrooms()
-        val vcard = vcardRepository.watchVcard(profileService.accountId)
         val roster = peerRepository.watchRoster()
 
         Page(
             viewModel = viewModel,
             chatrooms = chatrooms.collectAsState(),
-            vcard = vcard.collectAsState(),
+            vcard =
+                daemonService
+                    .nodeGrpcClient
+                    .watchVcardById(BytesValue.parseFrom(profileService.accountId.toBinaryId()))
+                    .collectAsState(null),
             accountId = profileService.accountId,
             roster = roster.collectAsState())
         ExitDialog(viewModel)

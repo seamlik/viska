@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.collect
 import viska.couchbase.ChatroomRepository
 import viska.couchbase.MessageRepository
 import viska.couchbase.PeerRepository
-import viska.couchbase.VcardRepository
 import viska.database.Database
 import viska.database.Database.TransactionPayload
 
@@ -20,15 +19,11 @@ class PlatformDaemon
         private val chatroomRepository: ChatroomRepository,
         private val peerRepository: PeerRepository,
         private val messageRepository: MessageRepository,
-        private val vcardRepository: VcardRepository,
     ) : PlatformGrpcKt.PlatformCoroutineImplBase() {
   override suspend fun commitTransaction(requests: Flow<TransactionPayload>): Empty {
     // TODO: Batch operation
     requests.collect { payload ->
       when (payload.contentCase) {
-        TransactionPayload.ContentCase.ADD_VCARD -> {
-          vcardRepository.commit(payload.addVcard)
-        }
         TransactionPayload.ContentCase.ADD_MESSAGE -> {
           messageRepository.commit(payload.addMessage)
         }
