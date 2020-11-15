@@ -1,9 +1,9 @@
 use crate::packet::ResponseWindow;
-use crate::pki::Certificate;
-use crate::pki::CertificateId;
+use crate::pki::CanonicalId;
 use crate::Connection;
 use crate::ConnectionError;
 use crate::EndpointError;
+use blake3::Hash;
 use futures::channel::mpsc::UnboundedSender;
 use futures::prelude::*;
 use quinn::CertificateChain;
@@ -37,7 +37,7 @@ pub struct Config<'a> {
 ///
 /// This also serves as the main endpoint that is used to connect with remote [Node](crate::Node)s.
 pub struct LocalEndpoint {
-    account_id: CertificateId,
+    account_id: Hash,
     quic: Endpoint,
     client_config: quinn::ClientConfig,
 }
@@ -86,7 +86,7 @@ impl LocalEndpoint {
 
         Ok((
             Self {
-                account_id: config.certificate.id(),
+                account_id: config.certificate.canonical_id(),
                 quic: endpoint,
                 client_config,
             },
@@ -107,7 +107,7 @@ pub trait ConnectionInfo {
     /// Gets the account ID of the [Node](crate::Node) who opened this connection.
     ///
     /// Consult [AuthenticationData](quinn::crypto::rustls::AuthenticationData) for the option-ness.
-    fn account_id(&self) -> Option<CertificateId>;
+    fn account_id(&self) -> Option<Hash>;
     fn remote_address(&self) -> SocketAddr;
 }
 
@@ -116,10 +116,10 @@ impl ConnectionInfo for quinn::Connection {
         self.remote_address()
     }
 
-    fn account_id(&self) -> Option<CertificateId> {
+    fn account_id(&self) -> Option<Hash> {
         self.authentication_data()
             .peer_certificates
-            .and_then(|chain| chain.iter().next().map(|cert| cert.id()))
+            .and_then(|chain| chain.iter().next().map(|cert| cert.canonical_id()))
     }
 }
 
@@ -207,8 +207,8 @@ impl ConnectionManager {
 }
 
 pub struct CertificateVerifier {
-    pub account_id: CertificateId,
-    pub peer_whitelist: RwLock<HashSet<CertificateId>>,
+    pub account_id: Hash,
+    pub peer_whitelist: RwLock<HashSet<Hash>>,
     pub enabled: bool,
 }
 
@@ -220,7 +220,7 @@ impl CertificateVerifier {
         // TODO: Check expiration
         match presented_certs {
             [cert] => {
-                let peer_id = cert.id();
+                let peer_id = cert.canonical_id();
                 if self.account_id == peer_id || self.peer_is_allowed(peer_id) {
                     log::info!("Peer {} is known, accepting connection.", peer_id.to_hex());
                     Ok(())
@@ -235,7 +235,7 @@ impl CertificateVerifier {
         }
     }
 
-    fn peer_is_allowed(&self, id: CertificateId) -> bool {
+    fn peer_is_allowed(&self, id: Hash) -> bool {
         self.peer_whitelist.read().unwrap().contains(&id)
     }
 }

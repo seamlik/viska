@@ -6,7 +6,7 @@ use crate::changelog::PeerRole;
 use crate::database::vcard::VcardService;
 use crate::database::Database;
 use crate::database::Vcard;
-use crate::pki::CertificateId;
+use blake3::Hash;
 use chrono::prelude::*;
 use chrono::Duration;
 use chrono::LocalResult;
@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 pub(crate) struct MockProfileService {
     pub database: Arc<Database>,
-    pub account_id: CertificateId,
+    pub account_id: Hash,
 }
 
 impl MockProfileService {

@@ -1,8 +1,8 @@
 use crate::endpoint::ConnectionInfo;
-use crate::pki::CertificateId;
 use crate::proto::Request;
 use crate::proto::Response;
 use crate::Connection;
+use blake3::Hash;
 use http::StatusCode;
 use prost::Message as _;
 use quinn::ReadToEndError;
@@ -69,7 +69,7 @@ impl ResponseWindow {
 }
 
 impl ConnectionInfo for ResponseWindow {
-    fn account_id(&self) -> Option<CertificateId> {
+    fn account_id(&self) -> Option<Hash> {
         self.connection.account_id()
     }
     fn remote_address(&self) -> SocketAddr {

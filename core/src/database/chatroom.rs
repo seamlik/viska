@@ -1,9 +1,13 @@
 use super::BytesArray;
+use crate::pki::CanonicalId;
+use blake3::Hash;
+use blake3::Hasher;
 use chrono::Utc;
 use prost::Message as _;
 use rusqlite::types::FromSql;
 use rusqlite::Connection;
 use rusqlite::Transaction;
+use std::collections::BTreeSet;
 
 pub(crate) struct ChatroomService;
 
@@ -19,8 +23,8 @@ impl ChatroomService {
 
         let chatroom_inner = crate::changelog::Chatroom { members, name };
 
-        let chatroom_id: [u8; 32] = chatroom_inner.id().into();
-        let latest_message_id: [u8; 32] = message.message_id().into();
+        let chatroom_id: [u8; 32] = chatroom_inner.chatroom_id().into();
+        let latest_message_id: [u8; 32] = message.canonical_id().into();
 
         super::Chatroom {
             inner: Some(chatroom_inner),
@@ -97,7 +101,7 @@ impl ChatroomService {
         transaction: &'_ Transaction,
         payload: crate::changelog::Chatroom,
     ) -> rusqlite::Result<()> {
-        let chatroom_id = super::bytes_from_hash(payload.id());
+        let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
         let mut row: super::Chatroom = payload.into();
 
         if let Some(latest_message_id) =
@@ -129,10 +133,30 @@ impl ChatroomService {
 impl From<crate::changelog::Chatroom> for super::Chatroom {
     fn from(src: crate::changelog::Chatroom) -> Self {
         Self {
-            chatroom_id: super::bytes_from_hash(src.id()),
+            chatroom_id: super::bytes_from_hash(src.chatroom_id()),
             latest_message_id: vec![],
             time_updated: super::float_from_time(Utc::now()),
             inner: src.into(),
         }
     }
+}
+
+impl crate::changelog::Chatroom {
+    pub fn chatroom_id(&self) -> Hash {
+        chatroom_id(self.members.iter())
+    }
+}
+
+pub fn chatroom_id<'a>(members: impl Iterator<Item = &'a Vec<u8>>) -> Hash {
+    let mut hasher = Hasher::default();
+    hasher.update(b"Viska chatroom ID");
+
+    let members_sorted: BTreeSet<&'a Vec<u8>> = members.collect();
+    let length = members_sorted.iter().fold(0, |sum, x| sum + x.len());
+    hasher.update(&length.to_be_bytes());
+    for id in members_sorted {
+        hasher.update(id);
+    }
+
+    hasher.finalize()
 }

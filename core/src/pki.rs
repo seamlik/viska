@@ -16,6 +16,7 @@
 //! the algorithms, it must notify the user and urge for an immediate update on software.
 
 use blake3::Hash;
+use blake3::Hasher;
 use rcgen::CertificateParams;
 use rcgen::DistinguishedName;
 use rcgen::DnType;
@@ -54,23 +55,28 @@ pub fn new_certificate() -> crate::pki::CertificateBundle {
     }
 }
 
-/// X.509 certificate with extra features.
-pub trait Certificate {
+/// Data structures that can produce a canonical ID.
+///
+/// This ID is used to uniquely identify important data structures in the project. It must be
+/// reproducible and depends only on the necessary child data of such a data structure.
+pub trait CanonicalId {
     /// Calculates its ID.
-    fn id(&self) -> CertificateId;
+    fn canonical_id(&self) -> Hash;
 }
 
-impl Certificate for [u8] {
-    fn id(&self) -> CertificateId {
-        blake3::hash(self)
+/// Canonical ID of a X.509 certificate encoded in PKCS#12 ASN.1 DER.
+impl CanonicalId for [u8] {
+    fn canonical_id(&self) -> Hash {
+        let mut hasher = Hasher::default();
+        hasher.update(b"Viska application/pkcs12");
+        hasher.update(&self.len().to_be_bytes());
+        hasher.update(&self);
+        hasher.finalize()
     }
 }
 
-impl Certificate for rustls::Certificate {
-    fn id(&self) -> CertificateId {
-        blake3::hash(self.as_ref())
+impl CanonicalId for rustls::Certificate {
+    fn canonical_id(&self) -> Hash {
+        self.as_ref().canonical_id()
     }
 }
-
-/// BLAKE3 digest of the entire certificate encoded in ASN.1 DER.
-pub type CertificateId = Hash;

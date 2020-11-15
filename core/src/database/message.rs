@@ -1,5 +1,8 @@
 use super::chatroom::ChatroomService;
 use super::BytesArray;
+use crate::pki::CanonicalId;
+use blake3::Hash;
+use blake3::Hasher;
 use prost::Message as _;
 use rusqlite::Transaction;
 
@@ -54,7 +57,7 @@ impl MessageService {
         ChatroomService::update_for_message(transaction, &payload)?;
 
         // Update message
-        let message_id = super::bytes_from_hash(payload.message_id());
+        let message_id = super::bytes_from_hash(payload.canonical_id());
         let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
         let message = super::Message {
             message_id,
@@ -63,5 +66,42 @@ impl MessageService {
         };
         MessageService::save(transaction, message)?;
         Ok(())
+    }
+}
+
+impl crate::changelog::Message {
+    pub fn chatroom_id(&self) -> Hash {
+        let recipients = self.recipients.iter();
+        let members = recipients.chain(std::iter::once(&self.sender));
+        super::chatroom::chatroom_id(members)
+    }
+}
+
+impl CanonicalId for crate::changelog::Message {
+    fn canonical_id(&self) -> Hash {
+        let mut hasher = Hasher::default();
+
+        hasher.update(b"Viska message");
+
+        hasher.update(&self.sender.len().to_be_bytes());
+        hasher.update(&self.sender);
+
+        let length = self.recipients.iter().fold(0, |sum, x| sum + x.len());
+        hasher.update(&length.to_be_bytes());
+        for account in self.recipients.iter() {
+            hasher.update(&account);
+        }
+
+        hasher.update(self.time.to_be_bytes().as_ref());
+
+        hasher.update(&self.content.len().to_be_bytes());
+        hasher.update(self.content.as_bytes());
+
+        if let Some(attachment) = &self.attachment {
+            hasher.update(&blake3::OUT_LEN.to_be_bytes());
+            hasher.update(attachment.canonical_id().as_bytes());
+        }
+
+        hasher.finalize()
     }
 }

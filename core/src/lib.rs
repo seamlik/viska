@@ -18,6 +18,7 @@ pub mod util;
 
 use crate::database::Database;
 use crate::endpoint::CertificateVerifier;
+use blake3::Hash;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
 use endpoint::LocalEndpoint;
@@ -27,8 +28,7 @@ use handler::Handler;
 use handler::PeerHandler;
 use http::StatusCode;
 use packet::ResponseWindow;
-use pki::Certificate;
-use pki::CertificateId;
+use pki::CanonicalId;
 use prost::DecodeError;
 use prost::Message as _;
 use proto::Request;
@@ -104,7 +104,7 @@ impl Node {
         enable_certificate_verification: bool,
         database_config: database::Config,
     ) -> Result<(Self, JoinHandle<()>), EndpointError> {
-        let account_id = certificate.id();
+        let account_id = certificate.canonical_id();
         let certificate_verifier = Arc::new(CertificateVerifier {
             enabled: enable_certificate_verification,
             account_id,
@@ -121,7 +121,7 @@ impl Node {
             futures::channel::mpsc::unbounded::<ResponseWindow>();
 
         // Handle requests
-        let account_id = certificate.id();
+        let account_id = certificate.canonical_id();
         tokio::spawn(window_receiver.for_each(move |window| {
             let handler: Box<dyn Handler + Send + Sync> = if window.account_id() == Some(account_id)
             {
@@ -220,7 +220,7 @@ impl ConnectionInfo for Connection {
         self.quic.remote_address()
     }
 
-    fn account_id(&self) -> Option<CertificateId> {
+    fn account_id(&self) -> Option<Hash> {
         self.quic.account_id()
     }
 }

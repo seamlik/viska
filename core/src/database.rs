@@ -8,8 +8,9 @@ pub(crate) mod peer;
 pub(crate) mod vcard;
 
 use crate::mock_profile::MockProfileService;
-use crate::pki::Certificate;
+use crate::pki::CanonicalId;
 use blake3::Hash;
+use blake3::Hasher;
 use chrono::prelude::*;
 use rusqlite::Connection;
 use serde_bytes::ByteBuf;
@@ -118,7 +119,11 @@ fn unwrap_optional_row<T>(result: rusqlite::Result<T>) -> rusqlite::Result<Optio
 #[riko::fun]
 pub fn create_standard_profile(base_data_dir: PathBuf) -> Result<String, CreateProfileError> {
     let bundle = crate::pki::new_certificate();
-    let account_id = bundle.certificate.id().to_hex().to_ascii_uppercase();
+    let account_id = bundle
+        .certificate
+        .canonical_id()
+        .to_hex()
+        .to_ascii_uppercase();
 
     let mut destination = base_data_dir;
     destination.push(&account_id);
@@ -151,7 +156,7 @@ pub fn create_mock_profile(base_data_dir: PathBuf) -> Result<String, CreateProfi
     destination.push(&account_id_text);
     destination.push("certificate.der");
     let certificate = std::fs::read(&destination)?;
-    let account_id = certificate.id();
+    let account_id = certificate.canonical_id();
 
     destination.pop();
     destination.push("database");
@@ -174,4 +179,14 @@ pub fn create_mock_profile(base_data_dir: PathBuf) -> Result<String, CreateProfi
 pub enum CreateProfileError {
     Database(#[from] rusqlite::Error),
     FileSystem(#[from] std::io::Error),
+}
+
+impl CanonicalId for crate::changelog::Blob {
+    fn canonical_id(&self) -> Hash {
+        let mut hasher = Hasher::default();
+        hasher.update(format!("Viska blob {}", self.mime).as_bytes());
+        hasher.update(&self.content.len().to_be_bytes());
+        hasher.update(&self.content);
+        hasher.finalize()
+    }
 }
