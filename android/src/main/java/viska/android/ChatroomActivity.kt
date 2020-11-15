@@ -5,12 +5,12 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.Text
 import androidx.compose.foundation.layout.preferredSize
 import androidx.compose.foundation.lazy.LazyColumnFor
 import androidx.compose.material.ListItem
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -20,39 +20,41 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.dp
+import com.google.protobuf.BytesValue
 import dagger.hilt.android.AndroidEntryPoint
 import java.lang.IllegalArgumentException
 import javax.inject.Inject
-import viska.couchbase.AndroidChatroomRepository
-import viska.couchbase.AndroidMessageRepository
 import viska.database.Database.Message
 import viska.database.displayId
+import viska.database.toBinaryId
 
 @AndroidEntryPoint
 class ChatroomActivity : InstanceActivity() {
 
-  @Inject lateinit var chatroomRepository: AndroidChatroomRepository
-  @Inject lateinit var messageRepository: AndroidMessageRepository
+  @Inject lateinit var daemonService: viska.daemon.DaemonService
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     cancelIfNoActiveAccount()
 
-    val chatroomId = chatroomId
+    val chatroomId = BytesValue.parseFrom(chatroomId.toBinaryId())
 
     setContent {
       MaterialTheme {
-        val chatroom by chatroomRepository.watchChatroom(chatroomId).collectAsState()
+        val chatroom by daemonService.nodeGrpcClient.watchChatroom(chatroomId).collectAsState(null)
         if (chatroom == null) {
           finish()
           return@MaterialTheme
         }
 
-        val messages by messageRepository.watchChatroomMessages(chatroomId).collectAsState()
+        val messagesSubscription by daemonService
+            .nodeGrpcClient
+            .watchChatroomMessages(chatroomId)
+            .collectAsState(null)
 
         Scaffold(topBar = { TopAppBar(title = { Text(text = chatroom?.inner?.name ?: "") }) }) {
         _ ->
-          LazyColumnFor(messages) { MessageItem(it) }
+          LazyColumnFor(messagesSubscription?.messagesList ?: emptyList()) { MessageItem(it) }
         }
       }
     }

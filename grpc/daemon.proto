@@ -17,11 +17,7 @@ service Platform {
   // The parameter is a message ID.
   rpc NotifyMessage(google.protobuf.BytesValue) returns (google.protobuf.Empty) {}
 
-  rpc FindChatroomById(google.protobuf.BytesValue) returns (viska.database.Chatroom) {}
-
   rpc FindPeerById(google.protobuf.BytesValue) returns (viska.database.Peer) {}
-
-  rpc FindMessageById(google.protobuf.BytesValue) returns (viska.database.Message) {}
 }
 
 // Represents a Node
@@ -36,4 +32,18 @@ service Node {
   rpc UpdatePeerWhitelist(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
   rpc WatchVcardById(google.protobuf.BytesValue) returns (stream viska.database.Vcard) {}
+
+  rpc WatchChatroomMessages(google.protobuf.BytesValue) returns (stream ChatroomMessagesSubscription) {}
+
+  rpc WatchChatroom(google.protobuf.BytesValue) returns (stream viska.database.Chatroom) {}
+
+  rpc WatchChatrooms(google.protobuf.Empty) returns (stream ChatroomsSubscription) {}
+}
+
+message ChatroomMessagesSubscription {
+  repeated viska.database.Message messages = 1;
+}
+
+message ChatroomsSubscription {
+  repeated viska.database.Chatroom chatrooms = 1;
 }

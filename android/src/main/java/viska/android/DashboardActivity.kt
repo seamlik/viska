@@ -39,25 +39,20 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.ui.tooling.preview.Preview
 import com.google.protobuf.BytesValue
+import com.google.protobuf.Empty
 import dagger.hilt.android.AndroidEntryPoint
-import java.time.Instant
 import javax.inject.Inject
+import kotlinx.coroutines.flow.map
 import viska.changelog.Changelog
-import viska.couchbase.AndroidChatroomRepository
 import viska.couchbase.AndroidPeerRepository
-import viska.couchbase.ChatroomQueryResult
-import viska.couchbase.preview
-import viska.database.Database
 import viska.database.Database.Chatroom
 import viska.database.Database.Peer
 import viska.database.Database.Vcard
 import viska.database.toBinaryId
-import viska.database.toFloat
 
 @AndroidEntryPoint
 class DashboardActivity : InstanceActivity() {
 
-  @Inject lateinit var chatroomRepository: AndroidChatroomRepository
   @Inject lateinit var daemonService: viska.daemon.DaemonService
   @Inject lateinit var peerRepository: AndroidPeerRepository
 
@@ -69,12 +64,16 @@ class DashboardActivity : InstanceActivity() {
 
     setContent {
       MaterialTheme {
-        val chatrooms = chatroomRepository.watchChatrooms()
+        val chatrooms by daemonService
+            .nodeGrpcClient
+            .watchChatrooms(Empty.getDefaultInstance())
+            .map { it.chatroomsList }
+            .collectAsState(null)
         val roster = peerRepository.watchRoster()
 
         Page(
             viewModel = viewModel,
-            chatrooms = chatrooms.collectAsState(),
+            chatrooms = chatrooms ?: emptyList(),
             vcard =
                 daemonService
                     .nodeGrpcClient
@@ -127,7 +126,7 @@ private fun PreviewPage() =
     MaterialTheme {
       Page(
           DashboardViewModel(),
-          mutableStateOf(emptyList()),
+          emptyList(),
           mutableStateOf(null),
           "a94eb927fae20e2cbdf417ae3eb920a5423635af772e30e33be78e15a3876259",
           mutableStateOf(emptyList()),
@@ -137,7 +136,7 @@ private fun PreviewPage() =
 @Composable
 private fun Page(
     viewModel: DashboardViewModel,
-    chatrooms: State<List<ChatroomQueryResult>>,
+    chatrooms: List<Chatroom>,
     vcard: State<Vcard?>,
     accountId: String,
     roster: State<List<Peer>>
@@ -154,7 +153,7 @@ private fun Page(
             }) { _ ->
           when (viewModel.screen) {
             DashboardViewModel.Screen.CHATROOMS ->
-                LazyColumnFor(items = chatrooms.value) { ChatroomItem(it) }
+                LazyColumnFor(items = chatrooms) { ChatroomItem(it) }
             DashboardViewModel.Screen.ROSTER ->
                 LazyColumnFor(items = roster.value) { RosterItem(it) }
           }
@@ -247,32 +246,26 @@ private fun DrawerContent(
 @Composable
 @Preview
 private fun PreviewChatroomItem() {
-  val message =
-      Changelog.Message.newBuilder().setContent("Ahoj").setTime(Instant.now().toFloat()).build()
-  val chatroom = Changelog.Chatroom.newBuilder().setName("A room").build()
-  val data =
-      ChatroomQueryResult(
-          Chatroom.newBuilder().setInner(chatroom).build(),
-          Database.Message.newBuilder().setInner(message).build(),
-      )
-  MaterialTheme { ChatroomItem(data) }
+  val chatroom = Chatroom.newBuilder().build() // TODO
+  MaterialTheme { ChatroomItem(chatroom) }
 }
 
 @Composable
-private fun ChatroomItem(data: ChatroomQueryResult) {
+private fun ChatroomItem(data: Chatroom) {
   val context = ContextAmbient.current
   ListItem(
       modifier =
           Modifier.clickable(
               onClick = {
-                if (data.chatroom.inner.membersList.isNotEmpty()) {
-                  ChatroomActivity.start(context, data.chatroom.chatroomId.toByteArray())
+                if (data.inner.membersList.isNotEmpty()) {
+                  ChatroomActivity.start(context, data.chatroomId.toByteArray())
                 }
               }),
       icon = { Image(asset = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
-      text = { Text(maxLines = 1, text = data.chatroom.inner.name) },
+      text = { Text(maxLines = 1, text = data.inner.name) },
       secondaryText = {
-        Text(maxLines = 3, text = data.latestMessage?.inner?.preview(context.resources) ?: "")
+      // TODO
+      // Text(maxLines = 3, text = data.latestMessage?.inner?.preview(context.resources) ?: "")
       },
   )
 }
