@@ -7,6 +7,6 @@ interface ProfileService {
   val certificate: ByteArray
   val key: ByteArray
   val hasActiveAccount: Boolean
-  fun createProfile()
+  fun createProfile(mock: Boolean)
   val database: Database
 }

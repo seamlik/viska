@@ -3,12 +3,12 @@ package viska.android
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.Text
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.Button
 import androidx.compose.material.LinearProgressIndicator
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.res.stringResource
 import androidx.ui.tooling.preview.Preview
-import com.google.protobuf.Empty
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -37,29 +36,21 @@ class NewProfileActivity : AppCompatActivity() {
     super.onCreate(savedInstanceState)
     setContent {
       val creatingAccount by GlobalState.creatingAccount.collectAsState()
-      Page(creatingAccount, this::newAccount, this::newMockProfile)
+      Page(creatingAccount, { createProfile(false) }, { createProfile(true) })
     }
   }
 
-  private fun newAccount() {
+  private fun createProfile(mock: Boolean) {
     GlobalState.creatingAccount.value = true
     InstanceActivity.finishAll()
-    profileService.createProfile()
-    GlobalState.creatingAccount.value = false
 
-    startActivity(Intent(this, DashboardActivity::class.java))
-    finish()
-  }
-
-  private fun newMockProfile() {
-    GlobalState.creatingAccount.value = true
-    InstanceActivity.finishAll()
-    profileService.createProfile()
     GlobalScope.launch(Dispatchers.IO) {
       try {
-        daemonService.get().nodeGrpcClient.populateMockData(Empty.getDefaultInstance())
+        profileService.createProfile(mock)
       } finally {
         GlobalState.creatingAccount.value = false
+        startActivity(Intent(this@NewProfileActivity, DashboardActivity::class.java))
+        finish()
       }
     }
   }

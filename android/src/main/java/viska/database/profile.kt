@@ -78,14 +78,17 @@ class AndroidProfileService @Inject constructor(@ApplicationContext private val 
   override val hasActiveAccount
     get() = _database != null
 
-  override fun createProfile() {
+  override fun createProfile(mock: Boolean) {
     _database?.run { close() }
     _database = null
 
-    val profileDir = context.filesDir.toPath().resolve("account")
-    Files.createDirectories(profileDir)
+    val profileDir = BsonString(context.filesDir.toPath().resolve("account").toString())
     val accountIdText =
-        Module.create_standard_profile(BsonString(profileDir.toString())).asString().value
+        if (mock) {
+          Module.create_mock_profile(profileDir).asString().value
+        } else {
+          Module.create_standard_profile(profileDir).asString().value
+        }
 
     PreferenceManager.getDefaultSharedPreferences(context).edit(commit = true) {
       putString("active-account", accountIdText)
