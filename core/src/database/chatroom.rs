@@ -6,7 +6,6 @@ use chrono::Utc;
 use prost::Message as _;
 use rusqlite::types::FromSql;
 use rusqlite::Connection;
-use rusqlite::Transaction;
 use std::collections::BTreeSet;
 
 pub(crate) struct ChatroomService;
@@ -36,39 +35,40 @@ impl ChatroomService {
 
     /// Updates the [Chatroom](super::Chatroom) that is supposed to hold a new [Message].
     pub fn update_for_message(
-        transaction: &Transaction,
+        connection: &'_ Connection,
         message: &crate::changelog::Message,
     ) -> rusqlite::Result<()> {
         let chatroom_id = message.chatroom_id();
         if let Some(time_updated) = ChatroomService::select_column_by_id(
-            transaction,
+            connection,
             chatroom_id.as_bytes().as_ref(),
             "time_updated",
         )? {
             if message.time > time_updated {
                 ChatroomService::update_time_updated_by_id(
-                    transaction,
+                    connection,
                     chatroom_id.as_bytes().as_ref(),
                     time_updated,
                 )?;
             }
         } else {
-            ChatroomService::save(transaction, ChatroomService::create_for_message(message))?;
+            ChatroomService::save(connection, ChatroomService::create_for_message(message))?;
         }
         Ok(())
     }
 
     fn update_time_updated_by_id(
-        transaction: &Transaction,
+        connection: &'_ Connection,
         chatroom_id: &[u8],
         time_updated: f64,
     ) -> rusqlite::Result<()> {
-        let sql = "UPDATE chatroom SET time_updated = ? WHERE chatroom_id = ?;";
-        transaction.execute(sql, rusqlite::params![time_updated, chatroom_id])?;
+        let sql = "UPDATE chatroom SET time_updated = ?1 WHERE chatroom_id = ?2;";
+        let mut stmt = connection.prepare_cached(sql)?;
+        stmt.execute(rusqlite::params![time_updated, chatroom_id])?;
         Ok(())
     }
 
-    fn save(transaction: &'_ Transaction, payload: super::Chatroom) -> rusqlite::Result<()> {
+    fn save(connection: &'_ Connection, payload: super::Chatroom) -> rusqlite::Result<()> {
         let inner = payload.inner.unwrap();
 
         let mut members = Vec::<u8>::default();
@@ -85,32 +85,33 @@ impl ChatroomService {
                 time_updated,
                 name,
                 members
-            ) VALUES (?);
+            ) VALUES (?1, ?2, ?3, ?4, ?5);
         "#;
-        let params = rusqlite::params![
+        let mut stmt = connection.prepare_cached(sql)?;
+        stmt.execute(rusqlite::params![
             payload.chatroom_id,
+            payload.latest_message_id,
             payload.time_updated,
             inner.name,
             members,
-        ];
-        transaction.execute(sql, params)?;
+        ])?;
         Ok(())
     }
 
     pub fn update(
-        transaction: &'_ Transaction,
+        connection: &'_ Connection,
         payload: crate::changelog::Chatroom,
     ) -> rusqlite::Result<()> {
         let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
         let mut row: super::Chatroom = payload.into();
 
         if let Some(latest_message_id) =
-            ChatroomService::select_column_by_id(transaction, &chatroom_id, "latest_message_id")?
+            ChatroomService::select_column_by_id(connection, &chatroom_id, "latest_message_id")?
         {
             row.latest_message_id = latest_message_id
         }
 
-        ChatroomService::save(transaction, row)
+        ChatroomService::save(connection, row)
     }
 
     fn select_column_by_id<T: FromSql>(
@@ -119,14 +120,11 @@ impl ChatroomService {
         column: &str,
     ) -> rusqlite::Result<Option<T>> {
         let sql = format!(
-            "SELECT {} FROM chatroom WHERE chatroom_id = ? LIMIT 1",
+            "SELECT {} FROM chatroom WHERE chatroom_id = ? LIMIT 1;",
             column
         );
-        super::unwrap_optional_row(connection.query_row(
-            &sql,
-            rusqlite::params![chatroom_id],
-            |row| row.get(0),
-        ))
+        let mut stmt = connection.prepare_cached(&sql)?;
+        super::unwrap_optional_row(stmt.query_row(rusqlite::params![chatroom_id], |row| row.get(0)))
     }
 }
 

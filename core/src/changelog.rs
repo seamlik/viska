@@ -4,25 +4,26 @@ use crate::database::chatroom::ChatroomService;
 use crate::database::message::MessageService;
 use crate::database::peer::PeerService;
 use changelog_payload::Content;
-use rusqlite::Transaction;
+use rusqlite::Connection;
 
 pub(crate) struct ChangelogMerger;
 
 impl ChangelogMerger {
     pub fn commit(
-        transaction: &'_ Transaction,
+        connection: &'_ Connection,
         payloads: impl Iterator<Item = ChangelogPayload>,
     ) -> rusqlite::Result<()> {
         for payload in payloads {
+            log::debug!("Committing {:?}", &payload.content);
             match payload.content {
                 Some(Content::AddChatroom(chatroom)) => {
-                    ChatroomService::update(transaction, chatroom)?;
+                    ChatroomService::update(connection, chatroom)?;
                 }
                 Some(Content::AddPeer(peer)) => {
-                    PeerService::save(transaction, peer)?;
+                    PeerService::save(connection, peer)?;
                 }
                 Some(Content::AddMessage(message)) => {
-                    MessageService::update(transaction, message)?;
+                    MessageService::update(connection, message)?;
                 }
                 None => todo!("Empty transaction payload"),
             }

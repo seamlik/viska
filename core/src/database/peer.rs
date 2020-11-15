@@ -1,10 +1,10 @@
-use rusqlite::Transaction;
+use rusqlite::Connection;
 
 pub struct PeerService;
 
 impl PeerService {
     pub fn save(
-        transaction: &'_ Transaction,
+        connection: &'_ Connection,
         payload: crate::changelog::Peer,
     ) -> rusqlite::Result<()> {
         let sql = r#"
@@ -12,10 +12,14 @@ impl PeerService {
                 account_id,
                 name,
                 role
-            ) VALUES (?);
+            ) VALUES (?1, ?2, ?3);
         "#;
-        let params = rusqlite::params![payload.account_id, payload.name, payload.role,];
-        transaction.execute(sql, params)?;
+        let mut stmt = connection.prepare_cached(sql)?;
+        stmt.execute(rusqlite::params![
+            payload.account_id,
+            payload.name,
+            payload.role
+        ])?;
         Ok(())
     }
 }

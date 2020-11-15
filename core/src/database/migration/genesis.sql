@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS message (
   chatroom_id     BLOB,
 
   -- changelog data
-  attachment      BLOB
-  attachment_mime TEXT
+  attachment      BLOB,
+  attachment_mime TEXT,
   content         TEXT,
   recipients      BLOB NOT NULL, -- Protobuf viska.database.BytesArray of account IDs
   sender          BLOB,

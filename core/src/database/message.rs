@@ -4,12 +4,12 @@ use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
 use prost::Message as _;
-use rusqlite::Transaction;
+use rusqlite::Connection;
 
 pub(crate) struct MessageService;
 
 impl MessageService {
-    fn save(transaction: &'_ Transaction, payload: super::Message) -> rusqlite::Result<()> {
+    fn save(connection: &'_ Connection, payload: super::Message) -> rusqlite::Result<()> {
         let inner = payload.inner.unwrap();
         let (attachment, attachment_mime) = inner
             .attachment
@@ -33,9 +33,10 @@ impl MessageService {
                 recipients,
                 sender,
                 time
-            ) VALUES (?);
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);
         "#;
-        let params = rusqlite::params![
+        let mut stmt = connection.prepare_cached(sql)?;
+        stmt.execute(rusqlite::params![
             payload.message_id,
             payload.chatroom_id,
             attachment,
@@ -44,17 +45,16 @@ impl MessageService {
             recipients,
             inner.sender,
             inner.time,
-        ];
-        transaction.execute(sql, params)?;
+        ])?;
         Ok(())
     }
 
     pub fn update(
-        transaction: &'_ Transaction,
+        connection: &'_ Connection,
         payload: crate::changelog::Message,
     ) -> rusqlite::Result<()> {
         // Update chatroom
-        ChatroomService::update_for_message(transaction, &payload)?;
+        ChatroomService::update_for_message(connection, &payload)?;
 
         // Update message
         let message_id = super::bytes_from_hash(payload.canonical_id());
@@ -64,7 +64,7 @@ impl MessageService {
             chatroom_id,
             inner: payload.into(),
         };
-        MessageService::save(transaction, message)?;
+        MessageService::save(connection, message)?;
         Ok(())
     }
 }

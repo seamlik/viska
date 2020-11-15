@@ -2,14 +2,14 @@ use super::Vcard;
 use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
-use rusqlite::Transaction;
+use rusqlite::Connection;
 use std::convert::AsRef;
 
 pub struct VcardService;
 
 impl VcardService {
     pub fn save(
-        transaction: &Transaction,
+        connection: &'_ Connection,
         vcards: impl Iterator<Item = Vcard>,
     ) -> rusqlite::Result<()> {
         let sql = r#"
@@ -19,24 +19,23 @@ impl VcardService {
                 name,
                 photo,
                 photo_mime
-            ) VALUES (?);
+            ) VALUES (?1, ?2, ?3, ?4, ?5);
         "#;
+        let mut stmt = connection.prepare_cached(sql)?;
+
         for vcard in vcards {
             let vcard_id = vcard.canonical_id();
             let (photo, photo_mime) = vcard
                 .photo
                 .map(|blob| (blob.content, blob.mime))
                 .unwrap_or_default();
-            transaction.execute(
-                sql,
-                rusqlite::params![
-                    vcard_id.as_bytes().as_ref(),
-                    &vcard.account_id,
-                    &vcard.name,
-                    photo,
-                    photo_mime
-                ],
-            )?;
+            stmt.execute(rusqlite::params![
+                vcard_id.as_bytes().as_ref(),
+                &vcard.account_id,
+                &vcard.name,
+                photo,
+                photo_mime
+            ])?;
         }
         Ok(())
     }
