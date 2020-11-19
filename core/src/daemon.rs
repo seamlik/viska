@@ -1,16 +1,9 @@
 tonic::include_proto!("viska.daemon");
 
-use crate::database::Chatroom;
-use crate::database::Message;
-use crate::database::Peer;
-use crate::database::TransactionPayload;
 use crate::endpoint::CertificateVerifier;
 use async_trait::async_trait;
 use node_client::NodeClient;
 use node_server::NodeServer;
-use platform_client::PlatformClient;
-use platform_server::Platform;
-use platform_server::PlatformServer;
 use std::error::Error;
 use std::sync::Arc;
 use tonic::body::BoxBody;
@@ -20,7 +13,6 @@ use tonic::transport::NamedService;
 use tonic::transport::Server;
 use tonic::Code;
 use tonic::Status;
-use tonic::Streaming;
 use tower::Service;
 
 trait GrpcService<S>
@@ -53,13 +45,6 @@ pub(crate) trait GrpcClient: Sized {
 }
 
 #[async_trait]
-impl GrpcClient for PlatformClient<Channel> {
-    async fn create(port: u16) -> Result<Self, tonic::transport::Error> {
-        Self::connect(format!("http://[::1]:{}", port)).await
-    }
-}
-
-#[async_trait]
 impl GrpcClient for NodeClient<Channel> {
     async fn create(port: u16) -> Result<Self, tonic::transport::Error> {
         Self::connect(format!("http://[::1]:{}", port)).await
@@ -85,72 +70,6 @@ impl<T: prost::Message> NullableResponse<T> for Result<tonic::Response<T>, Statu
                 }
             }
         }
-    }
-}
-
-/// [Platform] implementation without actual functionality for test purposes.
-pub struct DummyPlatform;
-
-impl<T: Platform> GrpcService<PlatformServer<T>> for DummyPlatform {}
-
-impl DummyPlatform {
-    /// Starts the gRPC server in the background and returns the port to access it.
-    pub fn start() -> u16 {
-        let port = crate::util::random_port();
-        Self::spawn_server(PlatformServer::new(Self), port);
-        port
-    }
-}
-
-#[async_trait]
-impl Platform for DummyPlatform {
-    async fn commit_transaction(
-        &self,
-        _: tonic::Request<Streaming<TransactionPayload>>,
-    ) -> Result<tonic::Response<()>, Status> {
-        log::info!("Committing a transaction");
-        Ok(tonic::Response::new(()))
-    }
-
-    async fn notify_message(
-        &self,
-        message_id: tonic::Request<Vec<u8>>,
-    ) -> Result<tonic::Response<()>, Status> {
-        log::info!(
-            "Received a message {}",
-            hex::encode_upper(message_id.get_ref())
-        );
-        Ok(tonic::Response::new(()))
-    }
-
-    async fn find_chatroom_by_id(
-        &self,
-        chatroom_id: tonic::Request<Vec<u8>>,
-    ) -> Result<tonic::Response<Chatroom>, Status> {
-        log::info!(
-            "Finding chatroom {}",
-            hex::encode_upper(chatroom_id.get_ref())
-        );
-        Ok(tonic::Response::new(Default::default()))
-    }
-
-    async fn find_peer_by_id(
-        &self,
-        peer_id: tonic::Request<Vec<u8>>,
-    ) -> Result<tonic::Response<Peer>, Status> {
-        log::info!("Finding peer {}", hex::encode_upper(peer_id.get_ref()));
-        Ok(tonic::Response::new(Default::default()))
-    }
-
-    async fn find_message_by_id(
-        &self,
-        message_id: tonic::Request<Vec<u8>>,
-    ) -> Result<tonic::Response<Message>, Status> {
-        log::info!(
-            "Finding message {}",
-            hex::encode_upper(message_id.get_ref())
-        );
-        Ok(tonic::Response::new(Default::default()))
     }
 }
 
