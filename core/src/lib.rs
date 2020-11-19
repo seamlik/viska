@@ -1,3 +1,4 @@
+#![feature(drain_filter)]
 #![feature(once_cell)]
 #![feature(proc_macro_hygiene)]
 
@@ -9,6 +10,7 @@ mod changelog;
 pub mod daemon;
 pub mod database;
 mod endpoint;
+pub(crate) mod event;
 mod handler;
 mod mock_profile;
 mod packet;
