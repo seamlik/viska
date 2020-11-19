@@ -1,7 +1,10 @@
 tonic::include_proto!("viska.daemon");
 
+use crate::database::Chatroom;
+use crate::database::Vcard;
 use crate::endpoint::CertificateVerifier;
 use async_trait::async_trait;
+use futures::channel::mpsc::Receiver;
 use node_client::NodeClient;
 use node_server::NodeServer;
 use std::error::Error;
@@ -93,6 +96,42 @@ impl node_server::Node for StandardNode {
         &self,
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<()>, Status> {
+        todo!()
+    }
+
+    type WatchVcardByIdStream = Receiver<Result<Vcard, Status>>;
+
+    async fn watch_vcard_by_id(
+        &self,
+        request: tonic::Request<Vec<u8>>,
+    ) -> Result<tonic::Response<Self::WatchVcardByIdStream>, Status> {
+        todo!()
+    }
+
+    type WatchChatroomMessagesStream = Receiver<Result<ChatroomMessagesSubscription, Status>>;
+
+    async fn watch_chatroom_messages(
+        &self,
+        request: tonic::Request<Vec<u8>>,
+    ) -> Result<tonic::Response<Self::WatchChatroomMessagesStream>, Status> {
+        todo!()
+    }
+
+    type WatchChatroomStream = Receiver<Result<Chatroom, Status>>;
+
+    async fn watch_chatroom(
+        &self,
+        request: tonic::Request<Vec<u8>>,
+    ) -> Result<tonic::Response<Self::WatchChatroomStream>, Status> {
+        todo!()
+    }
+
+    type WatchChatroomsStream = Receiver<Result<ChatroomsSubscription, Status>>;
+
+    async fn watch_chatrooms(
+        &self,
+        request: tonic::Request<()>,
+    ) -> Result<tonic::Response<Self::WatchChatroomsStream>, Status> {
         todo!()
     }
 }
