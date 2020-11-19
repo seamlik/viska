@@ -2,7 +2,6 @@ buildscript {
   ext {
     VERSIONS = [
       compose: '1.0.0-alpha07',
-      couchbaseLite: '2.8.0',
       grpcJava: '1.32.2',
       hilt: '2.29.1-alpha',
     ]

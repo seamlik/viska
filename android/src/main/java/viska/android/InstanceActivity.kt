@@ -22,7 +22,7 @@ abstract class InstanceActivity : AppCompatActivity() {
           "Launching an InstanceActivity is forbidden during account creation")
     }
 
-    if (!profileService.hasActiveAccount) {
+    if (profileService.accountId.isBlank()) {
       return
     }
 
@@ -38,7 +38,7 @@ abstract class InstanceActivity : AppCompatActivity() {
 
   /** Must be invoked by child classes at the earliest stage of [onCreate]. */
   protected fun cancelIfNoActiveAccount() {
-    if (!profileService.hasActiveAccount) {
+    if (profileService.accountId.isBlank()) {
       startActivity(Intent(this, NewProfileActivity::class.java))
       finish()
       return

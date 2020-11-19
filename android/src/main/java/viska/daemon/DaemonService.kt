@@ -15,7 +15,7 @@ class DaemonService @Inject constructor(profileService: ProfileService) : AutoCl
   val nodeGrpcServerHandle: Int
 
   init {
-    if (!profileService.hasActiveAccount) {
+    if (profileService.accountId.isBlank()) {
       throw IllegalStateException("Cannot start daemon without an active account")
     }
 

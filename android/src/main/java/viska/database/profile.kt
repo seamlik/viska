@@ -3,8 +3,6 @@ package viska.database
 import android.content.Context
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
-import com.couchbase.lite.Database
-import com.couchbase.lite.DatabaseConfiguration
 import dagger.Binds
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ActivityComponent
@@ -19,29 +17,6 @@ import org.bson.BsonString
 @Singleton
 class AndroidProfileService @Inject constructor(@ApplicationContext private val context: Context) :
     ProfileService {
-
-  private var _database = openDatabase(accountId)
-  override val database: Database
-    get() = _database ?: error("No active account")
-
-  private fun openDatabase(accountId: String): Database? {
-    val config =
-        if (accountId.isBlank()) {
-          null
-        } else {
-          DatabaseConfiguration().apply {
-            directory =
-                context
-                    .filesDir
-                    .toPath()
-                    .resolve("account")
-                    .resolve(accountId)
-                    .resolve("database")
-                    .toString()
-          }
-        }
-    return config?.let { Database("main", it) }
-  }
 
   override val accountId: String
     get() = PreferenceManager.getDefaultSharedPreferences(context).getString("active-account", "")!!
@@ -75,12 +50,7 @@ class AndroidProfileService @Inject constructor(@ApplicationContext private val 
       }
     }
 
-  override val hasActiveAccount
-    get() = _database != null
-
   override fun createProfile(mock: Boolean) {
-    _database?.run { close() }
-    _database = null
 
     val profileDir = BsonString(context.filesDir.toPath().resolve("account").toString())
     val accountIdText =
@@ -93,8 +63,6 @@ class AndroidProfileService @Inject constructor(@ApplicationContext private val 
     PreferenceManager.getDefaultSharedPreferences(context).edit(commit = true) {
       putString("active-account", accountIdText)
     }
-
-    _database = openDatabase(accountIdText)
   }
 }
 

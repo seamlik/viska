@@ -3,7 +3,6 @@ package viska.android
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import androidx.core.content.getSystemService
-import com.couchbase.lite.CouchbaseLite
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
@@ -14,7 +13,6 @@ class Application : android.app.Application() {
     System.loadLibrary("viska_android")
     viska_android.Module.initialize()
     initializeNotifications()
-    CouchbaseLite.init(this)
   }
 
   private fun initializeNotifications() {
