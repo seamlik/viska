@@ -26,6 +26,12 @@ service Node {
   rpc WatchChatroom(google.protobuf.BytesValue) returns (stream viska.database.Chatroom) {}
 
   rpc WatchChatrooms(google.protobuf.Empty) returns (stream ChatroomsSubscription) {}
+
+  rpc WatchRoster(google.protobuf.Empty) returns (stream Roster) {}
+}
+
+message Roster {
+  repeated viska.database.Peer roster = 1;
 }
 
 message ChatroomMessagesSubscription {

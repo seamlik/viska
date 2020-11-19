@@ -134,6 +134,15 @@ impl node_server::Node for StandardNode {
     ) -> Result<tonic::Response<Self::WatchChatroomsStream>, Status> {
         todo!()
     }
+
+    type WatchRosterStream = Receiver<Result<Roster, Status>>;
+
+    async fn watch_roster(
+        &self,
+        request: tonic::Request<()>,
+    ) -> Result<tonic::Response<Self::WatchRosterStream>, Status> {
+        todo!()
+    }
 }
 
 trait IntoTonicStatus {

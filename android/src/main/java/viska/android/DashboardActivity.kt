@@ -54,7 +54,6 @@ import viska.database.toBinaryId
 class DashboardActivity : InstanceActivity() {
 
   @Inject lateinit var daemonService: viska.daemon.DaemonService
-  @Inject lateinit var peerRepository: AndroidPeerRepository
 
   private val viewModel by viewModels<DashboardViewModel>()
 
@@ -69,7 +68,11 @@ class DashboardActivity : InstanceActivity() {
             .watchChatrooms(Empty.getDefaultInstance())
             .map { it.chatroomsList }
             .collectAsState(null)
-        val roster = peerRepository.watchRoster()
+        val roster by daemonService
+            .nodeGrpcClient
+            .watchRoster(Empty.getDefaultInstance())
+            .map { it.rosterList }
+            .collectAsState(null)
 
         Page(
             viewModel = viewModel,
@@ -80,7 +83,7 @@ class DashboardActivity : InstanceActivity() {
                     .watchVcardById(BytesValue.parseFrom(profileService.accountId.toBinaryId()))
                     .collectAsState(null),
             accountId = profileService.accountId,
-            roster = roster.collectAsState())
+            roster = roster ?: emptyList())
         ExitDialog(viewModel)
       }
     }
@@ -129,7 +132,7 @@ private fun PreviewPage() =
           emptyList(),
           mutableStateOf(null),
           "a94eb927fae20e2cbdf417ae3eb920a5423635af772e30e33be78e15a3876259",
-          mutableStateOf(emptyList()),
+          emptyList(),
       )
     }
 
@@ -139,7 +142,7 @@ private fun Page(
     chatrooms: List<Chatroom>,
     vcard: State<Vcard?>,
     accountId: String,
-    roster: State<List<Peer>>
+    roster: List<Peer>
 ) {
   val drawerState = rememberDrawerState(DrawerValue.Closed)
   ModalDrawerLayout(
@@ -154,8 +157,7 @@ private fun Page(
           when (viewModel.screen) {
             DashboardViewModel.Screen.CHATROOMS ->
                 LazyColumnFor(items = chatrooms) { ChatroomItem(it) }
-            DashboardViewModel.Screen.ROSTER ->
-                LazyColumnFor(items = roster.value) { RosterItem(it) }
+            DashboardViewModel.Screen.ROSTER -> LazyColumnFor(items = roster) { RosterItem(it) }
           }
         }
       })
