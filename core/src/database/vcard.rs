@@ -1,14 +1,20 @@
-use super::Vcard;
+use crate::changelog::Vcard;
+use crate::event::Event;
 use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
+use futures::channel::mpsc::UnboundedSender;
 use rusqlite::Connection;
 use std::convert::AsRef;
 
-pub struct VcardService;
+#[derive(Default)]
+pub struct VcardService {
+    pub event_sink: Option<UnboundedSender<Event>>,
+}
 
 impl VcardService {
     pub fn save(
+        &self,
         connection: &'_ Connection,
         vcards: impl Iterator<Item = Vcard>,
     ) -> rusqlite::Result<()> {
@@ -36,12 +42,31 @@ impl VcardService {
                 photo,
                 photo_mime
             ])?;
+            if let Some(sink) = &self.event_sink {
+                let _ = sink.unbounded_send(Event::Vcard {
+                    account_id: vcard.account_id.clone(),
+                });
+            }
         }
         Ok(())
     }
+
+    pub fn find_by_account_id(
+        connection: &'_ Connection,
+        account_id: &[u8],
+    ) -> rusqlite::Result<Option<crate::daemon::Vcard>> {
+        let mut stmt = connection
+            .prepare_cached("SELECT account_id, name FROM vcard WHERE account_id = ?;")?;
+        super::unwrap_optional_row(stmt.query_row(rusqlite::params![&account_id], |row| {
+            Ok(crate::daemon::Vcard {
+                account_id: row.get("account_id")?,
+                name: row.get("name")?,
+            })
+        }))
+    }
 }
 
-impl CanonicalId for super::Vcard {
+impl CanonicalId for crate::changelog::Vcard {
     fn canonical_id(&self) -> Hash {
         let mut hasher = Hasher::default();
 

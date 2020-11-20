@@ -20,6 +20,7 @@ pub mod util;
 
 use crate::database::Database;
 use crate::endpoint::CertificateVerifier;
+use crate::event::EventBus;
 use blake3::Hash;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
@@ -115,8 +116,16 @@ impl Node {
 
         let database = Arc::new(Database::create(database_config)?);
 
+        let (event_bus, event_task) = EventBus::new();
+        tokio::spawn(event_task);
+
         // Start gRPC server
-        daemon::StandardNode::start(certificate_verifier.clone(), node_grpc_port)?;
+        daemon::StandardNode::start(
+            certificate_verifier.clone(),
+            node_grpc_port,
+            event_bus.into(),
+            database.clone(),
+        )?;
 
         let config = endpoint::Config { certificate, key };
         let (window_sender, window_receiver) =

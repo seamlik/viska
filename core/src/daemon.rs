@@ -1,12 +1,20 @@
 tonic::include_proto!("viska.daemon");
 
+use crate::database::vcard::VcardService;
 use crate::database::Chatroom;
-use crate::database::Vcard;
+use crate::database::Database;
 use crate::endpoint::CertificateVerifier;
+use crate::event::Event;
+use crate::event::EventBus;
 use async_trait::async_trait;
 use futures::channel::mpsc::Receiver;
+use futures::channel::mpsc::TrySendError;
+use futures::channel::mpsc::UnboundedReceiver;
+use futures::channel::mpsc::UnboundedSender;
+use futures::prelude::*;
 use node_client::NodeClient;
 use node_server::NodeServer;
+use rusqlite::Connection;
 use std::error::Error;
 use std::sync::Arc;
 use tonic::body::BoxBody;
@@ -78,15 +86,43 @@ impl<T: prost::Message> NullableResponse<T> for Result<tonic::Response<T>, Statu
 
 pub(crate) struct StandardNode {
     verifier: Arc<CertificateVerifier>,
+    event_bus: Arc<EventBus<Event>>,
+    database: Arc<Database>,
 }
 
 impl<T: node_server::Node> GrpcService<NodeServer<T>> for StandardNode {}
 
 impl StandardNode {
-    pub fn start(verifier: Arc<CertificateVerifier>, node_grpc_port: u16) -> rusqlite::Result<()> {
-        let instance = Self { verifier };
+    pub fn start(
+        verifier: Arc<CertificateVerifier>,
+        node_grpc_port: u16,
+        event_bus: Arc<EventBus<Event>>,
+        database: Arc<Database>,
+    ) -> rusqlite::Result<()> {
+        let instance = Self {
+            verifier,
+            event_bus,
+            database,
+        };
         Self::spawn_server(NodeServer::new(instance), node_grpc_port);
         Ok(())
+    }
+
+    fn run_query<Q, T>(
+        database: Arc<Database>,
+        sender: UnboundedSender<Result<T, Status>>,
+        query: Q,
+    ) -> Result<(), TrySendError<Result<T, Status>>>
+    where
+        T: Default,
+        Q: FnOnce(&'_ Connection) -> rusqlite::Result<Option<T>>,
+    {
+        let connection = database.connection.lock().unwrap();
+        let queried = query(&connection)
+            .map_err(IntoTonicStatus::into_tonic_status)
+            .map(Option::unwrap_or_default);
+        drop(connection);
+        sender.unbounded_send(queried)
     }
 }
 
@@ -99,13 +135,37 @@ impl node_server::Node for StandardNode {
         todo!()
     }
 
-    type WatchVcardByIdStream = Receiver<Result<Vcard, Status>>;
+    type WatchVcardStream = UnboundedReceiver<Result<Vcard, Status>>;
 
-    async fn watch_vcard_by_id(
+    async fn watch_vcard(
         &self,
         request: tonic::Request<Vec<u8>>,
-    ) -> Result<tonic::Response<Self::WatchVcardByIdStream>, Status> {
-        todo!()
+    ) -> Result<tonic::Response<Self::WatchVcardStream>, Status> {
+        let (sender, receiver) = futures::channel::mpsc::unbounded::<Result<Vcard, Status>>();
+        let database = self.database.clone();
+        let mut subscription = self.event_bus.subscribe();
+        tokio::spawn(async move {
+            let account_id = request.into_inner();
+            if let Err(_) = Self::run_query(database.clone(), sender.clone(), |connection| {
+                VcardService::find_by_account_id(connection, &account_id)
+            }) {
+                return;
+            }
+
+            while let Some(event) = subscription.next().await {
+                if let Event::Vcard { account_id } = event.as_ref() {
+                    if let Err(_) =
+                        Self::run_query(database.clone(), sender.clone(), |connection| {
+                            VcardService::find_by_account_id(connection, &account_id)
+                        })
+                    {
+                        return;
+                    }
+                }
+            }
+        });
+
+        Ok(tonic::Response::new(receiver))
     }
 
     type WatchChatroomMessagesStream = Receiver<Result<ChatroomMessagesSubscription, Status>>;

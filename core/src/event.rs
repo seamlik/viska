@@ -53,3 +53,7 @@ impl<T> EventBus<T> {
         (this, task)
     }
 }
+
+pub enum Event {
+    Vcard { account_id: Vec<u8> },
+}

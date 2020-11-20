@@ -168,6 +168,7 @@ pub fn create_mock_profile(base_data_dir: PathBuf) -> Result<String, CreateProfi
     let mock_profile_service = MockProfileService {
         account_id,
         database: database.into(),
+        vcard_service: Default::default(),
     };
     mock_profile_service.populate_mock_data()?;
     Ok(account_id_text)

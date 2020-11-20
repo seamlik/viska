@@ -19,7 +19,7 @@ service Node {
   // in this list are allowed to connect with the Node.
   rpc UpdatePeerWhitelist(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
-  rpc WatchVcardById(google.protobuf.BytesValue) returns (stream viska.database.Vcard) {}
+  rpc WatchVcard(google.protobuf.BytesValue) returns (stream Vcard) {}
 
   rpc WatchChatroomMessages(google.protobuf.BytesValue) returns (stream ChatroomMessagesSubscription) {}
 
@@ -40,4 +40,9 @@ message ChatroomMessagesSubscription {
 
 message ChatroomsSubscription {
   repeated viska.database.Chatroom chatrooms = 1;
+}
+
+message Vcard {
+  bytes account_id = 1;
+  string name = 2;
 }

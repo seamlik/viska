@@ -26,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,10 +43,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.flow.map
 import viska.changelog.Changelog
-import viska.couchbase.AndroidPeerRepository
+import viska.daemon.Daemon.Vcard
 import viska.database.Database.Chatroom
 import viska.database.Database.Peer
-import viska.database.Database.Vcard
 import viska.database.toBinaryId
 
 @AndroidEntryPoint
@@ -63,6 +61,10 @@ class DashboardActivity : InstanceActivity() {
 
     setContent {
       MaterialTheme {
+        val vcard by daemonService
+            .nodeGrpcClient
+            .watchVcard(BytesValue.parseFrom(profileService.accountId.toBinaryId()))
+            .collectAsState(null)
         val chatrooms by daemonService
             .nodeGrpcClient
             .watchChatrooms(Empty.getDefaultInstance())
@@ -77,11 +79,7 @@ class DashboardActivity : InstanceActivity() {
         Page(
             viewModel = viewModel,
             chatrooms = chatrooms ?: emptyList(),
-            vcard =
-                daemonService
-                    .nodeGrpcClient
-                    .watchVcardById(BytesValue.parseFrom(profileService.accountId.toBinaryId()))
-                    .collectAsState(null),
+            vcard = vcard,
             accountId = profileService.accountId,
             roster = roster ?: emptyList())
         ExitDialog(viewModel)
@@ -130,7 +128,7 @@ private fun PreviewPage() =
       Page(
           DashboardViewModel(),
           emptyList(),
-          mutableStateOf(null),
+          null,
           "a94eb927fae20e2cbdf417ae3eb920a5423635af772e30e33be78e15a3876259",
           emptyList(),
       )
@@ -140,7 +138,7 @@ private fun PreviewPage() =
 private fun Page(
     viewModel: DashboardViewModel,
     chatrooms: List<Chatroom>,
-    vcard: State<Vcard?>,
+    vcard: Vcard?,
     accountId: String,
     roster: List<Peer>
 ) {
@@ -188,14 +186,14 @@ private fun PreviewDrawerContent() {
     DrawerContent(
         DashboardViewModel(),
         rememberDrawerState(DrawerValue.Closed),
-        mutableStateOf(null),
+        null,
         "a94eb927fae20e2cbdf417ae3eb920a5423635af772e30e33be78e15a3876259")
   }
 }
 
 @Composable
 private fun DrawerContent(
-    viewModel: DashboardViewModel, drawerState: DrawerState, vcard: State<Vcard?>, accountId: String
+    viewModel: DashboardViewModel, drawerState: DrawerState, vcard: Vcard?, accountId: String
 ) {
   Column {
 
@@ -205,7 +203,7 @@ private fun DrawerContent(
           Text(
               style = MaterialTheme.typography.h4,
               maxLines = 1,
-              text = vcard.value?.name ?: stringResource(R.string.unknown_account))
+              text = vcard?.name ?: stringResource(R.string.unknown_account))
         })
     ListItem(
         text = { Text(style = MaterialTheme.typography.body1, maxLines = 1, text = accountId) })

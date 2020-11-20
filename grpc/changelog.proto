@@ -49,3 +49,9 @@ enum PeerRole {
   // Peer in the roster.
   FRIEND = 1;
 }
+
+message Vcard {
+  bytes account_id = 1;
+  string name = 2;
+  viska.changelog.Blob photo = 3;
+}

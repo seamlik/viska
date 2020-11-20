@@ -3,9 +3,9 @@ use crate::changelog::ChangelogPayload;
 use crate::changelog::Message;
 use crate::changelog::Peer;
 use crate::changelog::PeerRole;
+use crate::changelog::Vcard;
 use crate::database::vcard::VcardService;
 use crate::database::Database;
-use crate::database::Vcard;
 use blake3::Hash;
 use chrono::prelude::*;
 use chrono::Duration;
@@ -21,6 +21,7 @@ use std::sync::Arc;
 pub(crate) struct MockProfileService {
     pub database: Arc<Database>,
     pub account_id: Hash,
+    pub vcard_service: Arc<VcardService>,
 }
 
 impl MockProfileService {
@@ -43,7 +44,7 @@ impl MockProfileService {
         let transaction = sqlite.transaction()?;
 
         log::info!("Committing the mock Vcards as a transaction");
-        VcardService::save(&transaction, vcards.into_iter())?;
+        self.vcard_service.save(&transaction, vcards.into_iter())?;
 
         log::info!("Merging changelog generated from `mock_profile`");
         ChangelogMerger::commit(&transaction, changelog.into_iter())?;
