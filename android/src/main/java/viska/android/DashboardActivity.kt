@@ -42,10 +42,9 @@ import com.google.protobuf.Empty
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.flow.map
-import viska.changelog.Changelog
+import viska.daemon.Daemon.RosterItem
 import viska.daemon.Daemon.Vcard
 import viska.database.Database.Chatroom
-import viska.database.Database.Peer
 import viska.database.toBinaryId
 
 @AndroidEntryPoint
@@ -140,7 +139,7 @@ private fun Page(
     chatrooms: List<Chatroom>,
     vcard: Vcard?,
     accountId: String,
-    roster: List<Peer>
+    roster: List<RosterItem>
 ) {
   val drawerState = rememberDrawerState(DrawerValue.Closed)
   ModalDrawerLayout(
@@ -273,16 +272,15 @@ private fun ChatroomItem(data: Chatroom) {
 @Preview
 @Composable
 private fun PreviewRosterItem() {
-  val inner = Changelog.Peer.newBuilder().setName("A friend").build()
-  val peer = Peer.newBuilder().setInner(inner).build()
-  RosterItem(peer)
+  val data = RosterItem.newBuilder().setName("A friend").build()
+  RosterItem(data)
 }
 
 @Composable
-private fun RosterItem(peer: Peer) {
+private fun RosterItem(item: RosterItem) {
   ListItem(
       modifier = Modifier.clickable(onClick = {}),
       icon = { Image(asset = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
-      text = { Text(maxLines = 1, text = peer.inner.name) },
+      text = { Text(maxLines = 1, text = item.name) },
   )
 }

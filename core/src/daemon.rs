@@ -1,5 +1,6 @@
 tonic::include_proto!("viska.daemon");
 
+use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
 use crate::database::Chatroom;
 use crate::database::Database;
@@ -114,15 +115,44 @@ impl StandardNode {
         query: Q,
     ) -> Result<(), TrySendError<Result<T, Status>>>
     where
-        T: Default,
-        Q: FnOnce(&'_ Connection) -> rusqlite::Result<Option<T>>,
+        Q: FnOnce(&'_ Connection) -> rusqlite::Result<T>,
     {
         let connection = database.connection.lock().unwrap();
-        let queried = query(&connection)
-            .map_err(IntoTonicStatus::into_tonic_status)
-            .map(Option::unwrap_or_default);
+        let queried = query(&connection).map_err(IntoTonicStatus::into_tonic_status);
         drop(connection);
         sender.unbounded_send(queried)
+    }
+
+    fn run_subscription<F, T, Q>(
+        &self,
+        event_filter: F,
+        query: Q,
+    ) -> Result<tonic::Response<UnboundedReceiver<Result<T, Status>>>, Status>
+    where
+        F: FnOnce(&Event) -> bool + Send + Clone + 'static,
+        T: Send + 'static,
+        Q: FnOnce(&'_ Connection) -> rusqlite::Result<T> + Send + Clone + 'static,
+    {
+        let (sender, receiver) = futures::channel::mpsc::unbounded::<Result<T, Status>>();
+        let database = self.database.clone();
+        let mut subscription = self.event_bus.subscribe();
+        tokio::spawn(async move {
+            if let Err(_) = Self::run_query(database.clone(), sender.clone(), query.clone()) {
+                return;
+            }
+
+            while let Some(event) = subscription.next().await {
+                let filter = event_filter.clone();
+                if filter(&event) {
+                    if let Err(_) = Self::run_query(database.clone(), sender.clone(), query.clone())
+                    {
+                        return;
+                    }
+                }
+            }
+        });
+
+        Ok(tonic::Response::new(receiver))
     }
 }
 
@@ -141,31 +171,23 @@ impl node_server::Node for StandardNode {
         &self,
         request: tonic::Request<Vec<u8>>,
     ) -> Result<tonic::Response<Self::WatchVcardStream>, Status> {
-        let (sender, receiver) = futures::channel::mpsc::unbounded::<Result<Vcard, Status>>();
-        let database = self.database.clone();
-        let mut subscription = self.event_bus.subscribe();
-        tokio::spawn(async move {
-            let account_id = request.into_inner();
-            if let Err(_) = Self::run_query(database.clone(), sender.clone(), |connection| {
-                VcardService::find_by_account_id(connection, &account_id)
-            }) {
-                return;
-            }
-
-            while let Some(event) = subscription.next().await {
-                if let Event::Vcard { account_id } = event.as_ref() {
-                    if let Err(_) =
-                        Self::run_query(database.clone(), sender.clone(), |connection| {
-                            VcardService::find_by_account_id(connection, &account_id)
-                        })
-                    {
-                        return;
-                    }
+        let requested_account_id = request.into_inner();
+        let requested_account_id_for_filter = requested_account_id.clone();
+        self.run_subscription(
+            |event| {
+                let requested_account_id_for_filter = requested_account_id_for_filter;
+                if let Event::Vcard { account_id } = event {
+                    account_id == &requested_account_id_for_filter
+                } else {
+                    false
                 }
-            }
-        });
-
-        Ok(tonic::Response::new(receiver))
+            },
+            move |connection| {
+                let requested_account_id = requested_account_id;
+                VcardService::find_by_account_id(connection, &requested_account_id)
+                    .map(Option::unwrap_or_default)
+            },
+        )
     }
 
     type WatchChatroomMessagesStream = Receiver<Result<ChatroomMessagesSubscription, Status>>;
@@ -195,13 +217,22 @@ impl node_server::Node for StandardNode {
         todo!()
     }
 
-    type WatchRosterStream = Receiver<Result<Roster, Status>>;
+    type WatchRosterStream = UnboundedReceiver<Result<Roster, Status>>;
 
     async fn watch_roster(
         &self,
-        request: tonic::Request<()>,
+        _: tonic::Request<()>,
     ) -> Result<tonic::Response<Self::WatchRosterStream>, Status> {
-        todo!()
+        self.run_subscription(
+            |event| {
+                if let Event::Roster = event {
+                    true
+                } else {
+                    false
+                }
+            },
+            move |connection| PeerService::roster(connection),
+        )
     }
 }
 

@@ -47,7 +47,7 @@ impl MockProfileService {
         self.vcard_service.save(&transaction, vcards.into_iter())?;
 
         log::info!("Merging changelog generated from `mock_profile`");
-        ChangelogMerger::commit(&transaction, changelog.into_iter())?;
+        ChangelogMerger::default().commit(&transaction, changelog.into_iter())?;
 
         transaction.commit()?;
         Ok(())

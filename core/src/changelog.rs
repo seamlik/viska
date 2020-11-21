@@ -5,11 +5,16 @@ use crate::database::message::MessageService;
 use crate::database::peer::PeerService;
 use changelog_payload::Content;
 use rusqlite::Connection;
+use std::sync::Arc;
 
-pub(crate) struct ChangelogMerger;
+#[derive(Default)]
+pub(crate) struct ChangelogMerger {
+    pub peer_service: Arc<PeerService>,
+}
 
 impl ChangelogMerger {
     pub fn commit(
+        &self,
         connection: &'_ Connection,
         payloads: impl Iterator<Item = ChangelogPayload>,
     ) -> rusqlite::Result<()> {
@@ -20,7 +25,7 @@ impl ChangelogMerger {
                     ChatroomService::update(connection, chatroom)?;
                 }
                 Some(Content::AddPeer(peer)) => {
-                    PeerService::save(connection, peer)?;
+                    self.peer_service.save(connection, peer)?;
                 }
                 Some(Content::AddMessage(message)) => {
                     MessageService::update(connection, message)?;

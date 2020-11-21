@@ -31,7 +31,11 @@ service Node {
 }
 
 message Roster {
-  repeated viska.database.Peer roster = 1;
+  repeated RosterItem roster = 1;
+}
+
+message RosterItem {
+  string name = 1;
 }
 
 message ChatroomMessagesSubscription {

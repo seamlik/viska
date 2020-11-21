@@ -1,3 +1,4 @@
+use super::peer::PeerService;
 use crate::changelog::Vcard;
 use crate::event::Event;
 use crate::pki::CanonicalId;
@@ -42,10 +43,17 @@ impl VcardService {
                 photo,
                 photo_mime
             ])?;
+
+            // Publish events
             if let Some(sink) = &self.event_sink {
-                let _ = sink.unbounded_send(Event::Vcard {
+                if let Err(_) = sink.unbounded_send(Event::Vcard {
                     account_id: vcard.account_id.clone(),
-                });
+                }) {
+                    continue;
+                }
+                if PeerService::is_in_roster(connection, &vcard.account_id)? {
+                    let _ = sink.unbounded_send(Event::Roster);
+                }
             }
         }
         Ok(())
@@ -56,7 +64,7 @@ impl VcardService {
         account_id: &[u8],
     ) -> rusqlite::Result<Option<crate::daemon::Vcard>> {
         let mut stmt = connection
-            .prepare_cached("SELECT account_id, name FROM vcard WHERE account_id = ?;")?;
+            .prepare_cached("SELECT account_id, name FROM vcard WHERE account_id = ? LIMIT 1;")?;
         super::unwrap_optional_row(stmt.query_row(rusqlite::params![&account_id], |row| {
             Ok(crate::daemon::Vcard {
                 account_id: row.get("account_id")?,

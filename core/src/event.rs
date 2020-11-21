@@ -55,5 +55,6 @@ impl<T> EventBus<T> {
 }
 
 pub enum Event {
+    Roster,
     Vcard { account_id: Vec<u8> },
 }
