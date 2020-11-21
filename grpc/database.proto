@@ -6,13 +6,6 @@ package viska.database;
 
 import "changelog.proto";
 
-message TransactionPayload {
-  oneof content {
-    Message add_message = 3;
-    Chatroom add_chatroom = 4;
-  }
-}
-
 message Message {
   viska.changelog.Message inner = 1;
   bytes message_id = 2;

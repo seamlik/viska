@@ -7,7 +7,7 @@
 pub mod bridge;
 
 mod changelog;
-pub mod daemon;
+mod daemon;
 pub mod database;
 mod endpoint;
 pub(crate) mod event;
