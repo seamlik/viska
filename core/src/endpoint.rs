@@ -208,15 +208,20 @@ impl ConnectionManager {
 
 pub struct CertificateVerifier {
     pub account_id: Hash,
-    pub peer_whitelist: RwLock<HashSet<Hash>>,
-    pub enabled: bool,
+    peer_whitelist: RwLock<HashSet<Vec<u8>>>,
+    peer_blacklist: RwLock<HashSet<Vec<u8>>>,
 }
 
 impl CertificateVerifier {
-    fn verify(&self, presented_certs: &[rustls::Certificate]) -> Result<(), TLSError> {
-        if !self.enabled {
-            return Ok(());
+    pub fn new(account_id: Hash) -> Self {
+        Self {
+            account_id,
+            peer_whitelist: Default::default(),
+            peer_blacklist: Default::default(),
         }
+    }
+
+    fn verify(&self, presented_certs: &[rustls::Certificate]) -> Result<(), TLSError> {
         // TODO: Check expiration
         match presented_certs {
             [cert] => {
@@ -236,7 +241,27 @@ impl CertificateVerifier {
     }
 
     fn peer_is_allowed(&self, id: Hash) -> bool {
-        self.peer_whitelist.read().unwrap().contains(&id)
+        let id_bytes = crate::database::bytes_from_hash(id);
+        let whitelist = self.peer_whitelist.read().unwrap();
+        if !whitelist.is_empty() && whitelist.contains(&id_bytes) {
+            true
+        } else {
+            !self.peer_blacklist.read().unwrap().contains(&id_bytes)
+        }
+    }
+
+    pub fn set_rules(
+        &self,
+        peer_whitelist: impl IntoIterator<Item = Vec<u8>>,
+        peer_blacklist: impl IntoIterator<Item = Vec<u8>>,
+    ) {
+        let mut whitelist = self.peer_whitelist.write().unwrap();
+        whitelist.clear();
+        whitelist.extend(peer_whitelist);
+
+        let mut blacklist = self.peer_blacklist.write().unwrap();
+        blacklist.clear();
+        blacklist.extend(peer_blacklist);
     }
 }
 

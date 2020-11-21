@@ -1,13 +1,16 @@
 use crate::changelog::PeerRole;
 use crate::daemon::Roster;
 use crate::daemon::RosterItem;
+use crate::endpoint::CertificateVerifier;
 use crate::event::Event;
 use futures::channel::mpsc::UnboundedSender;
 use rusqlite::Connection;
+use std::sync::Arc;
 
 #[derive(Default)]
 pub struct PeerService {
     pub event_sink: Option<UnboundedSender<Event>>,
+    pub verifier: Option<Arc<CertificateVerifier>>,
 }
 
 impl PeerService {
@@ -35,7 +38,31 @@ impl PeerService {
             let _ = sink.unbounded_send(Event::Roster);
         }
 
+        // Update certificate verifier rules
+        if let Some(verifier) = &self.verifier {
+            let blacklist = Self::blacklist(connection)?;
+            log::info!(
+                "Updating certificate blacklist to: {:?}",
+                blacklist
+                    .iter()
+                    .map(|id| hex::encode_upper(id))
+                    .collect::<Vec<_>>()
+            );
+            verifier.set_rules(std::iter::empty(), blacklist)
+        }
+
         Ok(())
+    }
+
+    pub fn blacklist(connection: &'_ Connection) -> rusqlite::Result<Vec<Vec<u8>>> {
+        let blocked_i32: i32 = PeerRole::Blocked.into();
+        connection
+            .prepare_cached("SELECT account_id FROM peer WHERE role = ?")?
+            .query_map(rusqlite::params![blocked_i32], |row| {
+                let result: Vec<u8> = row.get(0)?;
+                Ok(result)
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()
     }
 
     pub fn roster(connection: &'_ Connection) -> rusqlite::Result<Roster> {

@@ -10,15 +10,6 @@ import "google/protobuf/wrappers.proto";
 
 // Represents a Node
 service Node {
-  // Updates the peer whitelist.
-  //
-  // The Node will starts fetching whatever data it needs from the Platform and calculates a new
-  // peer whitelist.
-  //
-  // This list will be used when verifying the peer certificate of a TLS connection. Only peers
-  // in this list are allowed to connect with the Node.
-  rpc UpdatePeerWhitelist(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-
   rpc WatchVcard(google.protobuf.BytesValue) returns (stream Vcard) {}
 
   rpc WatchChatroomMessages(google.protobuf.BytesValue) returns (stream ChatroomMessagesSubscription) {}

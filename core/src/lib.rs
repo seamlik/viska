@@ -18,6 +18,7 @@ pub mod pki;
 pub mod proto;
 pub mod util;
 
+use crate::database::peer::PeerService;
 use crate::database::Database;
 use crate::endpoint::CertificateVerifier;
 use crate::event::EventBus;
@@ -72,7 +73,6 @@ pub fn start(
         &certificate,
         &key,
         node_grpc_port,
-        true,
         Default::default(),
     ))?;
     NODES.lock().unwrap().insert(handle, node);
@@ -104,28 +104,22 @@ impl Node {
         certificate: &[u8],
         key: &[u8],
         node_grpc_port: u16,
-        enable_certificate_verification: bool,
         database_config: database::Config,
     ) -> Result<(Self, JoinHandle<()>), EndpointError> {
         let account_id = certificate.canonical_id();
-        let certificate_verifier = Arc::new(CertificateVerifier {
-            enabled: enable_certificate_verification,
-            account_id,
-            peer_whitelist: Default::default(),
-        });
-
         let database = Arc::new(Database::create(database_config)?);
 
         let (event_bus, event_task) = EventBus::new();
         tokio::spawn(event_task);
 
+        let certificate_verifier: Arc<_> = CertificateVerifier::new(account_id).into();
+        certificate_verifier.set_rules(
+            std::iter::empty(),
+            PeerService::blacklist(&database.connection.lock().unwrap())?,
+        );
+
         // Start gRPC server
-        daemon::StandardNode::start(
-            certificate_verifier.clone(),
-            node_grpc_port,
-            event_bus.into(),
-            database.clone(),
-        )?;
+        daemon::StandardNode::start(node_grpc_port, event_bus.into(), database.clone())?;
 
         let config = endpoint::Config { certificate, key };
         let (window_sender, window_receiver) =

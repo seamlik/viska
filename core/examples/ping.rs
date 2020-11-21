@@ -22,7 +22,6 @@ async fn main() -> anyhow::Result<()> {
         &dummy_cert_bundle.certificate,
         &dummy_cert_bundle.key,
         node_grpc_port,
-        false,
         Default::default(),
     )
     .await?;

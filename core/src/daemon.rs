@@ -4,7 +4,6 @@ use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
 use crate::database::Chatroom;
 use crate::database::Database;
-use crate::endpoint::CertificateVerifier;
 use crate::event::Event;
 use crate::event::EventBus;
 use async_trait::async_trait;
@@ -86,7 +85,6 @@ impl<T: prost::Message> NullableResponse<T> for Result<tonic::Response<T>, Statu
 }
 
 pub(crate) struct StandardNode {
-    verifier: Arc<CertificateVerifier>,
     event_bus: Arc<EventBus<Event>>,
     database: Arc<Database>,
 }
@@ -95,13 +93,11 @@ impl<T: node_server::Node> GrpcService<NodeServer<T>> for StandardNode {}
 
 impl StandardNode {
     pub fn start(
-        verifier: Arc<CertificateVerifier>,
         node_grpc_port: u16,
         event_bus: Arc<EventBus<Event>>,
         database: Arc<Database>,
     ) -> rusqlite::Result<()> {
         let instance = Self {
-            verifier,
             event_bus,
             database,
         };
@@ -158,13 +154,6 @@ impl StandardNode {
 
 #[async_trait]
 impl node_server::Node for StandardNode {
-    async fn update_peer_whitelist(
-        &self,
-        _: tonic::Request<()>,
-    ) -> Result<tonic::Response<()>, Status> {
-        todo!()
-    }
-
     type WatchVcardStream = UnboundedReceiver<Result<Vcard, Status>>;
 
     async fn watch_vcard(
