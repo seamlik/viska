@@ -7,12 +7,12 @@ sourceCompatibility = 8
 dependencies {
   api "io.grpc:grpc-stub:${VERSIONS.grpcJava}"
   api 'com.google.protobuf:protobuf-java:3.13.0'
-  api 'io.grpc:grpc-kotlin-stub:0.2.0'
+  api "io.grpc:grpc-kotlin-stub:${VERSIONS.grpcKotlin}"
   api 'javax.inject:javax.inject:1'
   implementation "io.grpc:grpc-protobuf:${VERSIONS.grpcJava}"
   implementation 'commons-codec:commons-codec:1.15'
   implementation 'javax.annotation:javax.annotation-api:1.3.2'
-  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.0-M1'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2'
 }
 
 sourceSets {
@@ -38,7 +38,7 @@ protobuf {
       artifact = "io.grpc:protoc-gen-grpc-java:${VERSIONS.grpcJava}"
     }
     grpckt {
-      artifact = 'io.grpc:protoc-gen-grpc-kotlin:0.2.0:jdk7@jar'
+      artifact = "io.grpc:protoc-gen-grpc-kotlin:${VERSIONS.grpcKotlin}:jdk7@jar"
     }
   }
   generateProtoTasks {

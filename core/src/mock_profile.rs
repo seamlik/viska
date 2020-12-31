@@ -91,7 +91,7 @@ pub fn populate_data(account_id: &Vec<u8>) -> (Vec<Vcard>, Vec<ChangelogPayload>
 fn random_messages(account_id: &Vec<u8>, friends: &[Vcard]) -> Message {
     let mut rng = thread_rng();
 
-    let content = match rng.gen_range(1, 6) {
+    let content = match rng.gen_range(1..6) {
         4 => Paragraphs(1..2).fake::<Vec<String>>().into_iter().join(" "),
         5 => Paragraphs(2..3).fake::<Vec<String>>().into_iter().join(" "),
         n => Sentences(1..(n + 1))
@@ -104,7 +104,7 @@ fn random_messages(account_id: &Vec<u8>, friends: &[Vcard]) -> Message {
         friends.iter().map(|vcard| &vcard.account_id).collect();
     chatroom_members.push(account_id);
 
-    let num_recipients = rng.gen_range(2, 5);
+    let num_recipients = rng.gen_range(2..5);
     let recipients: Vec<_> = chatroom_members
         .choose_multiple(&mut rng, num_recipients)
         .cloned()
@@ -149,7 +149,7 @@ fn random_time() -> f64 {
     let mut rng = rand::thread_rng();
     let offset = Duration::days(365 * 100).num_seconds();
     loop {
-        let time = rng.gen_range(-offset, offset);
+        let time = rng.gen_range(-offset..offset);
         let result = Utc.timestamp_opt(time, 0);
         if let LocalResult::Single(datetime) = result {
             break crate::database::float_from_time(datetime);

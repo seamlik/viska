@@ -12,16 +12,15 @@ targets = ["jni"]
 async-trait = "0.1"
 chrono = "0.4"
 blake3 = { version = "0.3", features = ["pure"] }
-bytes = "0.6"
 fake = "2"
 futures = "0.3"
 hex = "0.4"
 http = "0"
-itertools = "0.9"
+itertools = "0.10"
 jni = "0.18"
 log = "0.4"
 quinn = "0.6.1"
-rand = "0.7"
+rand = "0.8"
 rcgen = "=0.8.0" # Bug generating bad DER format
 riko = { git = "https://github.com/seamlik/riko" }
 riko_runtime = { git = "https://github.com/seamlik/riko", features = ["riko_jni"] }
@@ -34,7 +33,7 @@ prost = "0.6"
 prost-types = "0.6"
 thiserror = "1"
 tokio = { version = "0.2", features = ["full"] }
-tower = "0.3"
+tower = "*"
 uuid = { version = "0", features = ["v4"] }
 webpki = "0"
 

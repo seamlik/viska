@@ -28,7 +28,7 @@ fun DrawerNavigationItem(
                   .height(24.dp)
                   .background(MaterialTheme.colors.onBackground, RectangleShape)
                   .align(Alignment.CenterStart),
-          children = {})
+      )
     }
     ListItem(
         modifier = Modifier.clickable(onClick = onClick),

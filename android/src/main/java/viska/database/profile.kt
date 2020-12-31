@@ -6,9 +6,9 @@ import androidx.preference.PreferenceManager
 import dagger.Binds
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ActivityComponent
-import dagger.hilt.android.components.ApplicationComponent
 import dagger.hilt.android.components.ServiceComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
 import java.nio.file.Files
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -67,7 +67,7 @@ class AndroidProfileService @Inject constructor(@ApplicationContext private val 
 }
 
 @dagger.Module
-@InstallIn(ServiceComponent::class, ActivityComponent::class, ApplicationComponent::class)
+@InstallIn(ServiceComponent::class, ActivityComponent::class, SingletonComponent::class)
 abstract class ProfileServiceModule {
   @Binds abstract fun bind(impl: AndroidProfileService): ProfileService
 }

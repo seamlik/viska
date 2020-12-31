@@ -31,12 +31,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ContextAmbient
+import androidx.compose.ui.platform.AmbientContext
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
-import androidx.ui.tooling.preview.Preview
 import com.google.protobuf.BytesValue
 import com.google.protobuf.Empty
 import dagger.hilt.android.AndroidEntryPoint
@@ -192,7 +192,10 @@ private fun PreviewDrawerContent() {
 
 @Composable
 private fun DrawerContent(
-    viewModel: DashboardViewModel, drawerState: DrawerState, vcard: Vcard?, accountId: String
+    viewModel: DashboardViewModel,
+    drawerState: DrawerState,
+    vcard: Vcard?,
+    accountId: String,
 ) {
   Column {
 
@@ -209,11 +212,10 @@ private fun DrawerContent(
 
     Divider()
 
-    val selectScreen =
-        { screen: DashboardViewModel.Screen ->
-          viewModel.screen = screen
-          drawerState.close()
-        }
+    val selectScreen = { screen: DashboardViewModel.Screen ->
+      viewModel.screen = screen
+      drawerState.close()
+    }
 
     // Screens
     DrawerNavigationItem(
@@ -251,7 +253,7 @@ private fun PreviewChatroomItem() {
 
 @Composable
 private fun ChatroomItem(data: Chatroom) {
-  val context = ContextAmbient.current
+  val context = AmbientContext.current
   ListItem(
       modifier =
           Modifier.clickable(
@@ -260,11 +262,11 @@ private fun ChatroomItem(data: Chatroom) {
                   ChatroomActivity.start(context, data.chatroomId.toByteArray())
                 }
               }),
-      icon = { Image(asset = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
+      icon = { Image(imageVector = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
       text = { Text(maxLines = 1, text = data.inner.name) },
       secondaryText = {
-      // TODO
-      // Text(maxLines = 3, text = data.latestMessage?.inner?.preview(context.resources) ?: "")
+        // TODO
+        // Text(maxLines = 3, text = data.latestMessage?.inner?.preview(context.resources) ?: "")
       },
   )
 }
@@ -280,7 +282,7 @@ private fun PreviewRosterItem() {
 private fun RosterItem(item: RosterItem) {
   ListItem(
       modifier = Modifier.clickable(onClick = {}),
-      icon = { Image(asset = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
+      icon = { Image(imageVector = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
       text = { Text(maxLines = 1, text = item.name) },
   )
 }

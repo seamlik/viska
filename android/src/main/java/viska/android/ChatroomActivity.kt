@@ -52,8 +52,8 @@ class ChatroomActivity : InstanceActivity() {
             .watchChatroomMessages(chatroomId)
             .collectAsState(null)
 
-        Scaffold(topBar = { TopAppBar(title = { Text(text = chatroom?.inner?.name ?: "") }) }) {
-        _ ->
+        Scaffold(topBar = { TopAppBar(title = { Text(text = chatroom?.inner?.name ?: "") }) }) { _
+          ->
           LazyColumnFor(messagesSubscription?.messagesList ?: emptyList()) { MessageItem(it) }
         }
       }
@@ -90,6 +90,6 @@ class ChatroomActivity : InstanceActivity() {
 @Composable
 private fun MessageItem(message: Message) {
   ListItem(
-      icon = { Image(asset = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
+      icon = { Image(imageVector = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
       text = { Text(text = message.inner.content) })
 }
