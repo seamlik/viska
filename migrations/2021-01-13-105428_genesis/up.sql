@@ -30,9 +30,15 @@ CREATE TABLE IF NOT EXISTS message (
   -- changelog data
   attachment      BLOB REFERENCES object(object_id) ON DELETE SET NULL,
   content         TEXT NOT NULL,
-  recipients      BLOB NOT NULL, -- Protobuf viska.database.BytesArray of account IDs
   sender          BLOB NOT NULL,
   time            DOUBLE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS message_recipients (
+  id                   BLOB PRIMARY KEY NOT NULL, -- UUID
+
+  message_id           BLOB NOT NULL REFERENCES message(message_id) ON DELETE CASCADE,
+  recipient_account_id BLOB NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS vcard (

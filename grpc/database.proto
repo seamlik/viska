@@ -18,7 +18,3 @@ message Chatroom {
   double time_updated = 3;
   bytes latest_message_id = 4;
 }
-
-message BytesArray {
-  repeated bytes array = 1;
-}

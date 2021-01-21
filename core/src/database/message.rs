@@ -1,12 +1,13 @@
 use super::chatroom::ChatroomService;
 use super::object::ObjectService;
 use super::schema::message as Schema;
-use super::BytesArray;
+use super::schema::message_recipients as SchemaRecipients;
 use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
 use diesel::prelude::*;
-use prost::Message as _;
+use std::collections::BTreeSet;
+use uuid::Uuid;
 
 pub(crate) struct MessageService;
 
@@ -20,24 +21,17 @@ impl MessageService {
             .transpose()?
             .map(|id| id.as_bytes().as_ref().into());
 
-        let mut recipients = Vec::<u8>::default();
-        BytesArray {
-            array: inner.recipients,
-        }
-        .encode(&mut recipients)
-        .unwrap();
-
         diesel::replace_into(Schema::table)
             .values((
-                Schema::message_id.eq(payload.message_id),
+                Schema::message_id.eq(&payload.message_id),
                 Schema::chatroom_id.eq(payload.chatroom_id),
                 Schema::attachment.eq(attachment_id),
                 Schema::content.eq(inner.content),
-                Schema::recipients.eq(recipients),
                 Schema::sender.eq(inner.sender),
                 Schema::time.eq(inner.time),
             ))
             .execute(connection)?;
+        Self::replace_recipients(connection, &payload.message_id, inner.recipients.iter())?;
         Ok(())
     }
 
@@ -57,6 +51,30 @@ impl MessageService {
             inner: payload.into(),
         };
         MessageService::save(connection, message)?;
+        Ok(())
+    }
+
+    fn replace_recipients<'m>(
+        connection: &'_ SqliteConnection,
+        message_id: &[u8],
+        recipients: impl Iterator<Item = &'m Vec<u8>>,
+    ) -> QueryResult<()> {
+        diesel::delete(SchemaRecipients::table.filter(SchemaRecipients::message_id.eq(message_id)))
+            .execute(connection)?;
+        let recipients_sorted: BTreeSet<_> = recipients.collect();
+        let rows: Vec<_> = recipients_sorted
+            .into_iter()
+            .map(|recipient| {
+                (
+                    SchemaRecipients::id.eq(Uuid::new_v4().as_bytes().to_vec()),
+                    SchemaRecipients::message_id.eq(message_id),
+                    SchemaRecipients::recipient_account_id.eq(recipient),
+                )
+            })
+            .collect();
+        diesel::insert_into(SchemaRecipients::table)
+            .values(rows)
+            .execute(connection)?;
         Ok(())
     }
 }
