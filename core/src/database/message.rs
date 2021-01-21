@@ -1,15 +1,16 @@
 use super::chatroom::ChatroomService;
+use super::schema::message as Schema;
 use super::BytesArray;
 use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
+use diesel::prelude::*;
 use prost::Message as _;
-use rusqlite::Connection;
 
 pub(crate) struct MessageService;
 
 impl MessageService {
-    fn save(connection: &'_ Connection, payload: super::Message) -> rusqlite::Result<()> {
+    fn save(connection: &'_ SqliteConnection, payload: super::Message) -> QueryResult<()> {
         let inner = payload.inner.unwrap();
         let (attachment, attachment_mime) = inner
             .attachment
@@ -23,36 +24,25 @@ impl MessageService {
         .encode(&mut recipients)
         .unwrap();
 
-        let sql = r#"
-            REPLACE INTO message (
-                message_id,
-                chatroom_id,
-                attachment,
-                attachment_mime,
-                content,
-                recipients,
-                sender,
-                time
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);
-        "#;
-        let mut stmt = connection.prepare_cached(sql)?;
-        stmt.execute(rusqlite::params![
-            payload.message_id,
-            payload.chatroom_id,
-            attachment,
-            attachment_mime,
-            inner.content,
-            recipients,
-            inner.sender,
-            inner.time,
-        ])?;
+        diesel::replace_into(Schema::table)
+            .values((
+                Schema::message_id.eq(payload.message_id),
+                Schema::chatroom_id.eq(payload.chatroom_id),
+                Schema::attachment.eq(attachment),
+                Schema::attachment_mime.eq(attachment_mime),
+                Schema::content.eq(inner.content),
+                Schema::recipients.eq(recipients),
+                Schema::sender.eq(inner.sender),
+                Schema::time.eq(inner.time),
+            ))
+            .execute(connection)?;
         Ok(())
     }
 
     pub fn update(
-        connection: &'_ Connection,
+        connection: &'_ SqliteConnection,
         payload: crate::changelog::Message,
-    ) -> rusqlite::Result<()> {
+    ) -> QueryResult<()> {
         // Update chatroom
         ChatroomService::update_for_message(connection, &payload)?;
 

@@ -10,6 +10,7 @@ use blake3::Hash;
 use chrono::prelude::*;
 use chrono::Duration;
 use chrono::LocalResult;
+use diesel::prelude::*;
 use fake::faker::lorem::en::Paragraphs;
 use fake::faker::lorem::en::Sentences;
 use fake::faker::name::en::Name;
@@ -26,12 +27,12 @@ pub(crate) struct MockProfileService {
 
 impl MockProfileService {
     #[cfg(not(debug_assertions))]
-    pub fn populate_mock_data(&self) -> rusqlite::Result<()> {
+    pub fn populate_mock_data(&self) -> QueryResult<()> {
         unimplemented!("Only in debug mode")
     }
 
     #[cfg(debug_assertions)]
-    pub fn populate_mock_data(&self) -> rusqlite::Result<()> {
+    pub fn populate_mock_data(&self) -> QueryResult<()> {
         let account_id_bytes = crate::database::bytes_from_hash(self.account_id);
         let (vcards, changelog) = crate::mock_profile::populate_data(&account_id_bytes);
         log::info!(
@@ -40,17 +41,16 @@ impl MockProfileService {
             changelog.len()
         );
 
-        let mut sqlite = self.database.connection.lock().unwrap();
-        let transaction = sqlite.transaction()?;
+        let connection = self.database.connection.lock().unwrap();
+        connection.transaction::<_, diesel::result::Error, _>(|| {
+            log::info!("Committing the mock Vcards as a transaction");
+            self.vcard_service.save(&connection, vcards.into_iter())?;
 
-        log::info!("Committing the mock Vcards as a transaction");
-        self.vcard_service.save(&transaction, vcards.into_iter())?;
+            log::info!("Merging changelog generated from `mock_profile`");
+            ChangelogMerger::default().commit(&connection, changelog.into_iter())?;
 
-        log::info!("Merging changelog generated from `mock_profile`");
-        ChangelogMerger::default().commit(&transaction, changelog.into_iter())?;
-
-        transaction.commit()?;
-        Ok(())
+            Ok(())
+        })
     }
 }
 

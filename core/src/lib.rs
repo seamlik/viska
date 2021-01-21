@@ -2,6 +2,12 @@
 #![feature(once_cell)]
 #![feature(proc_macro_hygiene)]
 
+// (https://github.com/diesel-rs/diesel/issues/1894)
+#[macro_use]
+extern crate diesel;
+#[macro_use]
+extern crate diesel_migrations;
+
 #[path = "../../target/riko/viska.rs"]
 #[riko::ignore]
 pub mod bridge;
@@ -23,6 +29,7 @@ use crate::database::Database;
 use crate::endpoint::CertificateVerifier;
 use crate::event::EventBus;
 use blake3::Hash;
+use database::DatabaseInitializationError;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
 use endpoint::LocalEndpoint;
@@ -119,7 +126,7 @@ impl Node {
         );
 
         // Start gRPC server
-        daemon::StandardNode::start(node_grpc_port, event_bus.into(), database.clone())?;
+        daemon::StandardNode::start(node_grpc_port, event_bus.into(), database.clone());
 
         let config = endpoint::Config { certificate, key };
         let (window_sender, window_receiver) =
@@ -271,9 +278,10 @@ pub enum ConnectionError {
 #[error("Failed to start a QUIC endpoint")]
 pub enum EndpointError {
     CryptoMaterial(#[from] quinn::ParseError),
+    DatabaseInitialization(#[from] DatabaseInitializationError),
+    DatabaseQuery(#[from] diesel::result::Error),
     Grpc(#[from] tonic::transport::Error),
     Quic(#[from] quinn::EndpointError),
     Socket(#[from] std::io::Error),
-    Sqlite(#[from] rusqlite::Error),
     TlsConfiguration(#[from] rustls::TLSError),
 }

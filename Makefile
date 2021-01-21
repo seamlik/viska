@@ -1,6 +1,8 @@
+export DATABASE_URL = file:/tmp/viska-sample-$(shell date +%s).db
+
 PRETTIER_ARGS = --ignore-path .gitignore .
 
-verify: riko
+verify: riko diesel-schema
 	cargo test --package viska
 	gradle check
 	prettier --check $(PRETTIER_ARGS)
@@ -26,3 +28,7 @@ prettier:
 .PHONY: install-prettier
 install-prettier:
 	npm install --global prettier @prettier/plugin-xml
+
+.PHONY: diesel-schema
+diesel-schema:
+	diesel database reset

@@ -4,7 +4,7 @@ use crate::database::chatroom::ChatroomService;
 use crate::database::message::MessageService;
 use crate::database::peer::PeerService;
 use changelog_payload::Content;
-use rusqlite::Connection;
+use diesel::prelude::*;
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -15,9 +15,9 @@ pub(crate) struct ChangelogMerger {
 impl ChangelogMerger {
     pub fn commit(
         &self,
-        connection: &'_ Connection,
+        connection: &'_ SqliteConnection,
         payloads: impl Iterator<Item = ChangelogPayload>,
-    ) -> rusqlite::Result<()> {
+    ) -> QueryResult<()> {
         for payload in payloads {
             log::debug!("Committing {:?}", &payload.content);
             match payload.content {

@@ -1,11 +1,12 @@
 use super::peer::PeerService;
+use super::schema::vcard as Schema;
 use crate::changelog::Vcard;
 use crate::event::Event;
 use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
+use diesel::prelude::*;
 use futures::channel::mpsc::UnboundedSender;
-use rusqlite::Connection;
 use std::convert::AsRef;
 
 #[derive(Default)]
@@ -16,33 +17,26 @@ pub struct VcardService {
 impl VcardService {
     pub fn save(
         &self,
-        connection: &'_ Connection,
+        connection: &'_ SqliteConnection,
         vcards: impl Iterator<Item = Vcard>,
-    ) -> rusqlite::Result<()> {
-        let sql = r#"
-            REPLACE INTO vcard (
-                vcard_id,
-                account_id,
-                name,
-                photo,
-                photo_mime
-            ) VALUES (?1, ?2, ?3, ?4, ?5);
-        "#;
-        let mut stmt = connection.prepare_cached(sql)?;
-
+    ) -> QueryResult<()> {
+        // TODO: Batch insert
         for vcard in vcards {
             let vcard_id = vcard.canonical_id();
             let (photo, photo_mime) = vcard
                 .photo
                 .map(|blob| (blob.content, blob.mime))
                 .unwrap_or_default();
-            stmt.execute(rusqlite::params![
-                vcard_id.as_bytes().as_ref(),
-                &vcard.account_id,
-                &vcard.name,
-                photo,
-                photo_mime
-            ])?;
+
+            diesel::replace_into(Schema::table)
+                .values((
+                    Schema::columns::vcard_id.eq(vcard_id.as_bytes().as_ref()),
+                    Schema::columns::account_id.eq(&vcard.account_id),
+                    Schema::columns::name.eq(&vcard.name),
+                    Schema::columns::photo.eq(photo),
+                    Schema::columns::photo_mime.eq(photo_mime),
+                ))
+                .execute(connection)?;
 
             // Publish events
             if let Some(sink) = &self.event_sink {
@@ -60,17 +54,16 @@ impl VcardService {
     }
 
     pub fn find_by_account_id(
-        connection: &'_ Connection,
+        connection: &'_ SqliteConnection,
         account_id: &[u8],
-    ) -> rusqlite::Result<Option<crate::daemon::Vcard>> {
-        let mut stmt = connection
-            .prepare_cached("SELECT account_id, name FROM vcard WHERE account_id = ? LIMIT 1;")?;
-        super::unwrap_optional_row(stmt.query_row(rusqlite::params![&account_id], |row| {
-            Ok(crate::daemon::Vcard {
-                account_id: row.get("account_id")?,
-                name: row.get("name")?,
-            })
-        }))
+    ) -> QueryResult<Option<crate::daemon::Vcard>> {
+        let result = Schema::table
+            .select((Schema::columns::account_id, Schema::columns::name))
+            .filter(Schema::account_id.eq(account_id))
+            .first::<(Vec<u8>, String)>(connection)
+            .optional()?
+            .map(|(account_id, name)| crate::daemon::Vcard { account_id, name });
+        Ok(result)
     }
 }
 

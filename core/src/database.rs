@@ -1,10 +1,12 @@
 //! Database models and operations.
 
 tonic::include_proto!("viska.database");
+diesel_migrations::embed_migrations!();
 
 pub(crate) mod chatroom;
 pub(crate) mod message;
 pub(crate) mod peer;
+mod schema;
 pub(crate) mod vcard;
 
 use crate::mock_profile::MockProfileService;
@@ -12,7 +14,7 @@ use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
 use chrono::prelude::*;
-use rusqlite::Connection;
+use diesel::prelude::*;
 use serde_bytes::ByteBuf;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -58,21 +60,19 @@ impl Default for Storage {
 }
 
 pub(crate) struct Database {
-    pub connection: Mutex<Connection>,
+    pub connection: Mutex<SqliteConnection>,
 }
 
 impl Database {
-    pub fn create(config: Config) -> rusqlite::Result<Self> {
-        let mut connection = match config.storage {
-            Storage::InMemory => Connection::open_in_memory()?,
-            Storage::OnDisk(path) => Connection::open(path)?,
+    pub fn create(config: Config) -> Result<Self, DatabaseInitializationError> {
+        let database_url = match config.storage {
+            Storage::InMemory => ":memory:".into(),
+            Storage::OnDisk(path) => path.display().to_string(),
         };
+        let connection = SqliteConnection::establish(&database_url)?;
 
         log::info!("Beginning database migration");
-        let transaction = connection.transaction()?;
-        transaction.execute_batch(include_str!("database/migration/genesis.sql"))?;
-        transaction.commit()?;
-        log::info!("Finished database migration");
+        embedded_migrations::run(&connection)?;
 
         Ok(Self {
             connection: connection.into(),
@@ -80,12 +80,12 @@ impl Database {
     }
 }
 
-fn unwrap_optional_row<T>(result: rusqlite::Result<T>) -> rusqlite::Result<Option<T>> {
-    if let Err(rusqlite::Error::QueryReturnedNoRows) = result {
-        Ok(None)
-    } else {
-        result.map(|inner| inner.into())
-    }
+/// Error when failed to initialize the database.
+#[derive(Error, Debug)]
+#[error("Failed to initialize the database")]
+pub enum DatabaseInitializationError {
+    DatabaseConnection(#[from] diesel::ConnectionError),
+    DatabaseMigration(#[from] diesel_migrations::RunMigrationsError),
 }
 
 /// Creates a profile with a newly generated account.
@@ -178,8 +178,9 @@ pub fn create_mock_profile(base_data_dir: PathBuf) -> Result<String, CreateProfi
 #[derive(Error, Debug)]
 #[error("Failed to create a profile")]
 pub enum CreateProfileError {
-    Database(#[from] rusqlite::Error),
+    DatabaseQuery(#[from] diesel::result::Error),
     FileSystem(#[from] std::io::Error),
+    InitializeDatabase(#[from] DatabaseInitializationError),
 }
 
 impl CanonicalId for crate::changelog::Blob {

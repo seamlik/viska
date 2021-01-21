@@ -3,6 +3,7 @@ use crate::database::Database;
 use crate::packet::ResponseWindow;
 use crate::proto::request::Payload;
 use crate::proto::Response;
+use diesel::prelude::*;
 use std::sync::Arc;
 use thiserror::Error;
 use tonic::Status;
@@ -10,7 +11,7 @@ use tonic::Status;
 #[derive(Error, Debug)]
 #[error("Error during request handling")]
 pub enum Error {
-    Database(#[from] rusqlite::Error),
+    Database(#[from] diesel::result::Error),
     GrpcOperation(#[from] Status),
     GrpcConnection(#[from] tonic::transport::Error),
 }
@@ -27,9 +28,10 @@ impl Handler for PeerHandler {
     fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
         match &window.request.payload {
             Some(Payload::Message(message)) => {
-                let mut sqlite = self.database.connection.lock().unwrap();
-                let transaction = sqlite.transaction()?;
-                MessageService::update(&transaction, message.clone())?;
+                let connection = self.database.connection.lock().unwrap();
+                connection.transaction::<_, diesel::result::Error, _>(|| {
+                    MessageService::update(&connection, message.clone())
+                })?;
                 Ok(Default::default())
             }
             _ => DefaultHandler.handle(window),

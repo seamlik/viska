@@ -1,11 +1,11 @@
+use super::schema::chatroom as Schema;
 use super::BytesArray;
 use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
 use chrono::Utc;
+use diesel::prelude::*;
 use prost::Message as _;
-use rusqlite::types::FromSql;
-use rusqlite::Connection;
 use std::collections::BTreeSet;
 
 pub(crate) struct ChatroomService;
@@ -35,21 +35,20 @@ impl ChatroomService {
 
     /// Updates the [Chatroom](super::Chatroom) that is supposed to hold a new [Message].
     pub fn update_for_message(
-        connection: &'_ Connection,
+        connection: &'_ SqliteConnection,
         message: &crate::changelog::Message,
-    ) -> rusqlite::Result<()> {
+    ) -> QueryResult<()> {
         let chatroom_id = message.chatroom_id();
-        if let Some(time_updated) = ChatroomService::select_column_by_id(
-            connection,
-            chatroom_id.as_bytes().as_ref(),
-            "time_updated",
-        )? {
+        if let Some(time_updated) = Schema::table
+            .find(chatroom_id.as_bytes().as_ref())
+            .select(Schema::time_updated)
+            .first(connection)
+            .optional()?
+        {
             if message.time > time_updated {
-                ChatroomService::update_time_updated_by_id(
-                    connection,
-                    chatroom_id.as_bytes().as_ref(),
-                    time_updated,
-                )?;
+                diesel::update(Schema::table.find(chatroom_id.as_bytes().as_ref()))
+                    .set(Schema::time_updated.eq(time_updated))
+                    .execute(connection)?;
             }
         } else {
             ChatroomService::save(connection, ChatroomService::create_for_message(message))?;
@@ -57,18 +56,7 @@ impl ChatroomService {
         Ok(())
     }
 
-    fn update_time_updated_by_id(
-        connection: &'_ Connection,
-        chatroom_id: &[u8],
-        time_updated: f64,
-    ) -> rusqlite::Result<()> {
-        let sql = "UPDATE chatroom SET time_updated = ?1 WHERE chatroom_id = ?2;";
-        let mut stmt = connection.prepare_cached(sql)?;
-        stmt.execute(rusqlite::params![time_updated, chatroom_id])?;
-        Ok(())
-    }
-
-    fn save(connection: &'_ Connection, payload: super::Chatroom) -> rusqlite::Result<()> {
+    fn save(connection: &'_ SqliteConnection, payload: super::Chatroom) -> QueryResult<()> {
         let inner = payload.inner.unwrap();
 
         let mut members = Vec::<u8>::default();
@@ -78,53 +66,35 @@ impl ChatroomService {
         .encode(&mut members)
         .unwrap();
 
-        let sql = r#"
-            REPLACE INTO chatroom (
-                chatroom_id,
-                latest_message_id,
-                time_updated,
-                name,
-                members
-            ) VALUES (?1, ?2, ?3, ?4, ?5);
-        "#;
-        let mut stmt = connection.prepare_cached(sql)?;
-        stmt.execute(rusqlite::params![
-            payload.chatroom_id,
-            payload.latest_message_id,
-            payload.time_updated,
-            inner.name,
-            members,
-        ])?;
+        diesel::replace_into(Schema::table)
+            .values((
+                Schema::chatroom_id.eq(payload.chatroom_id),
+                Schema::latest_message_id.eq(payload.latest_message_id),
+                Schema::time_updated.eq(payload.time_updated),
+                Schema::name.eq(inner.name),
+                Schema::members.eq(members),
+            ))
+            .execute(connection)?;
         Ok(())
     }
 
     pub fn update(
-        connection: &'_ Connection,
+        connection: &'_ SqliteConnection,
         payload: crate::changelog::Chatroom,
-    ) -> rusqlite::Result<()> {
+    ) -> QueryResult<()> {
         let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
         let mut row: super::Chatroom = payload.into();
 
-        if let Some(latest_message_id) =
-            ChatroomService::select_column_by_id(connection, &chatroom_id, "latest_message_id")?
+        if let Some(latest_message_id) = Schema::table
+            .find(&chatroom_id)
+            .select(Schema::latest_message_id)
+            .first(connection)
+            .optional()?
         {
             row.latest_message_id = latest_message_id
         }
 
         ChatroomService::save(connection, row)
-    }
-
-    fn select_column_by_id<T: FromSql>(
-        connection: &Connection,
-        chatroom_id: &[u8],
-        column: &str,
-    ) -> rusqlite::Result<Option<T>> {
-        let sql = format!(
-            "SELECT {} FROM chatroom WHERE chatroom_id = ? LIMIT 1;",
-            column
-        );
-        let mut stmt = connection.prepare_cached(&sql)?;
-        super::unwrap_optional_row(stmt.query_row(rusqlite::params![chatroom_id], |row| row.get(0)))
     }
 }
 

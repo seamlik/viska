@@ -1,10 +1,11 @@
+use super::schema::peer as Schema;
 use crate::changelog::PeerRole;
 use crate::daemon::Roster;
 use crate::daemon::RosterItem;
 use crate::endpoint::CertificateVerifier;
 use crate::event::Event;
+use diesel::prelude::*;
 use futures::channel::mpsc::UnboundedSender;
-use rusqlite::Connection;
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -16,22 +17,16 @@ pub struct PeerService {
 impl PeerService {
     pub fn save(
         &self,
-        connection: &'_ Connection,
+        connection: &'_ SqliteConnection,
         payload: crate::changelog::Peer,
-    ) -> rusqlite::Result<()> {
-        let sql = r#"
-            REPLACE INTO peer (
-                account_id,
-                name,
-                role
-            ) VALUES (?1, ?2, ?3);
-        "#;
-        let mut stmt = connection.prepare_cached(sql)?;
-        stmt.execute(rusqlite::params![
-            payload.account_id,
-            payload.name,
-            payload.role
-        ])?;
+    ) -> QueryResult<()> {
+        diesel::replace_into(Schema::table)
+            .values((
+                Schema::columns::account_id.eq(payload.account_id),
+                Schema::columns::name.eq(payload.name),
+                Schema::columns::role.eq(payload.role),
+            ))
+            .execute(connection)?;
 
         // Publish event
         if let Some(sink) = &self.event_sink {
@@ -54,54 +49,46 @@ impl PeerService {
         Ok(())
     }
 
-    pub fn blacklist(connection: &'_ Connection) -> rusqlite::Result<Vec<Vec<u8>>> {
+    pub fn blacklist(connection: &'_ SqliteConnection) -> QueryResult<Vec<Vec<u8>>> {
         let blocked_i32: i32 = PeerRole::Blocked.into();
-        connection
-            .prepare_cached("SELECT account_id FROM peer WHERE role = ?")?
-            .query_map(rusqlite::params![blocked_i32], |row| {
-                let result: Vec<u8> = row.get(0)?;
-                Ok(result)
-            })?
-            .collect::<rusqlite::Result<Vec<_>>>()
+        Schema::table
+            .select(Schema::account_id)
+            .filter(Schema::role.eq(blocked_i32))
+            .load(connection)
     }
 
-    pub fn roster(connection: &'_ Connection) -> rusqlite::Result<Roster> {
-        let sql = r#"
-            SELECT peer.name, vcard.name
-            FROM peer
-            JOIN vcard ON peer.account_id = vcard.account_id;"#;
-        let mut stmt = connection.prepare_cached(sql)?;
-        let roster_list: rusqlite::Result<Vec<_>> = stmt
-            .query_map(rusqlite::NO_PARAMS, |row| {
-                let peer_name: String = row.get(0)?;
-                let display_name = if peer_name.is_empty() {
-                    row.get(1)?
+    pub fn roster(connection: &'_ SqliteConnection) -> QueryResult<Roster> {
+        let result = Schema::table
+            .left_join(
+                super::schema::vcard::table
+                    .on(super::schema::vcard::account_id.eq(Schema::account_id)),
+            )
+            .select((Schema::name, super::schema::vcard::name.nullable()))
+            .load::<(String, Option<String>)>(connection)?
+            .into_iter()
+            .map(|(peer_name, vcard_name)| RosterItem {
+                name: if peer_name.is_empty() {
+                    vcard_name.unwrap_or_default()
                 } else {
                     peer_name
-                };
-                Ok(RosterItem { name: display_name })
-            })?
+                },
+            })
             .collect();
-        Ok(Roster {
-            roster: roster_list?,
-        })
+        Ok(Roster { roster: result })
     }
 
     pub fn is_in_roster(
-        connection: &'_ Connection,
+        connection: &'_ SqliteConnection,
         account_id: &'_ [u8],
-    ) -> rusqlite::Result<bool> {
-        let sql = r#"
-            SELECT EXISTS (
-                SELECT 1 FROM peer WHERE (peer.account_id = ?1 AND peer.role = ?2) LIMIT 1
-            );
-        "#;
-        let mut stmt = connection.prepare_cached(sql)?;
-
+    ) -> QueryResult<bool> {
         let friend_i32: i32 = PeerRole::Friend.into();
-        stmt.query_row(rusqlite::params![account_id, friend_i32], |row| {
-            let result: u8 = row.get(0)?;
-            Ok(result == 1)
-        })
+        diesel::select(diesel::dsl::exists(
+            Schema::table.filter(
+                Schema::account_id
+                    .eq(account_id)
+                    .and(Schema::role.eq(friend_i32)),
+            ),
+        ))
+        .first(connection)
     }
 }

@@ -7,6 +7,7 @@ use crate::database::Database;
 use crate::event::Event;
 use crate::event::EventBus;
 use async_trait::async_trait;
+use diesel::prelude::*;
 use futures::channel::mpsc::Receiver;
 use futures::channel::mpsc::TrySendError;
 use futures::channel::mpsc::UnboundedReceiver;
@@ -14,7 +15,6 @@ use futures::channel::mpsc::UnboundedSender;
 use futures::prelude::*;
 use node_client::NodeClient;
 use node_server::NodeServer;
-use rusqlite::Connection;
 use std::error::Error;
 use std::sync::Arc;
 use tonic::body::BoxBody;
@@ -92,17 +92,12 @@ pub(crate) struct StandardNode {
 impl<T: node_server::Node> GrpcService<NodeServer<T>> for StandardNode {}
 
 impl StandardNode {
-    pub fn start(
-        node_grpc_port: u16,
-        event_bus: Arc<EventBus<Event>>,
-        database: Arc<Database>,
-    ) -> rusqlite::Result<()> {
+    pub fn start(node_grpc_port: u16, event_bus: Arc<EventBus<Event>>, database: Arc<Database>) {
         let instance = Self {
             event_bus,
             database,
         };
         Self::spawn_server(NodeServer::new(instance), node_grpc_port);
-        Ok(())
     }
 
     fn run_query<Q, T>(
@@ -111,7 +106,7 @@ impl StandardNode {
         query: Q,
     ) -> Result<(), TrySendError<Result<T, Status>>>
     where
-        Q: FnOnce(&'_ Connection) -> rusqlite::Result<T>,
+        Q: FnOnce(&'_ SqliteConnection) -> QueryResult<T>,
     {
         let connection = database.connection.lock().unwrap();
         let queried = query(&connection).map_err(IntoTonicStatus::into_tonic_status);
@@ -127,7 +122,7 @@ impl StandardNode {
     where
         F: FnOnce(&Event) -> bool + Send + Clone + 'static,
         T: Send + 'static,
-        Q: FnOnce(&'_ Connection) -> rusqlite::Result<T> + Send + Clone + 'static,
+        Q: FnOnce(&'_ SqliteConnection) -> QueryResult<T> + Send + Clone + 'static,
     {
         let (sender, receiver) = futures::channel::mpsc::unbounded::<Result<T, Status>>();
         let database = self.database.clone();
@@ -229,10 +224,10 @@ trait IntoTonicStatus {
     fn into_tonic_status(self) -> Status;
 }
 
-impl IntoTonicStatus for rusqlite::Error {
+impl IntoTonicStatus for diesel::result::Error {
     fn into_tonic_status(self) -> Status {
         match self {
-            rusqlite::Error::QueryReturnedNoRows => Status::not_found(""),
+            diesel::result::Error::NotFound => Status::not_found(self.to_string()),
             _ => Status::internal(self.to_string()),
         }
     }
