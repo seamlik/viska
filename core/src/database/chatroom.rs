@@ -1,12 +1,12 @@
 use super::schema::chatroom as Schema;
-use super::BytesArray;
+use super::schema::chatroom_members as SchemaMembers;
 use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
 use chrono::Utc;
 use diesel::prelude::*;
-use prost::Message as _;
 use std::collections::BTreeSet;
+use uuid::Uuid;
 
 pub(crate) struct ChatroomService;
 
@@ -59,22 +59,15 @@ impl ChatroomService {
     fn save(connection: &'_ SqliteConnection, payload: super::Chatroom) -> QueryResult<()> {
         let inner = payload.inner.unwrap();
 
-        let mut members = Vec::<u8>::default();
-        BytesArray {
-            array: inner.members,
-        }
-        .encode(&mut members)
-        .unwrap();
-
         diesel::replace_into(Schema::table)
             .values((
-                Schema::chatroom_id.eq(payload.chatroom_id),
+                Schema::chatroom_id.eq(&payload.chatroom_id),
                 Schema::latest_message_id.eq(payload.latest_message_id),
                 Schema::time_updated.eq(payload.time_updated),
                 Schema::name.eq(inner.name),
-                Schema::members.eq(members),
             ))
             .execute(connection)?;
+        Self::replace_members(connection, &payload.chatroom_id, inner.members.iter())?;
         Ok(())
     }
 
@@ -95,6 +88,30 @@ impl ChatroomService {
         }
 
         ChatroomService::save(connection, row)
+    }
+
+    fn replace_members<'m>(
+        connection: &'_ SqliteConnection,
+        chatroom_id: &[u8],
+        members: impl Iterator<Item = &'m Vec<u8>>,
+    ) -> QueryResult<()> {
+        diesel::delete(SchemaMembers::table.filter(SchemaMembers::chatroom_id.eq(chatroom_id)))
+            .execute(connection)?;
+        let members_sorted: BTreeSet<_> = members.collect();
+        let rows: Vec<_> = members_sorted
+            .into_iter()
+            .map(|member| {
+                (
+                    SchemaMembers::id.eq(Uuid::new_v4().as_bytes().to_vec()),
+                    SchemaMembers::chatroom_id.eq(chatroom_id),
+                    SchemaMembers::member_account_id.eq(member),
+                )
+            })
+            .collect();
+        diesel::insert_into(SchemaMembers::table)
+            .values(rows)
+            .execute(connection)?;
+        Ok(())
     }
 }
 

@@ -12,8 +12,14 @@ CREATE TABLE IF NOT EXISTS chatroom (
   time_updated      DOUBLE NOT NULL,
 
   -- changelog data
-  name              TEXT NOT NULL,
-  members           BLOB NOT NULL -- Protobuf viska.database.BytesArray of account IDs
+  name              TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS chatroom_members (
+  id                BLOB PRIMARY KEY NOT NULL, -- UUID
+
+  chatroom_id       BLOB NOT NULL REFERENCES chatroom(chatroom_id) ON DELETE CASCADE,
+  member_account_id BLOB NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS message (
