@@ -5,6 +5,7 @@ diesel_migrations::embed_migrations!();
 
 pub(crate) mod chatroom;
 pub(crate) mod message;
+mod object;
 pub(crate) mod peer;
 mod schema;
 pub(crate) mod vcard;

@@ -1,3 +1,4 @@
+use super::object::ObjectService;
 use super::peer::PeerService;
 use super::schema::vcard as Schema;
 use crate::changelog::Vcard;
@@ -23,18 +24,19 @@ impl VcardService {
         // TODO: Batch insert
         for vcard in vcards {
             let vcard_id = vcard.canonical_id();
-            let (photo, photo_mime) = vcard
+
+            let photo_id: Option<Vec<u8>> = vcard
                 .photo
-                .map(|blob| (blob.content, blob.mime))
-                .unwrap_or_default();
+                .map(|obj| ObjectService::save(connection, obj))
+                .transpose()?
+                .map(|id| id.as_bytes().as_ref().into());
 
             diesel::replace_into(Schema::table)
                 .values((
                     Schema::columns::vcard_id.eq(vcard_id.as_bytes().as_ref()),
                     Schema::columns::account_id.eq(&vcard.account_id),
                     Schema::columns::name.eq(&vcard.name),
-                    Schema::columns::photo.eq(photo),
-                    Schema::columns::photo_mime.eq(photo_mime),
+                    Schema::columns::photo.eq(photo_id),
                 ))
                 .execute(connection)?;
 

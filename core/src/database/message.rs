@@ -1,4 +1,5 @@
 use super::chatroom::ChatroomService;
+use super::object::ObjectService;
 use super::schema::message as Schema;
 use super::BytesArray;
 use crate::pki::CanonicalId;
@@ -12,10 +13,12 @@ pub(crate) struct MessageService;
 impl MessageService {
     fn save(connection: &'_ SqliteConnection, payload: super::Message) -> QueryResult<()> {
         let inner = payload.inner.unwrap();
-        let (attachment, attachment_mime) = inner
+
+        let attachment_id: Option<Vec<u8>> = inner
             .attachment
-            .map(|blob| (blob.content, blob.mime))
-            .unwrap_or_default();
+            .map(|obj| ObjectService::save(connection, obj))
+            .transpose()?
+            .map(|id| id.as_bytes().as_ref().into());
 
         let mut recipients = Vec::<u8>::default();
         BytesArray {
@@ -28,8 +31,7 @@ impl MessageService {
             .values((
                 Schema::message_id.eq(payload.message_id),
                 Schema::chatroom_id.eq(payload.chatroom_id),
-                Schema::attachment.eq(attachment),
-                Schema::attachment_mime.eq(attachment_mime),
+                Schema::attachment.eq(attachment_id),
                 Schema::content.eq(inner.content),
                 Schema::recipients.eq(recipients),
                 Schema::sender.eq(inner.sender),

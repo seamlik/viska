@@ -22,8 +22,7 @@ CREATE TABLE IF NOT EXISTS message (
   chatroom_id     BLOB NOT NULL,
 
   -- changelog data
-  attachment      BLOB NOT NULL,
-  attachment_mime TEXT NOT NULL,
+  attachment      BLOB REFERENCES object(object_id) ON DELETE SET NULL,
   content         TEXT NOT NULL,
   recipients      BLOB NOT NULL, -- Protobuf viska.database.BytesArray of account IDs
   sender          BLOB NOT NULL,
@@ -35,6 +34,12 @@ CREATE TABLE IF NOT EXISTS vcard (
 
   account_id BLOB NOT NULL,
   name       TEXT NOT NULL,
-  photo      BLOB NOT NULL,
-  photo_mime TEXT NOT NULL
+  photo      BLOB REFERENCES object(object_id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS object (
+  object_id BLOB PRIMARY KEY NOT NULL, -- UUID
+
+  content   BLOB NOT NULL,
+  mime      TEXT NOT NULL
 );
