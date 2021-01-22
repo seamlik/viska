@@ -30,7 +30,7 @@ impl Handler for PeerHandler {
             Some(Payload::Message(message)) => {
                 let connection = self.database.connection.lock().unwrap();
                 connection.transaction::<_, diesel::result::Error, _>(|| {
-                    MessageService::update(&connection, message.clone())
+                    MessageService::update(&connection, &message)
                 })?;
                 Ok(Default::default())
             }

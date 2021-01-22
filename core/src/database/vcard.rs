@@ -27,6 +27,7 @@ impl VcardService {
 
             let photo_id: Option<Vec<u8>> = vcard
                 .photo
+                .as_ref()
                 .map(|obj| ObjectService::save(connection, obj))
                 .transpose()?
                 .map(|id| id.as_bytes().as_ref().into());

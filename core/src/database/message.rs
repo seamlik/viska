@@ -2,6 +2,7 @@ use super::chatroom::ChatroomService;
 use super::object::ObjectService;
 use super::schema::message as Schema;
 use super::schema::message_recipients as SchemaRecipients;
+use crate::changelog::Message;
 use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
@@ -12,45 +13,36 @@ use uuid::Uuid;
 pub(crate) struct MessageService;
 
 impl MessageService {
-    fn save(connection: &'_ SqliteConnection, payload: super::Message) -> QueryResult<()> {
-        let inner = payload.inner.unwrap();
-
-        let attachment_id: Option<Vec<u8>> = inner
+    fn save(connection: &'_ SqliteConnection, payload: &Message) -> QueryResult<()> {
+        let message_id = super::bytes_from_hash(payload.canonical_id());
+        let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
+        let attachment_id: Option<Vec<u8>> = payload
             .attachment
+            .as_ref()
             .map(|obj| ObjectService::save(connection, obj))
             .transpose()?
             .map(|id| id.as_bytes().as_ref().into());
 
         diesel::replace_into(Schema::table)
             .values((
-                Schema::message_id.eq(&payload.message_id),
-                Schema::chatroom_id.eq(payload.chatroom_id),
+                Schema::message_id.eq(&message_id),
+                Schema::chatroom_id.eq(chatroom_id),
                 Schema::attachment.eq(attachment_id),
-                Schema::content.eq(inner.content),
-                Schema::sender.eq(inner.sender),
-                Schema::time.eq(inner.time),
+                Schema::content.eq(&payload.content),
+                Schema::sender.eq(&payload.sender),
+                Schema::time.eq(&payload.time),
             ))
             .execute(connection)?;
-        Self::replace_recipients(connection, &payload.message_id, inner.recipients.iter())?;
+        Self::replace_recipients(connection, &message_id, payload.recipients.iter())?;
         Ok(())
     }
 
-    pub fn update(
-        connection: &'_ SqliteConnection,
-        payload: crate::changelog::Message,
-    ) -> QueryResult<()> {
+    pub fn update(connection: &'_ SqliteConnection, payload: &Message) -> QueryResult<()> {
         // Update chatroom
         ChatroomService::update_for_message(connection, &payload)?;
 
         // Update message
-        let message_id = super::bytes_from_hash(payload.canonical_id());
-        let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
-        let message = super::Message {
-            message_id,
-            chatroom_id,
-            inner: payload.into(),
-        };
-        MessageService::save(connection, message)?;
+        MessageService::save(connection, &payload)?;
         Ok(())
     }
 

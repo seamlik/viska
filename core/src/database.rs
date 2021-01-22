@@ -1,6 +1,5 @@
 //! Database models and operations.
 
-tonic::include_proto!("viska.database");
 diesel_migrations::embed_migrations!();
 
 pub(crate) mod chatroom;

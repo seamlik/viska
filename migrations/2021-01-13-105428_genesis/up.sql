@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS peer (
 CREATE TABLE IF NOT EXISTS chatroom (
   chatroom_id       BLOB PRIMARY KEY NOT NULL,
 
-  latest_message_id BLOB NOT NULL,
   time_updated      DOUBLE NOT NULL,
 
   -- changelog data

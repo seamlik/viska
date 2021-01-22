@@ -4,7 +4,6 @@ syntax = "proto3";
 
 package viska.daemon;
 
-import "database.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/wrappers.proto";
 
@@ -14,8 +13,10 @@ service Node {
 
   rpc WatchChatroomMessages(google.protobuf.BytesValue) returns (stream ChatroomMessagesSubscription) {}
 
-  rpc WatchChatroom(google.protobuf.BytesValue) returns (stream viska.database.Chatroom) {}
+  // Subscribes to the data of a chatroom.
+  rpc WatchChatroom(google.protobuf.BytesValue) returns (stream Chatroom) {}
 
+  // Subscribes to the list of all chatrooms.
   rpc WatchChatrooms(google.protobuf.Empty) returns (stream ChatroomsSubscription) {}
 
   rpc WatchRoster(google.protobuf.Empty) returns (stream Roster) {}
@@ -30,14 +31,24 @@ message RosterItem {
 }
 
 message ChatroomMessagesSubscription {
-  repeated viska.database.Message messages = 1;
+  repeated Message messages = 1;
 }
 
 message ChatroomsSubscription {
-  repeated viska.database.Chatroom chatrooms = 1;
+  repeated Chatroom chatrooms = 1;
 }
 
 message Vcard {
   bytes account_id = 1;
   string name = 2;
+}
+
+message Chatroom {
+  string name = 1;
+}
+
+message Message {
+  double time = 1;
+  Vcard sender = 2;
+  string content = 3;
 }

@@ -2,7 +2,6 @@ tonic::include_proto!("viska.daemon");
 
 use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
-use crate::database::Chatroom;
 use crate::database::Database;
 use crate::database::Event;
 use async_trait::async_trait;

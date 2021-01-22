@@ -1,6 +1,7 @@
 use super::schema::chatroom as Schema;
 use super::schema::chatroom_members as SchemaMembers;
-use crate::pki::CanonicalId;
+use crate::changelog::Chatroom;
+use crate::changelog::Message;
 use blake3::Hash;
 use blake3::Hasher;
 use chrono::Utc;
@@ -13,24 +14,14 @@ pub(crate) struct ChatroomService;
 impl ChatroomService {
     /// Creates a [Chatroom](super::Chatroom) when receiving or sending a message belonging to a
     /// non-existing [Chatroom](super::Chatroom).
-    fn create_for_message(message: &crate::changelog::Message) -> super::Chatroom {
+    fn create_for_message(message: &Message) -> Chatroom {
         let mut members = message.recipients.clone();
         members.push(message.sender.clone());
 
         // TODO: New name by fetching Vcard
         let name = "New chatroom".to_string();
 
-        let chatroom_inner = crate::changelog::Chatroom { members, name };
-
-        let chatroom_id: [u8; 32] = chatroom_inner.chatroom_id().into();
-        let latest_message_id: [u8; 32] = message.canonical_id().into();
-
-        super::Chatroom {
-            inner: Some(chatroom_inner),
-            time_updated: message.time,
-            chatroom_id: chatroom_id.to_vec(),
-            latest_message_id: latest_message_id.to_vec(),
-        }
+        Chatroom { members, name }
     }
 
     /// Updates the [Chatroom](super::Chatroom) that is supposed to hold a new [Message].
@@ -39,6 +30,7 @@ impl ChatroomService {
         message: &crate::changelog::Message,
     ) -> QueryResult<()> {
         let chatroom_id = message.chatroom_id();
+        // TODO: Simplify to 1 SQL
         if let Some(time_updated) = Schema::table
             .find(chatroom_id.as_bytes().as_ref())
             .select(Schema::time_updated)
@@ -51,43 +43,22 @@ impl ChatroomService {
                     .execute(connection)?;
             }
         } else {
-            ChatroomService::save(connection, ChatroomService::create_for_message(message))?;
+            ChatroomService::save(connection, &ChatroomService::create_for_message(message))?;
         }
         Ok(())
     }
 
-    fn save(connection: &'_ SqliteConnection, payload: super::Chatroom) -> QueryResult<()> {
-        let inner = payload.inner.unwrap();
-
+    pub fn save(connection: &'_ SqliteConnection, payload: &Chatroom) -> QueryResult<()> {
+        let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
         diesel::replace_into(Schema::table)
             .values((
-                Schema::chatroom_id.eq(&payload.chatroom_id),
-                Schema::latest_message_id.eq(payload.latest_message_id),
-                Schema::time_updated.eq(payload.time_updated),
-                Schema::name.eq(inner.name),
+                Schema::chatroom_id.eq(&chatroom_id),
+                Schema::time_updated.eq(super::float_from_time(Utc::now())),
+                Schema::name.eq(&payload.name),
             ))
             .execute(connection)?;
-        Self::replace_members(connection, &payload.chatroom_id, inner.members.iter())?;
+        Self::replace_members(connection, &chatroom_id, payload.members.iter())?;
         Ok(())
-    }
-
-    pub fn update(
-        connection: &'_ SqliteConnection,
-        payload: crate::changelog::Chatroom,
-    ) -> QueryResult<()> {
-        let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
-        let mut row: super::Chatroom = payload.into();
-
-        if let Some(latest_message_id) = Schema::table
-            .find(&chatroom_id)
-            .select(Schema::latest_message_id)
-            .first(connection)
-            .optional()?
-        {
-            row.latest_message_id = latest_message_id
-        }
-
-        ChatroomService::save(connection, row)
     }
 
     fn replace_members<'m>(
@@ -112,17 +83,6 @@ impl ChatroomService {
             .values(rows)
             .execute(connection)?;
         Ok(())
-    }
-}
-
-impl From<crate::changelog::Chatroom> for super::Chatroom {
-    fn from(src: crate::changelog::Chatroom) -> Self {
-        Self {
-            chatroom_id: super::bytes_from_hash(src.chatroom_id()),
-            latest_message_id: vec![],
-            time_updated: super::float_from_time(Utc::now()),
-            inner: src.into(),
-        }
     }
 }
 

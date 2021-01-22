@@ -21,13 +21,13 @@ impl ChangelogMerger {
             log::debug!("Committing {:?}", &payload.content);
             match payload.content {
                 Some(Content::AddChatroom(chatroom)) => {
-                    ChatroomService::update(connection, chatroom)?;
+                    ChatroomService::save(connection, &chatroom)?;
                 }
                 Some(Content::AddPeer(peer)) => {
                     self.peer_service.save(connection, peer)?;
                 }
                 Some(Content::AddMessage(message)) => {
-                    MessageService::update(connection, message)?;
+                    MessageService::update(connection, &message)?;
                 }
                 None => todo!("Empty transaction payload"),
             }
