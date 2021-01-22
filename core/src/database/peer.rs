@@ -1,16 +1,15 @@
 use super::schema::peer as Schema;
+use super::Event;
 use crate::changelog::PeerRole;
 use crate::daemon::Roster;
 use crate::daemon::RosterItem;
 use crate::endpoint::CertificateVerifier;
-use crate::event::Event;
 use diesel::prelude::*;
-use futures::channel::mpsc::UnboundedSender;
 use std::sync::Arc;
+use tokio::sync::broadcast::Sender;
 
-#[derive(Default)]
-pub struct PeerService {
-    pub event_sink: Option<UnboundedSender<Event>>,
+pub(crate) struct PeerService {
+    pub event_sink: Sender<Arc<Event>>,
     pub verifier: Option<Arc<CertificateVerifier>>,
 }
 
@@ -29,9 +28,7 @@ impl PeerService {
             .execute(connection)?;
 
         // Publish event
-        if let Some(sink) = &self.event_sink {
-            let _ = sink.unbounded_send(Event::Roster);
-        }
+        let _ = self.event_sink.send(Event::Roster.into());
 
         // Update certificate verifier rules
         if let Some(verifier) = &self.verifier {

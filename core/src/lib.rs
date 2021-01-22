@@ -16,7 +16,6 @@ mod changelog;
 mod daemon;
 pub mod database;
 mod endpoint;
-mod event;
 mod handler;
 mod mock_profile;
 mod packet;
@@ -27,7 +26,6 @@ pub mod util;
 use crate::database::peer::PeerService;
 use crate::database::Database;
 use crate::endpoint::CertificateVerifier;
-use crate::event::EventBus;
 use blake3::Hash;
 use database::DatabaseInitializationError;
 use endpoint::ConnectionInfo;
@@ -117,9 +115,7 @@ impl Node {
     ) -> Result<(Self, impl Future<Output = Result<(), JoinError>>), EndpointError> {
         let account_id = certificate.canonical_id();
         let database = Arc::new(Database::create(database_config)?);
-
-        let (event_bus, event_task) = EventBus::new();
-        tokio::spawn(event_task);
+        let (event_sink, _) = tokio::sync::broadcast::channel(8);
 
         let certificate_verifier: Arc<_> = CertificateVerifier::new(account_id).into();
         certificate_verifier.set_rules(
@@ -129,7 +125,7 @@ impl Node {
 
         // Start gRPC server
         let (node_grpc_task, node_grpc_shutdown_token) =
-            daemon::StandardNode::start(node_grpc_port, event_bus.into(), database.clone());
+            daemon::StandardNode::start(node_grpc_port, event_sink, database.clone());
 
         let config = endpoint::Config { certificate, key };
         let (window_sender, window_receiver) =

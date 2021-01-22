@@ -4,6 +4,7 @@ use crate::changelog::Message;
 use crate::changelog::Peer;
 use crate::changelog::PeerRole;
 use crate::changelog::Vcard;
+use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
 use crate::database::Database;
 use blake3::Hash;
@@ -40,14 +41,20 @@ impl MockProfileService {
             vcards.len(),
             changelog.len()
         );
-
+        let changelog_merger = ChangelogMerger {
+            peer_service: PeerService {
+                event_sink: crate::util::dummy_mpmc_sender(),
+                verifier: None,
+            }
+            .into(),
+        };
         let connection = self.database.connection.lock().unwrap();
         connection.transaction::<_, diesel::result::Error, _>(|| {
             log::info!("Committing the mock Vcards as a transaction");
             self.vcard_service.save(&connection, vcards.into_iter())?;
 
             log::info!("Merging changelog generated from `mock_profile`");
-            ChangelogMerger::default().commit(&connection, changelog.into_iter())?;
+            changelog_merger.commit(&connection, changelog.into_iter())?;
 
             Ok(())
         })

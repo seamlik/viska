@@ -4,8 +4,7 @@ use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
 use crate::database::Chatroom;
 use crate::database::Database;
-use crate::event::Event;
-use crate::event::EventBus;
+use crate::database::Event;
 use async_trait::async_trait;
 use diesel::prelude::*;
 use futures::channel::mpsc::Receiver;
@@ -17,6 +16,8 @@ use node_client::NodeClient;
 use node_server::NodeServer;
 use std::any::Any;
 use std::sync::Arc;
+use tokio::sync::broadcast::RecvError;
+use tokio::sync::broadcast::Sender;
 use tokio::task::JoinHandle;
 use tonic::transport::Channel;
 use tonic::transport::Server;
@@ -59,7 +60,7 @@ impl<T: prost::Message> NullableResponse<T> for Result<tonic::Response<T>, Statu
 
 /// The standard implementation of a "Node" gRPC daemon.
 pub(crate) struct StandardNode {
-    event_bus: Arc<EventBus<Event>>,
+    event_sink: Sender<Arc<Event>>,
     database: Arc<Database>,
 }
 
@@ -70,11 +71,11 @@ impl StandardNode {
     /// the service manually. Drop the token to shut it down.
     pub fn start(
         node_grpc_port: u16,
-        event_bus: Arc<EventBus<Event>>,
+        event_sink: Sender<Arc<Event>>,
         database: Arc<Database>,
     ) -> (JoinHandle<()>, impl Any + Send + 'static) {
         let instance = Self {
-            event_bus,
+            event_sink,
             database,
         };
         let (sender, receiver) = futures::channel::oneshot::channel::<()>();
@@ -121,19 +122,26 @@ impl StandardNode {
     {
         let (sender, receiver) = futures::channel::mpsc::unbounded::<Result<T, Status>>();
         let database = self.database.clone();
-        let mut subscription = self.event_bus.subscribe();
+        let mut subscription = self.event_sink.subscribe();
         tokio::spawn(async move {
             if let Err(_) = Self::run_query(database.clone(), sender.clone(), query.clone()) {
                 return;
             }
 
-            while let Some(event) = subscription.next().await {
-                let filter = event_filter.clone();
-                if filter(&event) {
-                    if let Err(_) = Self::run_query(database.clone(), sender.clone(), query.clone())
-                    {
-                        return;
+            loop {
+                match subscription.recv().await {
+                    Ok(event) => {
+                        let filter = event_filter.clone();
+                        if filter(&event) {
+                            if let Err(_) =
+                                Self::run_query(database.clone(), sender.clone(), query.clone())
+                            {
+                                return;
+                            }
+                        }
                     }
+                    Err(RecvError::Lagged(_)) => continue,
+                    Err(RecvError::Closed) => (),
                 }
             }
         });

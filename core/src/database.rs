@@ -20,6 +20,7 @@ use serde_bytes::ByteBuf;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use thiserror::Error;
+use vcard::VcardService;
 
 /// THE hash function (BLAKE3) universally used in the project.
 ///
@@ -174,7 +175,10 @@ pub fn create_mock_profile(base_data_dir: PathBuf) -> Result<String, CreateProfi
     let mock_profile_service = MockProfileService {
         account_id,
         database: database.into(),
-        vcard_service: Default::default(),
+        vcard_service: VcardService {
+            event_sink: crate::util::dummy_mpmc_sender(),
+        }
+        .into(),
     };
     mock_profile_service.populate_mock_data()?;
     Ok(account_id_text)
@@ -197,4 +201,9 @@ impl CanonicalId for crate::changelog::Blob {
         hasher.update(&self.content);
         hasher.finalize()
     }
+}
+
+pub(crate) enum Event {
+    Roster,
+    Vcard { account_id: Vec<u8> },
 }

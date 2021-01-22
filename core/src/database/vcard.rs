@@ -1,18 +1,18 @@
 use super::object::ObjectService;
 use super::peer::PeerService;
 use super::schema::vcard as Schema;
+use super::Event;
 use crate::changelog::Vcard;
-use crate::event::Event;
 use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
 use diesel::prelude::*;
-use futures::channel::mpsc::UnboundedSender;
 use std::convert::AsRef;
+use std::sync::Arc;
+use tokio::sync::broadcast::Sender;
 
-#[derive(Default)]
-pub struct VcardService {
-    pub event_sink: Option<UnboundedSender<Event>>,
+pub(crate) struct VcardService {
+    pub event_sink: Sender<Arc<Event>>,
 }
 
 impl VcardService {
@@ -41,15 +41,14 @@ impl VcardService {
                 .execute(connection)?;
 
             // Publish events
-            if let Some(sink) = &self.event_sink {
-                if let Err(_) = sink.unbounded_send(Event::Vcard {
+            let _ = self.event_sink.send(
+                Event::Vcard {
                     account_id: vcard.account_id.clone(),
-                }) {
-                    continue;
                 }
-                if PeerService::is_in_roster(connection, &vcard.account_id)? {
-                    let _ = sink.unbounded_send(Event::Roster);
-                }
+                .into(),
+            );
+            if PeerService::is_in_roster(connection, &vcard.account_id)? {
+                let _ = self.event_sink.send(Event::Roster.into());
             }
         }
         Ok(())

@@ -7,8 +7,7 @@ use changelog_payload::Content;
 use diesel::prelude::*;
 use std::sync::Arc;
 
-#[derive(Default)]
-pub struct ChangelogMerger {
+pub(crate) struct ChangelogMerger {
     pub peer_service: Arc<PeerService>,
 }
 
