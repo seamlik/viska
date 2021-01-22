@@ -8,9 +8,12 @@ use blake3::Hash;
 use blake3::Hasher;
 use diesel::prelude::*;
 use std::collections::BTreeSet;
+use std::sync::Arc;
 use uuid::Uuid;
 
-pub(crate) struct MessageService;
+pub struct MessageService {
+    pub chatroom_service: Arc<ChatroomService>,
+}
 
 impl MessageService {
     fn save(connection: &'_ SqliteConnection, payload: &Message) -> QueryResult<()> {
@@ -37,9 +40,10 @@ impl MessageService {
         Ok(())
     }
 
-    pub fn update(connection: &'_ SqliteConnection, payload: &Message) -> QueryResult<()> {
+    pub fn update(&self, connection: &'_ SqliteConnection, payload: &Message) -> QueryResult<()> {
         // Update chatroom
-        ChatroomService::update_for_message(connection, &payload)?;
+        self.chatroom_service
+            .update_for_message(connection, &payload)?;
 
         // Update message
         MessageService::save(connection, &payload)?;

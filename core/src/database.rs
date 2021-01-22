@@ -2,7 +2,7 @@
 
 diesel_migrations::embed_migrations!();
 
-pub(crate) mod chatroom;
+pub mod chatroom;
 pub(crate) mod message;
 mod object;
 pub(crate) mod peer;
@@ -202,7 +202,8 @@ impl CanonicalId for crate::changelog::Blob {
     }
 }
 
-pub(crate) enum Event {
+pub enum Event {
+    Chatroom { chatroom_id: Vec<u8> },
     Roster,
     Vcard { account_id: Vec<u8> },
 }

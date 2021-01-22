@@ -8,6 +8,8 @@ use diesel::prelude::*;
 use std::sync::Arc;
 
 pub(crate) struct ChangelogMerger {
+    pub chatroom_service: Arc<ChatroomService>,
+    pub message_service: Arc<MessageService>,
     pub peer_service: Arc<PeerService>,
 }
 
@@ -21,13 +23,13 @@ impl ChangelogMerger {
             log::debug!("Committing {:?}", &payload.content);
             match payload.content {
                 Some(Content::AddChatroom(chatroom)) => {
-                    ChatroomService::save(connection, &chatroom)?;
+                    self.chatroom_service.save(connection, &chatroom)?;
                 }
                 Some(Content::AddPeer(peer)) => {
                     self.peer_service.save(connection, peer)?;
                 }
                 Some(Content::AddMessage(message)) => {
-                    MessageService::update(connection, &message)?;
+                    self.message_service.update(connection, &message)?;
                 }
                 None => todo!("Empty transaction payload"),
             }

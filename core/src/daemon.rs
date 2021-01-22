@@ -1,5 +1,6 @@
 tonic::include_proto!("viska.daemon");
 
+use crate::database::chatroom::ChatroomService;
 use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
 use crate::database::Database;
@@ -185,13 +186,29 @@ impl node_server::Node for StandardNode {
         todo!()
     }
 
-    type WatchChatroomStream = Receiver<Result<Chatroom, Status>>;
+    type WatchChatroomStream = UnboundedReceiver<Result<Chatroom, Status>>;
 
     async fn watch_chatroom(
         &self,
         request: tonic::Request<Vec<u8>>,
     ) -> Result<tonic::Response<Self::WatchChatroomStream>, Status> {
-        todo!()
+        let requested_chatroom_id = request.into_inner();
+        let requested_chatroom_id_for_filter = requested_chatroom_id.clone();
+        self.run_subscription(
+            |event| {
+                let requested_chatroom_id_for_filter = requested_chatroom_id_for_filter;
+                if let Event::Chatroom { chatroom_id } = event {
+                    chatroom_id == &requested_chatroom_id_for_filter
+                } else {
+                    false
+                }
+            },
+            move |connection| {
+                let requested_chatroom_id = requested_chatroom_id;
+                ChatroomService::find_by_id(connection, &requested_chatroom_id)
+                    .map(Option::unwrap_or_default)
+            },
+        )
     }
 
     type WatchChatroomsStream = Receiver<Result<ChatroomsSubscription, Status>>;

@@ -4,6 +4,8 @@ use crate::changelog::Message;
 use crate::changelog::Peer;
 use crate::changelog::PeerRole;
 use crate::changelog::Vcard;
+use crate::database::chatroom::ChatroomService;
+use crate::database::message::MessageService;
 use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
 use crate::database::Database;
@@ -41,12 +43,18 @@ impl MockProfileService {
             vcards.len(),
             changelog.len()
         );
+        let event_sink = crate::util::dummy_mpmc_sender();
+        let chatroom_service = Arc::new(ChatroomService {
+            event_sink: event_sink.clone(),
+        });
         let changelog_merger = ChangelogMerger {
             peer_service: PeerService {
-                event_sink: crate::util::dummy_mpmc_sender(),
+                event_sink,
                 verifier: None,
             }
             .into(),
+            chatroom_service: chatroom_service.clone(),
+            message_service: MessageService { chatroom_service }.into(),
         };
         let connection = self.database.connection.lock().unwrap();
         connection.transaction::<_, diesel::result::Error, _>(|| {

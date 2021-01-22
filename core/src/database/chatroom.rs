@@ -1,5 +1,6 @@
 use super::schema::chatroom as Schema;
 use super::schema::chatroom_members as SchemaMembers;
+use super::Event;
 use crate::changelog::Chatroom;
 use crate::changelog::Message;
 use blake3::Hash;
@@ -7,9 +8,13 @@ use blake3::Hasher;
 use chrono::Utc;
 use diesel::prelude::*;
 use std::collections::BTreeSet;
+use std::sync::Arc;
+use tokio::sync::broadcast::Sender;
 use uuid::Uuid;
 
-pub(crate) struct ChatroomService;
+pub struct ChatroomService {
+    pub event_sink: Sender<Arc<Event>>,
+}
 
 impl ChatroomService {
     /// Creates a [Chatroom](super::Chatroom) when receiving or sending a message belonging to a
@@ -26,6 +31,7 @@ impl ChatroomService {
 
     /// Updates the [Chatroom](super::Chatroom) that is supposed to hold a new [Message].
     pub fn update_for_message(
+        &self,
         connection: &'_ SqliteConnection,
         message: &crate::changelog::Message,
     ) -> QueryResult<()> {
@@ -43,12 +49,12 @@ impl ChatroomService {
                     .execute(connection)?;
             }
         } else {
-            ChatroomService::save(connection, &ChatroomService::create_for_message(message))?;
+            self.save(connection, &ChatroomService::create_for_message(message))?;
         }
         Ok(())
     }
 
-    pub fn save(connection: &'_ SqliteConnection, payload: &Chatroom) -> QueryResult<()> {
+    pub fn save(&self, connection: &'_ SqliteConnection, payload: &Chatroom) -> QueryResult<()> {
         let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
         diesel::replace_into(Schema::table)
             .values((
@@ -58,6 +64,8 @@ impl ChatroomService {
             ))
             .execute(connection)?;
         Self::replace_members(connection, &chatroom_id, payload.members.iter())?;
+        let _ = self.event_sink.send(Event::Chatroom { chatroom_id }.into());
+
         Ok(())
     }
 
@@ -83,6 +91,18 @@ impl ChatroomService {
             .values(rows)
             .execute(connection)?;
         Ok(())
+    }
+
+    pub fn find_by_id(
+        connection: &SqliteConnection,
+        id: &[u8],
+    ) -> QueryResult<Option<crate::daemon::Chatroom>> {
+        Schema::table
+            .find(id)
+            .select(Schema::columns::name)
+            .first::<String>(connection)
+            .map(|name| crate::daemon::Chatroom { name })
+            .optional()
     }
 }
 

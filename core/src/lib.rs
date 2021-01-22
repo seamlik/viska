@@ -27,6 +27,8 @@ use crate::database::peer::PeerService;
 use crate::database::Database;
 use crate::endpoint::CertificateVerifier;
 use blake3::Hash;
+use database::chatroom::ChatroomService;
+use database::message::MessageService;
 use database::DatabaseInitializationError;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
@@ -116,6 +118,12 @@ impl Node {
         let account_id = certificate.canonical_id();
         let database = Arc::new(Database::create(database_config)?);
         let (event_sink, _) = tokio::sync::broadcast::channel(8);
+        let chatroom_service = Arc::new(ChatroomService {
+            event_sink: event_sink.clone(),
+        });
+        let message_service = Arc::new(MessageService {
+            chatroom_service: chatroom_service.clone(),
+        });
 
         let certificate_verifier: Arc<_> = CertificateVerifier::new(account_id).into();
         certificate_verifier.set_rules(
@@ -140,6 +148,7 @@ impl Node {
             } else {
                 Box::new(PeerHandler {
                     database: database.clone(),
+                    message_service: message_service.clone(),
                 })
             };
             async move {
