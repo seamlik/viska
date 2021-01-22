@@ -46,6 +46,7 @@ use proto::Request;
 use proto::Response;
 use quinn::ReadToEndError;
 use serde_bytes::ByteBuf;
+use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fmt::Formatter;
@@ -57,7 +58,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use thiserror::Error;
 use tokio::runtime::Runtime;
-use tokio::task::JoinHandle;
+use tokio::task::JoinError;
 use uuid::Uuid;
 
 static CURRENT_NODE_HANDLE: AtomicI32 = AtomicI32::new(0);
@@ -100,6 +101,7 @@ pub fn stop(handle: i32) {
 /// The protagonist.
 pub struct Node {
     connection_manager: Arc<ConnectionManager>,
+    _node_grpc_shutdown_token: Box<dyn Any + Send>,
 }
 
 impl Node {
@@ -112,7 +114,7 @@ impl Node {
         key: &[u8],
         node_grpc_port: u16,
         database_config: database::Config,
-    ) -> Result<(Self, JoinHandle<()>), EndpointError> {
+    ) -> Result<(Self, impl Future<Output = Result<(), JoinError>>), EndpointError> {
         let account_id = certificate.canonical_id();
         let database = Arc::new(Database::create(database_config)?);
 
@@ -126,7 +128,8 @@ impl Node {
         );
 
         // Start gRPC server
-        daemon::StandardNode::start(node_grpc_port, event_bus.into(), database.clone());
+        let (node_grpc_task, node_grpc_shutdown_token) =
+            daemon::StandardNode::start(node_grpc_port, event_bus.into(), database.clone());
 
         let config = endpoint::Config { certificate, key };
         let (window_sender, window_receiver) =
@@ -160,7 +163,7 @@ impl Node {
 
         // Process incoming connections
         let connection_manager_cloned = connection_manager.clone();
-        let task = tokio::spawn(incomings.for_each(move |connecting| {
+        let incoming_connections_task = tokio::spawn(incomings.for_each(move |connecting| {
             let connection_manager_cloned = connection_manager_cloned.clone();
             tokio::spawn(async {
                 match connecting.await {
@@ -173,8 +176,20 @@ impl Node {
             async {}
         }));
 
+        let task = async {
+            incoming_connections_task.await?;
+            node_grpc_task.await?;
+            Ok(())
+        };
+
         println!("Started Viska node with account {}", account_id.to_hex());
-        Ok((Self { connection_manager }, task))
+        Ok((
+            Self {
+                connection_manager,
+                _node_grpc_shutdown_token: Box::new(node_grpc_shutdown_token),
+            },
+            task,
+        ))
     }
 
     /// Connects to a remote [Node].

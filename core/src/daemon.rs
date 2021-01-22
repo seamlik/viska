@@ -15,40 +15,13 @@ use futures::channel::mpsc::UnboundedSender;
 use futures::prelude::*;
 use node_client::NodeClient;
 use node_server::NodeServer;
-use std::error::Error;
+use std::any::Any;
 use std::sync::Arc;
-use tonic::body::BoxBody;
-use tonic::transport::Body;
+use tokio::task::JoinHandle;
 use tonic::transport::Channel;
-use tonic::transport::NamedService;
 use tonic::transport::Server;
 use tonic::Code;
 use tonic::Status;
-use tower::Service;
-
-trait GrpcService<S>
-where
-    S: Service<http::Request<Body>, Response = http::Response<BoxBody>>
-        + NamedService
-        + Clone
-        + Send
-        + 'static,
-    S::Future: Send + 'static,
-    S::Error: Into<Box<dyn Error + Send + Sync>> + Send,
-{
-    fn spawn_server(service: S, port: u16) {
-        // TODO: TLS
-        log::info!("{} serving at port {}", std::any::type_name::<S>(), port);
-        let task = async move {
-            Server::builder()
-                .add_service(service)
-                .serve(format!("[::1]:{}", port).parse().unwrap())
-                .await
-                .expect("Failed to spawn gRPC server")
-        };
-        tokio::spawn(task);
-    }
-}
 
 #[async_trait]
 pub(crate) trait GrpcClient: Sized {
@@ -84,20 +57,42 @@ impl<T: prost::Message> NullableResponse<T> for Result<tonic::Response<T>, Statu
     }
 }
 
+/// The standard implementation of a "Node" gRPC daemon.
 pub(crate) struct StandardNode {
     event_bus: Arc<EventBus<Event>>,
     database: Arc<Database>,
 }
 
-impl<T: node_server::Node> GrpcService<NodeServer<T>> for StandardNode {}
-
 impl StandardNode {
-    pub fn start(node_grpc_port: u16, event_bus: Arc<EventBus<Event>>, database: Arc<Database>) {
+    /// Starts the gRPC daemon.
+    ///
+    /// Returns a [Future] to await the shutdown of the gRPC service and a token for shutting down
+    /// the service manually. Drop the token to shut it down.
+    pub fn start(
+        node_grpc_port: u16,
+        event_bus: Arc<EventBus<Event>>,
+        database: Arc<Database>,
+    ) -> (JoinHandle<()>, impl Any + Send + 'static) {
         let instance = Self {
             event_bus,
             database,
         };
-        Self::spawn_server(NodeServer::new(instance), node_grpc_port);
+        let (sender, receiver) = futures::channel::oneshot::channel::<()>();
+        let shutdown_token = receiver.map(Result::unwrap_or_default);
+
+        // TODO: TLS
+        log::info!("gRPC daemon serving at port {}", node_grpc_port);
+        let task = async move {
+            Server::builder()
+                .add_service(NodeServer::new(instance))
+                .serve_with_shutdown(
+                    format!("[::1]:{}", node_grpc_port).parse().unwrap(),
+                    shutdown_token,
+                )
+                .await
+                .expect("Failed to spawn gRPC server")
+        };
+        (tokio::spawn(task), sender)
     }
 
     fn run_query<Q, T>(
