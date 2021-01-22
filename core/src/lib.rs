@@ -16,7 +16,7 @@ mod changelog;
 mod daemon;
 pub mod database;
 mod endpoint;
-pub(crate) mod event;
+mod event;
 mod handler;
 mod mock_profile;
 mod packet;

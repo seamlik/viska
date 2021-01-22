@@ -8,7 +8,7 @@ use diesel::prelude::*;
 use std::sync::Arc;
 
 #[derive(Default)]
-pub(crate) struct ChangelogMerger {
+pub struct ChangelogMerger {
     pub peer_service: Arc<PeerService>,
 }
 
