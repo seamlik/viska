@@ -44,11 +44,13 @@ pub(crate) fn bytes_from_hash(src: Hash) -> Vec<u8> {
     raw_hash.to_vec()
 }
 
+/// Database config.
 #[derive(Default)]
 pub struct Config {
     pub storage: Storage,
 }
 
+/// Where to store the database.
 pub enum Storage {
     InMemory,
     OnDisk(PathBuf),
@@ -150,6 +152,9 @@ pub fn create_standard_profile(base_data_dir: PathBuf) -> Result<String, CreateP
     Ok(account_id)
 }
 
+/// Creates a mock profile.
+///
+/// The profile contains a freshly-generated account with a lot of random database content.
 #[riko::fun]
 pub fn create_mock_profile(base_data_dir: PathBuf) -> Result<String, CreateProfileError> {
     let account_id_text = create_standard_profile(base_data_dir.clone())?;

@@ -1,3 +1,5 @@
+//! Utilities.
+
 use rand::prelude::*;
 
 /// Generates a random port within the private range untouched by IANA.

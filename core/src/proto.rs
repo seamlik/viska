@@ -1,3 +1,5 @@
+//! Communication protocol between [Node](crate::Node)s.
+
 tonic::include_proto!("viska.proto");
 
 use http::StatusCode;

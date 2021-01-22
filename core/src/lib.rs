@@ -177,6 +177,7 @@ impl Node {
         Ok((Self { connection_manager }, task))
     }
 
+    /// Connects to a remote [Node].
     pub async fn connect(&self, addr: &SocketAddr) -> Result<Arc<Connection>, ConnectionError> {
         self.connection_manager.clone().connect(addr).await
     }
@@ -190,8 +191,6 @@ pub struct Connection {
 
 impl Connection {
     /// Sends a [Request] and awaits for its [Response].
-    ///
-    /// # Note
     ///
     /// If the remote [Node] is sending a packet larger than a threashold, this [Connection] will
     /// be closed immediately.
@@ -221,6 +220,7 @@ impl Connection {
         }
     }
 
+    /// Closes the connection with a reason code.
     pub fn close(&self, code: StatusCode) {
         log::info!("Closing connection to {}", self.remote_address());
         self.quic.close(code.as_u16().into(), &[]);
