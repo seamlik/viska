@@ -15,6 +15,6 @@ use log::Level;
 /// Must be used by a Java client loading this crate.
 #[riko::fun]
 pub fn initialize() {
-    let config = Config::default().with_min_level(Level::max());
+    let config = Config::default().with_min_level(Level::Info);
     android_logger::init_once(config);
 }
