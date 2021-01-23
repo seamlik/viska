@@ -20,7 +20,7 @@ android {
     jvmTarget = '1.8'
   }
   defaultConfig {
-    applicationId 'viska.android'
+    applicationId 'viska.debug'
     minSdkVersion 28
     targetSdkVersion 30
     versionName PROJECT_VERSION
