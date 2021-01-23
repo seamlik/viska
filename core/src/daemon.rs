@@ -116,25 +116,25 @@ impl StandardNode {
         query: Q,
     ) -> Result<tonic::Response<UnboundedReceiver<Result<T, Status>>>, Status>
     where
-        F: FnOnce(&Event) -> bool + Send + Clone + 'static,
+        F: Fn(&Event) -> bool + Send + Clone + 'static,
         T: Send + 'static,
-        Q: FnOnce(&'_ SqliteConnection) -> QueryResult<T> + Send + Clone + 'static,
+        Q: Fn(&'_ SqliteConnection) -> QueryResult<T> + Send + Clone + 'static,
     {
         let (sender, receiver) = futures::channel::mpsc::unbounded::<Result<T, Status>>();
         let database = self.database.clone();
         let mut subscription = self.event_sink.subscribe();
         tokio::spawn(async move {
-            if let Err(_) = Self::run_query(database.clone(), sender.clone(), query.clone()) {
+            if let Err(_) = Self::run_query(database.clone(), sender.clone(), &query) {
                 return;
             }
 
+            let event_filter = event_filter;
             loop {
                 match subscription.recv().await {
                     Ok(event) => {
-                        let filter = event_filter.clone();
-                        if filter(&event) {
+                        if event_filter(&event) {
                             if let Err(_) =
-                                Self::run_query(database.clone(), sender.clone(), query.clone())
+                                Self::run_query(database.clone(), sender.clone(), &query)
                             {
                                 return;
                             }
@@ -161,8 +161,7 @@ impl node_server::Node for StandardNode {
         let requested_account_id = request.into_inner();
         let requested_account_id_for_filter = requested_account_id.clone();
         self.run_subscription(
-            |event| {
-                let requested_account_id_for_filter = requested_account_id_for_filter;
+            move |event| {
                 if let Event::Vcard { account_id } = event {
                     account_id == &requested_account_id_for_filter
                 } else {
@@ -170,7 +169,6 @@ impl node_server::Node for StandardNode {
                 }
             },
             move |connection| {
-                let requested_account_id = requested_account_id;
                 VcardService::find_by_account_id(connection, &requested_account_id)
                     .map(Option::unwrap_or_default)
             },
@@ -187,18 +185,14 @@ impl node_server::Node for StandardNode {
         let requested_chatroom_id = request.into_inner();
         let requested_chatroom_id_for_filter = requested_chatroom_id.clone();
         self.run_subscription(
-            |event| {
-                let requested_chatroom_id_for_filter = requested_chatroom_id_for_filter;
+            move |event| {
                 if let Event::Message { chatroom_id } = event {
                     chatroom_id == &requested_chatroom_id_for_filter
                 } else {
                     false
                 }
             },
-            move |connection| {
-                let requested_chatroom_id = requested_chatroom_id;
-                MessageService::find_by_chatroom(connection, &requested_chatroom_id)
-            },
+            move |connection| MessageService::find_by_chatroom(connection, &requested_chatroom_id),
         )
     }
 
@@ -211,8 +205,7 @@ impl node_server::Node for StandardNode {
         let requested_chatroom_id = request.into_inner();
         let requested_chatroom_id_for_filter = requested_chatroom_id.clone();
         self.run_subscription(
-            |event| {
-                let requested_chatroom_id_for_filter = requested_chatroom_id_for_filter;
+            move |event| {
                 if let Event::Chatroom { chatroom_id } = event {
                     chatroom_id == &requested_chatroom_id_for_filter
                 } else {
@@ -220,7 +213,6 @@ impl node_server::Node for StandardNode {
                 }
             },
             move |connection| {
-                let requested_chatroom_id = requested_chatroom_id;
                 ChatroomService::find_by_id(connection, &requested_chatroom_id)
                     .map(Option::unwrap_or_default)
             },
