@@ -6,7 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.preferredSize
-import androidx.compose.foundation.lazy.LazyColumnFor
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.ListItem
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
@@ -20,41 +20,51 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.dp
+import com.google.protobuf.ByteString
 import com.google.protobuf.BytesValue
+import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import java.lang.IllegalArgumentException
 import javax.inject.Inject
-import viska.database.Database.Message
+import viska.daemon.Daemon.Message
 import viska.database.displayId
 import viska.database.toBinaryId
 
 @AndroidEntryPoint
 class ChatroomActivity : InstanceActivity() {
 
-  @Inject lateinit var daemonService: viska.daemon.DaemonService
+  @Inject lateinit var daemonService: Lazy<viska.daemon.DaemonService>
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    cancelIfNoActiveAccount()
-
-    val chatroomId = BytesValue.parseFrom(chatroomId.toBinaryId())
+    try {
+      super.onCreate(savedInstanceState)
+    } catch (_: ActivityRedirectedException) {
+      return
+    }
 
     setContent {
       MaterialTheme {
-        val chatroom by daemonService.nodeGrpcClient.watchChatroom(chatroomId).collectAsState(null)
+        val chatroomIdProtobuf = BytesValue.of(ByteString.copyFrom(chatroomId.toBinaryId()))
+        val chatroom by daemonService
+            .get()
+            .nodeGrpcClient
+            .watchChatroom(chatroomIdProtobuf)
+            .collectAsState(null)
         if (chatroom == null) {
           finish()
           return@MaterialTheme
         }
 
         val messagesSubscription by daemonService
+            .get()
             .nodeGrpcClient
-            .watchChatroomMessages(chatroomId)
+            .watchChatroomMessages(chatroomIdProtobuf)
             .collectAsState(null)
 
-        Scaffold(topBar = { TopAppBar(title = { Text(text = chatroom?.inner?.name ?: "") }) }) { _
-          ->
-          LazyColumnFor(messagesSubscription?.messagesList ?: emptyList()) { MessageItem(it) }
+        Scaffold(topBar = { TopAppBar(title = { Text(text = chatroom?.name ?: "") }) }) { _ ->
+          LazyColumn {
+            items(messagesSubscription?.messagesList ?: emptyList()) { MessageItem(it) }
+          }
         }
       }
     }
@@ -91,5 +101,5 @@ class ChatroomActivity : InstanceActivity() {
 private fun MessageItem(message: Message) {
   ListItem(
       icon = { Image(imageVector = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
-      text = { Text(text = message.inner.content) })
+      text = { Text(text = message.content) })
 }

@@ -23,7 +23,9 @@ abstract class InstanceActivity : AppCompatActivity() {
     }
 
     if (profileService.accountId.isBlank()) {
-      return
+      startActivity(Intent(this, NewProfileActivity::class.java))
+      finish()
+      throw ActivityRedirectedException()
     }
 
     startForegroundService(Intent(this, DaemonService::class.java))
@@ -34,15 +36,6 @@ abstract class InstanceActivity : AppCompatActivity() {
   override fun onDestroy() {
     synchronized(INSTANCES) { INSTANCES.remove(this) }
     super.onDestroy()
-  }
-
-  /** Must be invoked by child classes at the earliest stage of [onCreate]. */
-  protected fun cancelIfNoActiveAccount() {
-    if (profileService.accountId.isBlank()) {
-      startActivity(Intent(this, NewProfileActivity::class.java))
-      finish()
-      return
-    }
   }
 
   companion object {

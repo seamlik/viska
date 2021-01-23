@@ -7,7 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.preferredSize
-import androidx.compose.foundation.lazy.LazyColumnFor
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Divider
 import androidx.compose.material.DrawerState
@@ -37,39 +37,49 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import com.google.protobuf.ByteString
 import com.google.protobuf.BytesValue
 import com.google.protobuf.Empty
+import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.flow.map
+import viska.daemon.Daemon.Chatroom
 import viska.daemon.Daemon.RosterItem
 import viska.daemon.Daemon.Vcard
-import viska.database.Database.Chatroom
 import viska.database.toBinaryId
 
 @AndroidEntryPoint
 class DashboardActivity : InstanceActivity() {
 
-  @Inject lateinit var daemonService: viska.daemon.DaemonService
+  @Inject lateinit var daemonService: Lazy<viska.daemon.DaemonService>
 
   private val viewModel by viewModels<DashboardViewModel>()
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    cancelIfNoActiveAccount()
+    try {
+      super.onCreate(savedInstanceState)
+    } catch (_: ActivityRedirectedException) {
+      return
+    }
 
     setContent {
       MaterialTheme {
+        val accountIdProtobuf =
+            BytesValue.of(ByteString.copyFrom(profileService.accountId.toBinaryId()))
         val vcard by daemonService
+            .get()
             .nodeGrpcClient
-            .watchVcard(BytesValue.parseFrom(profileService.accountId.toBinaryId()))
+            .watchVcard(accountIdProtobuf)
             .collectAsState(null)
         val chatrooms by daemonService
+            .get()
             .nodeGrpcClient
             .watchChatrooms(Empty.getDefaultInstance())
             .map { it.chatroomsList }
             .collectAsState(null)
         val roster by daemonService
+            .get()
             .nodeGrpcClient
             .watchRoster(Empty.getDefaultInstance())
             .map { it.rosterList }
@@ -153,8 +163,8 @@ private fun Page(
             }) { _ ->
           when (viewModel.screen) {
             DashboardViewModel.Screen.CHATROOMS ->
-                LazyColumnFor(items = chatrooms) { ChatroomItem(it) }
-            DashboardViewModel.Screen.ROSTER -> LazyColumnFor(items = roster) { RosterItem(it) }
+                LazyColumn { items(chatrooms) { ChatroomItem(it) } }
+            DashboardViewModel.Screen.ROSTER -> LazyColumn { items(roster) { RosterItem(it) } }
           }
         }
       })
@@ -257,13 +267,9 @@ private fun ChatroomItem(data: Chatroom) {
   ListItem(
       modifier =
           Modifier.clickable(
-              onClick = {
-                if (data.inner.membersList.isNotEmpty()) {
-                  ChatroomActivity.start(context, data.chatroomId.toByteArray())
-                }
-              }),
+              onClick = { ChatroomActivity.start(context, data.chatroomId.toByteArray()) }),
       icon = { Image(imageVector = Icons.Default.Person, Modifier.preferredSize(48.dp)) },
-      text = { Text(maxLines = 1, text = data.inner.name) },
+      text = { Text(maxLines = 1, text = data.name) },
       secondaryText = {
         // TODO
         // Text(maxLines = 3, text = data.latestMessage?.inner?.preview(context.resources) ?: "")

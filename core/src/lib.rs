@@ -123,6 +123,7 @@ impl Node {
         });
         let message_service = Arc::new(MessageService {
             chatroom_service: chatroom_service.clone(),
+            event_sink: event_sink.clone(),
         });
 
         let certificate_verifier: Arc<_> = CertificateVerifier::new(account_id).into();

@@ -187,7 +187,11 @@ pub fn create_mock_profile(base_data_dir: PathBuf) -> Result<String, CreateProfi
         }
         .into(),
         chatroom_service: chatroom_service.clone(),
-        message_service: MessageService { chatroom_service }.into(),
+        message_service: MessageService {
+            chatroom_service,
+            event_sink: event_sink.clone(),
+        }
+        .into(),
     }
     .into();
     let mock_profile_service = MockProfileService {
@@ -221,6 +225,7 @@ impl CanonicalId for crate::changelog::Blob {
 
 pub(crate) enum Event {
     Chatroom { chatroom_id: Vec<u8> },
+    Message { chatroom_id: Vec<u8> },
     Roster,
     Vcard { account_id: Vec<u8> },
 }

@@ -2,21 +2,25 @@ use super::chatroom::ChatroomService;
 use super::object::ObjectService;
 use super::schema::message as Schema;
 use super::schema::message_recipients as SchemaRecipients;
+use super::Event;
 use crate::changelog::Message;
+use crate::daemon::ChatroomMessagesSubscription;
 use crate::pki::CanonicalId;
 use blake3::Hash;
 use blake3::Hasher;
 use diesel::prelude::*;
 use std::collections::BTreeSet;
 use std::sync::Arc;
+use tokio::sync::broadcast::Sender;
 use uuid::Uuid;
 
 pub(crate) struct MessageService {
     pub chatroom_service: Arc<ChatroomService>,
+    pub event_sink: Sender<Arc<Event>>,
 }
 
 impl MessageService {
-    fn save(connection: &'_ SqliteConnection, payload: &Message) -> QueryResult<()> {
+    fn save(&self, connection: &'_ SqliteConnection, payload: &Message) -> QueryResult<()> {
         let message_id = super::bytes_from_hash(payload.canonical_id());
         let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
         let attachment_id: Option<Vec<u8>> = payload
@@ -29,7 +33,7 @@ impl MessageService {
         diesel::replace_into(Schema::table)
             .values((
                 Schema::message_id.eq(&message_id),
-                Schema::chatroom_id.eq(chatroom_id),
+                Schema::chatroom_id.eq(&chatroom_id),
                 Schema::attachment.eq(attachment_id),
                 Schema::content.eq(&payload.content),
                 Schema::sender.eq(&payload.sender),
@@ -37,6 +41,8 @@ impl MessageService {
             ))
             .execute(connection)?;
         Self::replace_recipients(connection, &message_id, payload.recipients.iter())?;
+        let _ = self.event_sink.send(Event::Message { chatroom_id }.into());
+
         Ok(())
     }
 
@@ -46,7 +52,7 @@ impl MessageService {
             .update_for_message(connection, &payload)?;
 
         // Update message
-        MessageService::save(connection, &payload)?;
+        self.save(connection, &payload)?;
         Ok(())
     }
 
@@ -72,6 +78,13 @@ impl MessageService {
             .values(rows)
             .execute(connection)?;
         Ok(())
+    }
+
+    pub fn find_by_chatroom(
+        connection: &SqliteConnection,
+        chatroom_id: &[u8],
+    ) -> QueryResult<ChatroomMessagesSubscription> {
+        todo!()
     }
 }
 

@@ -45,10 +45,12 @@ message Vcard {
 
 message Chatroom {
   string name = 1;
+  bytes chatroom_id = 2;
 }
 
 message Message {
   double time = 1;
   Vcard sender = 2;
   string content = 3;
+  string attachment_mime = 4;
 }

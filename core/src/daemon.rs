@@ -1,13 +1,13 @@
 tonic::include_proto!("viska.daemon");
 
 use crate::database::chatroom::ChatroomService;
+use crate::database::message::MessageService;
 use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
 use crate::database::Database;
 use crate::database::Event;
 use async_trait::async_trait;
 use diesel::prelude::*;
-use futures::channel::mpsc::Receiver;
 use futures::channel::mpsc::TrySendError;
 use futures::channel::mpsc::UnboundedReceiver;
 use futures::channel::mpsc::UnboundedSender;
@@ -177,13 +177,29 @@ impl node_server::Node for StandardNode {
         )
     }
 
-    type WatchChatroomMessagesStream = Receiver<Result<ChatroomMessagesSubscription, Status>>;
+    type WatchChatroomMessagesStream =
+        UnboundedReceiver<Result<ChatroomMessagesSubscription, Status>>;
 
     async fn watch_chatroom_messages(
         &self,
         request: tonic::Request<Vec<u8>>,
     ) -> Result<tonic::Response<Self::WatchChatroomMessagesStream>, Status> {
-        todo!()
+        let requested_chatroom_id = request.into_inner();
+        let requested_chatroom_id_for_filter = requested_chatroom_id.clone();
+        self.run_subscription(
+            |event| {
+                let requested_chatroom_id_for_filter = requested_chatroom_id_for_filter;
+                if let Event::Message { chatroom_id } = event {
+                    chatroom_id == &requested_chatroom_id_for_filter
+                } else {
+                    false
+                }
+            },
+            move |connection| {
+                let requested_chatroom_id = requested_chatroom_id;
+                MessageService::find_by_chatroom(connection, &requested_chatroom_id)
+            },
+        )
     }
 
     type WatchChatroomStream = UnboundedReceiver<Result<Chatroom, Status>>;
@@ -211,13 +227,22 @@ impl node_server::Node for StandardNode {
         )
     }
 
-    type WatchChatroomsStream = Receiver<Result<ChatroomsSubscription, Status>>;
+    type WatchChatroomsStream = UnboundedReceiver<Result<ChatroomsSubscription, Status>>;
 
     async fn watch_chatrooms(
         &self,
-        request: tonic::Request<()>,
+        _: tonic::Request<()>,
     ) -> Result<tonic::Response<Self::WatchChatroomsStream>, Status> {
-        todo!()
+        self.run_subscription(
+            |event| {
+                if let Event::Chatroom { chatroom_id: _ } = event {
+                    true
+                } else {
+                    false
+                }
+            },
+            move |connection| ChatroomService::find_all(connection),
+        )
     }
 
     type WatchRosterStream = UnboundedReceiver<Result<Roster, Status>>;

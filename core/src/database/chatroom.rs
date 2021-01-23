@@ -3,6 +3,7 @@ use super::schema::chatroom_members as SchemaMembers;
 use super::Event;
 use crate::changelog::Chatroom;
 use crate::changelog::Message;
+use crate::daemon::ChatroomsSubscription;
 use blake3::Hash;
 use blake3::Hasher;
 use chrono::Utc;
@@ -99,10 +100,26 @@ impl ChatroomService {
     ) -> QueryResult<Option<crate::daemon::Chatroom>> {
         Schema::table
             .find(id)
-            .select(Schema::columns::name)
+            .select(Schema::name)
             .first::<String>(connection)
-            .map(|name| crate::daemon::Chatroom { name })
+            .map(|name| crate::daemon::Chatroom {
+                name,
+                chatroom_id: id.into(),
+            })
             .optional()
+    }
+
+    pub fn find_all(connection: &SqliteConnection) -> QueryResult<ChatroomsSubscription> {
+        Schema::table
+            .select((Schema::name, Schema::chatroom_id))
+            .order(Schema::time_updated.asc())
+            .load::<(String, Vec<u8>)>(connection)
+            .map(|rows| ChatroomsSubscription {
+                chatrooms: rows
+                    .into_iter()
+                    .map(|(name, chatroom_id)| crate::daemon::Chatroom { name, chatroom_id })
+                    .collect(),
+            })
     }
 }
 
