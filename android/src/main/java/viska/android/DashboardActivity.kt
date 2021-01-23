@@ -78,20 +78,15 @@ class DashboardActivity : InstanceActivity() {
             .nodeGrpcClient
             .watchChatrooms(Empty.getDefaultInstance())
             .map { it.chatroomsList }
-            .collectAsState(null)
+            .collectAsState(emptyList())
         val roster by daemonService
             .get()
             .nodeGrpcClient
             .watchRoster(Empty.getDefaultInstance())
             .map { it.rosterList }
-            .collectAsState(null)
+            .collectAsState(emptyList())
 
-        Page(
-            viewModel = viewModel,
-            chatrooms = chatrooms ?: emptyList(),
-            vcard = vcard,
-            accountId = profileService.accountId,
-            roster = roster ?: emptyList())
+        Page(viewModel, chatrooms, vcard, profileService.accountId, roster)
         ExitDialog(viewModel)
       }
     }

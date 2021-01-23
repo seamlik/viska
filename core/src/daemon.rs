@@ -98,7 +98,7 @@ impl StandardNode {
 
     fn run_query<Q, T>(
         database: Arc<Database>,
-        sender: UnboundedSender<Result<T, Status>>,
+        sender: &UnboundedSender<Result<T, Status>>,
         query: Q,
     ) -> Result<(), TrySendError<Result<T, Status>>>
     where
@@ -124,7 +124,7 @@ impl StandardNode {
         let database = self.database.clone();
         let mut subscription = self.event_sink.subscribe();
         tokio::spawn(async move {
-            if let Err(_) = Self::run_query(database.clone(), sender.clone(), &query) {
+            if let Err(_) = Self::run_query(database.clone(), &sender, &query) {
                 return;
             }
 
@@ -133,9 +133,7 @@ impl StandardNode {
                 match subscription.recv().await {
                     Ok(event) => {
                         if event_filter(&event) {
-                            if let Err(_) =
-                                Self::run_query(database.clone(), sender.clone(), &query)
-                            {
+                            if let Err(_) = Self::run_query(database.clone(), &sender, &query) {
                                 return;
                             }
                         }
