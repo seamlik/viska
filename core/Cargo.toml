@@ -1,5 +1,4 @@
 [package]
-authors = ["殷啟聰 | Kai-Chung Yan <seamlik@debian.org>"]
 description = "Peer-to-peer chatting app hiding inside popular distributed networks"
 edition = "2018"
 name = "viska"
