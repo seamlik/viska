@@ -9,12 +9,15 @@ pub use viska::bridge as bridge_core;
 
 use android_logger::Config;
 use log::Level;
+use log::ParseLevelError;
+use std::str::FromStr;
 
 /// Initializes the whole library.
 ///
 /// Must be used by a Java client loading this crate.
 #[riko::fun]
-pub fn initialize() {
-    let config = Config::default().with_min_level(Level::Info);
+pub fn initialize(log_level: String) -> Result<(), ParseLevelError> {
+    let config = Config::default().with_min_level(Level::from_str(&log_level)?);
     android_logger::init_once(config);
+    Ok(())
 }

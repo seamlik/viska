@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import androidx.core.content.getSystemService
 import dagger.hilt.android.HiltAndroidApp
+import org.bson.BsonString
 import viska.R
 
 @HiltAndroidApp
@@ -12,7 +13,7 @@ class Application : android.app.Application() {
     super.onCreate()
 
     System.loadLibrary("viska_android")
-    viska_android.Module.initialize()
+    viska_android.Module.initialize(BsonString("INFO"))
     initializeNotifications()
   }
 
