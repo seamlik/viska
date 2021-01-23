@@ -1,5 +1,5 @@
 <manifest
-  package="viska.android"
+  package="viska"
   xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:tools="http://schemas.android.com/tools"
 >
@@ -10,14 +10,14 @@
   <application
     android:icon="@drawable/icon"
     android:label="@string/app"
-    android:name=".Application"
+    android:name=".android.Application"
     android:supportsRtl="true"
     android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar"
     tools:replace="android:label"
   >
     <activity
       android:launchMode="singleInstance"
-      android:name=".DashboardActivity"
+      android:name=".android.DashboardActivity"
     >
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
@@ -25,13 +25,13 @@
       </intent-filter>
     </activity>
     <activity
-      android:name=".NewProfileActivity"
+      android:name=".android.NewProfileActivity"
       android:launchMode="singleInstance"
     />
     <activity
-      android:name=".ChatroomActivity"
+      android:name=".android.ChatroomActivity"
       android:documentLaunchMode="intoExisting"
     />
-    <service android:name=".DaemonService" />
+    <service android:name=".android.DaemonService" />
   </application>
 </manifest>

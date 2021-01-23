@@ -2,7 +2,7 @@ package viska.couchbase
 
 import android.content.res.Resources
 import androidx.core.content.MimeTypeFilter
-import viska.android.R
+import viska.R
 import viska.changelog.Changelog
 
 /** Generates a text previewing the content of this {@link Message}. */

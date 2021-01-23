@@ -44,6 +44,7 @@ import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.flow.map
+import viska.R
 import viska.daemon.Daemon.Chatroom
 import viska.daemon.Daemon.RosterItem
 import viska.daemon.Daemon.Vcard

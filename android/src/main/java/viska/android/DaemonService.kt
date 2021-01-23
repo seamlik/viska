@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.IBinder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import viska.R
 import viska.daemon.DaemonService
 import viska.database.ProfileService
 

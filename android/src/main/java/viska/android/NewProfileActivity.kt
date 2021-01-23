@@ -23,6 +23,8 @@ import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import viska.BuildConfig
+import viska.R
 import viska.daemon.DaemonService
 import viska.database.ProfileService
 

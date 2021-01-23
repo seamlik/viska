@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import androidx.core.content.getSystemService
 import dagger.hilt.android.HiltAndroidApp
+import viska.R
 
 @HiltAndroidApp
 class Application : android.app.Application() {
