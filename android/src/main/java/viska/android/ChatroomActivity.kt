@@ -73,7 +73,7 @@ class ChatroomActivity : InstanceActivity() {
 
     fun start(source: Context, chatroomId: ByteArray) {
       // Will be like:
-      // viska://chatroom/87956192a8143476909113cda0d4077e092e26e10cc7dac43e68f694ea68a036
+      // viska://chatroom/87956192A8143476909113CDA0D4077E092E26E10CC7DAC43E68F694EA68A036
       val uri =
           Uri.Builder()
               .scheme("viska")
