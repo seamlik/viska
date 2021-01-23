@@ -12,7 +12,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast::Sender;
 use uuid::Uuid;
 
-pub struct ChatroomService {
+pub(crate) struct ChatroomService {
     pub event_sink: Sender<Arc<Event>>,
 }
 

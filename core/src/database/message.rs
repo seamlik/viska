@@ -11,7 +11,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 use uuid::Uuid;
 
-pub struct MessageService {
+pub(crate) struct MessageService {
     pub chatroom_service: Arc<ChatroomService>,
 }
 

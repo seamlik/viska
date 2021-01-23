@@ -14,7 +14,7 @@ pub mod bridge;
 
 mod changelog;
 mod daemon;
-mod database;
+pub mod database;
 mod endpoint;
 mod handler;
 mod mock_profile;

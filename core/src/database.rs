@@ -2,13 +2,17 @@
 
 diesel_migrations::embed_migrations!();
 
-pub mod chatroom;
+pub(crate) mod chatroom;
 pub(crate) mod message;
 mod object;
 pub(crate) mod peer;
 mod schema;
 pub(crate) mod vcard;
 
+use self::chatroom::ChatroomService;
+use self::message::MessageService;
+use self::peer::PeerService;
+use crate::changelog::ChangelogMerger;
 use crate::mock_profile::MockProfileService;
 use crate::pki::CanonicalId;
 use blake3::Hash;
@@ -17,6 +21,7 @@ use chrono::prelude::*;
 use diesel::prelude::*;
 use serde_bytes::ByteBuf;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::Mutex;
 use thiserror::Error;
 use vcard::VcardService;
@@ -171,13 +176,25 @@ pub fn create_mock_profile(base_data_dir: PathBuf) -> Result<String, CreateProfi
         storage: Storage::OnDisk(destination),
     };
     let database = Database::create(database_config)?;
+    let event_sink = crate::util::dummy_mpmc_sender();
+    let chatroom_service = Arc::new(ChatroomService {
+        event_sink: event_sink.clone(),
+    });
+    let changelog_merger = ChangelogMerger {
+        peer_service: PeerService {
+            event_sink: event_sink.clone(),
+            verifier: None,
+        }
+        .into(),
+        chatroom_service: chatroom_service.clone(),
+        message_service: MessageService { chatroom_service }.into(),
+    }
+    .into();
     let mock_profile_service = MockProfileService {
         account_id,
         database: database.into(),
-        vcard_service: VcardService {
-            event_sink: crate::util::dummy_mpmc_sender(),
-        }
-        .into(),
+        vcard_service: VcardService { event_sink }.into(),
+        changelog_merger,
     };
     mock_profile_service.populate_mock_data()?;
     Ok(account_id_text)
@@ -202,7 +219,7 @@ impl CanonicalId for crate::changelog::Blob {
     }
 }
 
-pub enum Event {
+pub(crate) enum Event {
     Chatroom { chatroom_id: Vec<u8> },
     Roster,
     Vcard { account_id: Vec<u8> },
