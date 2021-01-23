@@ -49,12 +49,6 @@ pub(crate) fn bytes_from_hash(src: Hash) -> Vec<u8> {
     raw_hash.to_vec()
 }
 
-/// Database config.
-#[derive(Default)]
-pub struct Config {
-    pub storage: Storage,
-}
-
 /// Where to store the database.
 pub enum Storage {
     InMemory,
@@ -72,8 +66,8 @@ pub(crate) struct Database {
 }
 
 impl Database {
-    pub fn create(config: Config) -> Result<Self, DatabaseInitializationError> {
-        let database_url = match config.storage {
+    pub fn create(storage: &Storage) -> Result<Self, DatabaseInitializationError> {
+        let database_url = match storage {
             Storage::InMemory => ":memory:".into(),
             Storage::OnDisk(path) => path.display().to_string(),
         };
@@ -149,10 +143,7 @@ pub fn create_standard_profile(base_data_dir: PathBuf) -> Result<String, CreateP
     std::fs::create_dir_all(&destination)?;
     destination.push("main.db");
 
-    let database_config = Config {
-        storage: Storage::OnDisk(destination),
-    };
-    Database::create(database_config)?;
+    Database::create(&Storage::OnDisk(destination))?;
 
     Ok(account_id)
 }
@@ -172,10 +163,8 @@ pub fn create_mock_profile(base_data_dir: PathBuf) -> Result<String, CreateProfi
     destination.pop();
     destination.push("database");
     destination.push("main.db");
-    let database_config = Config {
-        storage: Storage::OnDisk(destination),
-    };
-    let database = Database::create(database_config)?;
+
+    let database = Database::create(&Storage::OnDisk(destination))?;
     let event_sink = crate::util::dummy_mpmc_sender();
     let chatroom_service = Arc::new(ChatroomService {
         event_sink: event_sink.clone(),

@@ -13,6 +13,7 @@ import java.nio.file.Files
 import javax.inject.Inject
 import javax.inject.Singleton
 import org.bson.BsonString
+import java.nio.file.Path
 
 @Singleton
 class AndroidProfileService @Inject constructor(@ApplicationContext private val context: Context) :
@@ -64,6 +65,9 @@ class AndroidProfileService @Inject constructor(@ApplicationContext private val 
       putString("active-account", accountIdText)
     }
   }
+
+  override val baseDataDir: Path
+    get() = context.filesDir.toPath()
 }
 
 @dagger.Module

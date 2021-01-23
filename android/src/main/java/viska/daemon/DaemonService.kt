@@ -6,6 +6,7 @@ import javax.inject.Singleton
 import kotlin.random.Random
 import org.bson.BsonBinary
 import org.bson.BsonInt32
+import org.bson.BsonString
 import viska.database.ProfileService
 
 @Singleton
@@ -29,6 +30,7 @@ class DaemonService @Inject constructor(profileService: ProfileService) : AutoCl
                 BsonBinary(profileService.certificate),
                 BsonBinary(profileService.key),
                 BsonInt32(nodeGrpcPort),
+                BsonString(profileService.baseDataDir.toString())
             )
             .asInt32()
             .value

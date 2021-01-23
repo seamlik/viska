@@ -30,6 +30,7 @@ use blake3::Hash;
 use database::chatroom::ChatroomService;
 use database::message::MessageService;
 use database::DatabaseInitializationError;
+use database::Storage;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
 use endpoint::LocalEndpoint;
@@ -52,6 +53,7 @@ use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::lazy::SyncLazy;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -75,13 +77,14 @@ pub fn start(
     certificate: ByteBuf,
     key: ByteBuf,
     node_grpc_port: u16,
+    base_data_dir: PathBuf,
 ) -> Result<i32, EndpointError> {
     let handle = CURRENT_NODE_HANDLE.fetch_add(1, Ordering::SeqCst);
     let (node, _) = TOKIO.lock().unwrap().block_on(Node::start(
         &certificate,
         &key,
         node_grpc_port,
-        Default::default(),
+        base_data_dir,
     ))?;
     NODES.lock().unwrap().insert(handle, node);
     Ok(handle)
@@ -113,10 +116,18 @@ impl Node {
         certificate: &[u8],
         key: &[u8],
         node_grpc_port: u16,
-        database_config: database::Config,
+        base_data_dir: PathBuf,
     ) -> Result<(Self, impl Future<Output = Result<(), JoinError>>), EndpointError> {
         let account_id = certificate.canonical_id();
-        let database = Arc::new(Database::create(database_config)?);
+
+        let mut database_path = base_data_dir;
+        database_path.push("account");
+        database_path.push(account_id.to_hex().to_ascii_uppercase());
+        database_path.push("database");
+        database_path.push("main.db");
+        log::info!("Opening database file {}", database_path.display());
+        let database = Arc::new(Database::create(&Storage::OnDisk(database_path))?);
+
         let (event_sink, _) = tokio::sync::broadcast::channel(8);
         let chatroom_service = Arc::new(ChatroomService {
             event_sink: event_sink.clone(),
