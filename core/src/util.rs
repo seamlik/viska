@@ -9,6 +9,6 @@ pub fn random_port() -> u16 {
 }
 
 pub(crate) fn dummy_mpmc_sender<T>() -> Sender<T> {
-    let (sender, _) = tokio::sync::broadcast::channel(0);
+    let (sender, _) = tokio::sync::broadcast::channel(1);
     sender
 }
