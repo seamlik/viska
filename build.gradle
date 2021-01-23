@@ -14,9 +14,9 @@ buildscript {
   }
   dependencies {
     classpath 'com.android.tools.build:gradle:7.0.0-alpha04'
-    classpath 'com.diffplug.spotless:spotless-plugin-gradle:5.7.0'
+    classpath 'com.diffplug.spotless:spotless-plugin-gradle:5.9.0'
     classpath "com.google.dagger:hilt-android-gradle-plugin:${VERSIONS.hilt}"
-    classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.13'
+    classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.14'
     classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.21'
   }
 }

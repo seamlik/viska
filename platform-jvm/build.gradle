@@ -6,7 +6,7 @@ sourceCompatibility = 8
 
 dependencies {
   api "io.grpc:grpc-stub:${VERSIONS.grpcJava}"
-  api 'com.google.protobuf:protobuf-java:3.13.0'
+  api 'com.google.protobuf:protobuf-java:3.14.0'
   api "io.grpc:grpc-kotlin-stub:${VERSIONS.grpcKotlin}"
   api 'javax.inject:javax.inject:1'
   implementation "io.grpc:grpc-protobuf:${VERSIONS.grpcJava}"
