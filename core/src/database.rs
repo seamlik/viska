@@ -71,6 +71,7 @@ impl Database {
             Storage::InMemory => ":memory:".into(),
             Storage::OnDisk(path) => path.display().to_string(),
         };
+        log::info!("Opening database URL {}", &database_url);
         let connection = SqliteConnection::establish(&database_url)?;
 
         log::info!("Beginning database migration");
