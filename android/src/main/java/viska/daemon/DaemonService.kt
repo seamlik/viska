@@ -24,7 +24,7 @@ class DaemonService @Inject constructor(profileService: ProfileService) : AutoCl
 
     // TODO: TLS
     // Node daemon
-    val nodeGrpcPort = Random.nextInt(1, 65536)
+    val nodeGrpcPort = Random.nextInt(49152, 65536) // IANA private range
     nodeGrpcServerHandle =
         viska.Module.start(
                 BsonBinary(profileService.certificate),
