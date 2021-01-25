@@ -116,6 +116,9 @@ pub struct Node {
 impl Node {
     /// Constructor.
     ///
+    /// Port to serve ths gRPC service must be manually chosen because Tonic currently does not
+    /// support getting the port number from a started service.
+    ///
     /// The returned [Future] is a handle for awaiting all operations. Everything is running once
     /// this method finishes.
     pub async fn start(
