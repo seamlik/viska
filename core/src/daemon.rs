@@ -78,8 +78,12 @@ impl StandardNode {
             event_sink,
             database,
         };
+
+        // Shutdown token
         let (sender, receiver) = futures::channel::oneshot::channel::<()>();
-        let shutdown_token = receiver.map(Result::unwrap_or_default);
+        let shutdown_token = receiver
+            .map(Result::unwrap_or_default)
+            .inspect(move |_| log::info!("Shutting down gRPC daemon at port {}", node_grpc_port));
 
         // TODO: TLS
         log::info!("gRPC daemon serving at port {}", node_grpc_port);

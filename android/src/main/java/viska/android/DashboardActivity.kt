@@ -1,6 +1,5 @@
 package viska.android
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
@@ -40,27 +39,26 @@ import androidx.lifecycle.ViewModel
 import com.google.protobuf.ByteString
 import com.google.protobuf.BytesValue
 import com.google.protobuf.Empty
-import dagger.Lazy
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 import kotlinx.coroutines.flow.map
 import viska.R
 import viska.daemon.Daemon.Chatroom
 import viska.daemon.Daemon.RosterItem
 import viska.daemon.Daemon.Vcard
+import viska.daemon.DaemonWrapper
 import viska.database.toBinaryId
 
-@AndroidEntryPoint
 class DashboardActivity : InstanceActivity() {
-
-  @Inject lateinit var daemonService: Lazy<viska.daemon.DaemonService>
 
   private val viewModel by viewModels<DashboardViewModel>()
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+
+    val daemon: DaemonWrapper
     try {
-      super.onCreate(savedInstanceState)
+      daemon = daemonService.getOrCreate()
     } catch (_: ActivityRedirectedException) {
+      redirectToNewProfile()
       return
     }
 
@@ -68,19 +66,13 @@ class DashboardActivity : InstanceActivity() {
       MaterialTheme {
         val accountIdProtobuf =
             BytesValue.of(ByteString.copyFrom(profileService.accountId.toBinaryId()))
-        val vcard by daemonService
-            .get()
-            .nodeGrpcClient
-            .watchVcard(accountIdProtobuf)
-            .collectAsState(null)
-        val chatrooms by daemonService
-            .get()
+        val vcard by daemon.nodeGrpcClient.watchVcard(accountIdProtobuf).collectAsState(null)
+        val chatrooms by daemon
             .nodeGrpcClient
             .watchChatrooms(Empty.getDefaultInstance())
             .map { it.chatroomsList }
             .collectAsState(emptyList())
-        val roster by daemonService
-            .get()
+        val roster by daemon
             .nodeGrpcClient
             .watchRoster(Empty.getDefaultInstance())
             .map { it.rosterList }
@@ -90,11 +82,6 @@ class DashboardActivity : InstanceActivity() {
         ExitDialog(viewModel)
       }
     }
-  }
-
-  private fun exitApp() {
-    stopService(Intent(this, DaemonService::class.java))
-    finish()
   }
 
   @Composable

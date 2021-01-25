@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -25,14 +24,12 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import viska.BuildConfig
 import viska.R
-import viska.daemon.DaemonService
 import viska.database.ProfileService
 
 @AndroidEntryPoint
 class NewProfileActivity : AppCompatActivity() {
 
   @Inject lateinit var profileService: ProfileService
-  @Inject lateinit var daemonService: Lazy<DaemonService>
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)

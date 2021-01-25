@@ -33,6 +33,6 @@
       android:name=".android.ChatroomActivity"
       android:documentLaunchMode="intoExisting"
     />
-    <service android:name=".android.DaemonService" />
+    <service android:name=".android.AppBannerService" />
   </application>
 </manifest>

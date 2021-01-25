@@ -1,4 +1,4 @@
 package viska.android
 
 class ActivityRedirectedException :
-    Exception("Redirected to another Activity, please exit `onCreate` immediately.")
+    Exception("Redirecting to profile creation because no active account is set")

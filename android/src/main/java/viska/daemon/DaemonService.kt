@@ -1,44 +1,37 @@
 package viska.daemon
 
-import io.grpc.ManagedChannelBuilder
+import android.content.Context
+import android.content.Intent
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.random.Random
-import org.bson.BsonBinary
-import org.bson.BsonInt32
-import org.bson.BsonString
+import viska.android.AppBannerService
 import viska.database.ProfileService
 
 @Singleton
-class DaemonService @Inject constructor(profileService: ProfileService) : AutoCloseable {
+class DaemonService
+@Inject
+constructor(
+    @ApplicationContext private val context: Context,
+    private val profileService: ProfileService,
+) {
+  private var daemon: DaemonWrapper? = null
 
-  val nodeGrpcClient: NodeGrpcKt.NodeCoroutineStub
-  val nodeGrpcServerHandle: Int
-
-  init {
-    if (profileService.accountId.isBlank()) {
-      throw IllegalStateException("Cannot start daemon without an active account")
+  fun getOrCreate(): DaemonWrapper {
+    val currentDaemon = daemon
+    if (currentDaemon == null) {
+      val d = DaemonWrapper(profileService)
+      daemon = d
+      context.startForegroundService(Intent(context, AppBannerService::class.java))
+      return d
+    } else {
+      return currentDaemon
     }
-
-    val localhost = "::1"
-
-    // TODO: TLS
-    // Node daemon
-    val nodeGrpcPort = Random.nextInt(49152, 65536) // IANA private range
-    nodeGrpcServerHandle =
-        viska.Module.start(
-                BsonBinary(profileService.certificate),
-                BsonBinary(profileService.key),
-                BsonInt32(nodeGrpcPort),
-                BsonString(profileService.baseDataDir.toString())
-            )
-            .asInt32()
-            .value
-    val channel = ManagedChannelBuilder.forAddress(localhost, nodeGrpcPort).usePlaintext().build()
-    nodeGrpcClient = NodeGrpcKt.NodeCoroutineStub(channel)
   }
 
-  override fun close() {
-    viska.Module.stop(BsonInt32(nodeGrpcServerHandle))
+  fun stop() {
+    daemon?.close()
+    daemon = null
+    context.stopService(Intent(context, AppBannerService::class.java))
   }
 }

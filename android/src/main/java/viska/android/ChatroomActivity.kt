@@ -22,41 +22,35 @@ import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.unit.dp
 import com.google.protobuf.ByteString
 import com.google.protobuf.BytesValue
-import dagger.Lazy
-import dagger.hilt.android.AndroidEntryPoint
 import java.lang.IllegalArgumentException
-import javax.inject.Inject
 import viska.daemon.Daemon.Message
+import viska.daemon.DaemonWrapper
 import viska.database.displayId
 import viska.database.toBinaryId
 
-@AndroidEntryPoint
 class ChatroomActivity : InstanceActivity() {
 
-  @Inject lateinit var daemonService: Lazy<viska.daemon.DaemonService>
-
   override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+
+    val daemon: DaemonWrapper
     try {
-      super.onCreate(savedInstanceState)
+      daemon = daemonService.getOrCreate()
     } catch (_: ActivityRedirectedException) {
+      redirectToNewProfile()
       return
     }
 
     setContent {
       MaterialTheme {
         val chatroomIdProtobuf = BytesValue.of(ByteString.copyFrom(chatroomId.toBinaryId()))
-        val chatroom by daemonService
-            .get()
-            .nodeGrpcClient
-            .watchChatroom(chatroomIdProtobuf)
-            .collectAsState(null)
+        val chatroom by daemon.nodeGrpcClient.watchChatroom(chatroomIdProtobuf).collectAsState(null)
         if (chatroom == null) {
           finish()
           return@MaterialTheme
         }
 
-        val messagesSubscription by daemonService
-            .get()
+        val messagesSubscription by daemon
             .nodeGrpcClient
             .watchChatroomMessages(chatroomIdProtobuf)
             .collectAsState(null)

@@ -6,14 +6,13 @@ import androidx.preference.PreferenceManager
 import dagger.Binds
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ActivityComponent
-import dagger.hilt.android.components.ServiceComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import java.nio.file.Files
+import java.nio.file.Path
 import javax.inject.Inject
 import javax.inject.Singleton
 import org.bson.BsonString
-import java.nio.file.Path
 
 @Singleton
 class AndroidProfileService @Inject constructor(@ApplicationContext private val context: Context) :
@@ -71,7 +70,7 @@ class AndroidProfileService @Inject constructor(@ApplicationContext private val 
 }
 
 @dagger.Module
-@InstallIn(ServiceComponent::class, ActivityComponent::class, SingletonComponent::class)
+@InstallIn(ActivityComponent::class, SingletonComponent::class)
 abstract class ProfileServiceModule {
   @Binds abstract fun bind(impl: AndroidProfileService): ProfileService
 }
