@@ -79,8 +79,8 @@ impl LocalEndpoint {
         endpoint_builder.listen(server_config);
         let socket = UdpSocket::bind("[::]:0")?;
         let (endpoint, incoming) = endpoint_builder.with_socket(socket)?;
-        println!(
-            "Started local endpoint on port {}",
+        log::info!(
+            "Started local QUIC endpoint on port {}",
             endpoint.local_addr().unwrap().port()
         );
 

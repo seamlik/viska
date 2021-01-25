@@ -198,7 +198,7 @@ impl Node {
             Ok(())
         };
 
-        println!("Started Viska node with account {}", account_id.to_hex());
+        log::info!("Started Viska node with account {}", account_id.to_hex());
         Ok((
             Self {
                 connection_manager,
