@@ -1,6 +1,8 @@
 [workspace]
 members = ["core", "core-android"]
 
+# LTO due to https://github.com/rust-lang/rust/issues/50007
+
 [profile.dev]
 lto = true
 
