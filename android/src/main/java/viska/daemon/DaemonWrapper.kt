@@ -5,10 +5,12 @@ import io.grpc.ManagedChannelBuilder
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 import org.bson.BsonBinary
+import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
 import viska.android.ActivityRedirectedException
 import viska.database.ProfileService
+import viska.database.toBinaryId
 
 class DaemonWrapper(profileService: ProfileService) : AutoCloseable {
 
@@ -23,15 +25,19 @@ class DaemonWrapper(profileService: ProfileService) : AutoCloseable {
 
     val localhost = "::1"
 
+    val profileConfig = profileService.profileConfig
+    val profileConfigBson = BsonDocument()
+    profileConfigBson["dir_data"] = BsonString(profileConfig.dirData.toString())
+
     // TODO: TLS
     // Node daemon
     val nodeGrpcPort = Random.nextInt(49152, 65536) // IANA private range
     nodeGrpcServerHandle =
         viska.Module.start(
-                BsonBinary(profileService.certificate),
-                BsonBinary(profileService.key),
+                BsonBinary(profileService.accountId.toBinaryId()),
+                profileConfigBson,
                 BsonInt32(nodeGrpcPort),
-                BsonString(profileService.baseDataDir.toString()))
+            )
             .asInt32()
             .value
     nodeGrpcChannel =

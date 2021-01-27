@@ -2,7 +2,6 @@ use crate::packet::ResponseWindow;
 use crate::pki::CanonicalId;
 use crate::Connection;
 use crate::ConnectionError;
-use crate::EndpointError;
 use blake3::Hash;
 use futures::channel::mpsc::UnboundedSender;
 use futures::prelude::*;
@@ -46,7 +45,7 @@ impl LocalEndpoint {
     pub fn start(
         config: &Config,
         verifier: Arc<CertificateVerifier>,
-    ) -> Result<(Self, impl Stream<Item = quinn::Connecting>), EndpointError> {
+    ) -> Result<(Self, impl Stream<Item = quinn::Connecting>), Error> {
         let cert_chain = CertificateChain::from_certs(std::iter::once(
             quinn::Certificate::from_der(&config.certificate)?,
         ));
@@ -101,6 +100,17 @@ impl LocalEndpoint {
             .await
             .map_err(Into::into)
     }
+}
+
+/// Error when starting a QUIC endpoint.
+#[derive(thiserror::Error, Debug)]
+#[error("Failed to start a QUIC endpoint")]
+pub enum Error {
+    CryptoMaterial(#[from] quinn::ParseError),
+    Grpc(#[from] tonic::transport::Error),
+    Quic(#[from] quinn::EndpointError),
+    Socket(#[from] std::io::Error),
+    TlsConfiguration(#[from] rustls::TLSError),
 }
 
 pub trait ConnectionInfo {

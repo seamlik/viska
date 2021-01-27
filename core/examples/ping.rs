@@ -6,6 +6,7 @@ use std::net::SocketAddr;
 use std::time::Instant;
 use structopt::StructOpt;
 use tokio::time::Duration;
+use viska::database::ProfileConfig;
 use viska::proto::request::Payload;
 use viska::proto::Request;
 use viska::Node;
@@ -13,18 +14,16 @@ use viska::Node;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-
     let cli = Cli::from_args();
 
-    let dummy_cert_bundle = viska::pki::new_certificate();
+    let tmp_dir = tempfile::tempdir()?;
+    let account_id = viska::database::create_standard_profile(tmp_dir.path().to_path_buf())?;
+    let profile_config = ProfileConfig {
+        dir_data: tmp_dir.path().to_path_buf(),
+    };
     let node_grpc_port = viska::util::random_port();
-    let (node, _) = Node::start(
-        &dummy_cert_bundle.certificate,
-        &dummy_cert_bundle.key,
-        node_grpc_port,
-        Default::default(),
-    )
-    .await?;
+
+    let (node, _) = Node::start(&account_id, &profile_config, node_grpc_port).await?;
 
     let connection = node.connect(&cli.destination).await?;
     let mut counter = 0_u32;

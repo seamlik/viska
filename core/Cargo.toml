@@ -8,6 +8,7 @@ version = "0.0.1"
 targets = ["jni"]
 
 [dependencies]
+async-std = "1"
 async-trait = "0.1"
 chrono = "0.4"
 blake3 = { version = "0.3", features = ["pure"] }
@@ -43,6 +44,7 @@ anyhow = "1"
 clap = "2"
 env_logger = "0"
 structopt = "0"
+tempfile = "3"
 tokio = { version = "0.2", features = ["macros"] }
 
 [build-dependencies]

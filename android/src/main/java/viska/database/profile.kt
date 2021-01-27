@@ -8,8 +8,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ActivityComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import java.nio.file.Files
-import java.nio.file.Path
 import javax.inject.Inject
 import javax.inject.Singleton
 import org.bson.BsonString
@@ -21,52 +19,26 @@ class AndroidProfileService @Inject constructor(@ApplicationContext private val 
   override val accountId: String
     get() = PreferenceManager.getDefaultSharedPreferences(context).getString("active-account", "")!!
 
-  override val certificate: ByteArray
-    get() {
-      val account = accountId
-      return if (account.isBlank()) {
-        ByteArray(0)
-      } else {
-        val path =
-            context
-                .filesDir
-                .toPath()
-                .resolve("account")
-                .resolve(accountId)
-                .resolve("certificate.der")
-        return Files.readAllBytes(path)
-      }
-    }
-
-  override val key: ByteArray
-    get() {
-      val account = accountId
-      return if (account.isBlank()) {
-        ByteArray(0)
-      } else {
-        val path =
-            context.filesDir.toPath().resolve("account").resolve(accountId).resolve("key.der")
-        return Files.readAllBytes(path)
-      }
-    }
-
   override fun createProfile(mock: Boolean) {
 
-    val profileDir = BsonString(context.filesDir.toPath().resolve("account").toString())
-    val accountIdText =
+    val dirData = BsonString(context.filesDir.path)
+    val accountId =
         if (mock) {
-          Module.create_mock_profile(profileDir).asString().value
-        } else {
-          Module.create_standard_profile(profileDir).asString().value
-        }
+              Module.create_mock_profile(dirData)
+            } else {
+              Module.create_standard_profile(dirData)
+            }
+            .asBinary()
+            .data
+            .displayId()
 
     PreferenceManager.getDefaultSharedPreferences(context).edit(commit = true) {
-      putString("active-account", accountIdText)
+      putString("active-account", accountId)
     }
   }
 
-  override val baseDataDir: Path
-    get() = context.filesDir.toPath()
+  override val profileConfig: ProfileConfig
+    get() = ProfileConfig(context.filesDir.toPath())
 }
 
 @dagger.Module

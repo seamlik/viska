@@ -23,6 +23,7 @@ pub mod pki;
 pub mod proto;
 pub mod util;
 
+use self::database::ProfileConfig;
 use crate::database::peer::PeerService;
 use crate::database::Database;
 use crate::endpoint::CertificateVerifier;
@@ -53,7 +54,6 @@ use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::lazy::SyncLazy;
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -74,23 +74,15 @@ static TOKIO: SyncLazy<Mutex<Runtime>> = SyncLazy::new(|| Mutex::new(Runtime::ne
 /// The handle for use with [stop].
 #[riko::fun]
 pub fn start(
-    certificate: ByteBuf,
-    key: ByteBuf,
+    account_id: ByteBuf,
+    profile_config: ProfileConfig,
     node_grpc_port: u16,
-    base_data_dir: PathBuf,
-) -> Result<i32, EndpointError> {
-    let mut database_path = base_data_dir;
-    database_path.push("account");
-    database_path.push(certificate.canonical_id().to_hex().to_ascii_uppercase());
-    database_path.push("database");
-    database_path.push("main.db");
-
+) -> Result<i32, NodeStartError> {
     let handle = CURRENT_NODE_HANDLE.fetch_add(1, Ordering::SeqCst);
     let (node, _) = TOKIO.lock().unwrap().block_on(Node::start(
-        &certificate,
-        &key,
+        &account_id,
+        &profile_config,
         node_grpc_port,
-        Storage::OnDisk(database_path),
     ))?;
     NODES.lock().unwrap().insert(handle, node);
     Ok(handle)
@@ -122,13 +114,13 @@ impl Node {
     /// The returned [Future] is a handle for awaiting all operations. Everything is running once
     /// this method finishes.
     pub async fn start(
-        certificate: &[u8],
-        key: &[u8],
+        account_id: &[u8],
+        profile_config: &ProfileConfig,
         node_grpc_port: u16,
-        database_storage: Storage,
-    ) -> Result<(Self, impl Future<Output = Result<(), JoinError>>), EndpointError> {
-        let account_id = certificate.canonical_id();
-        let database = Arc::new(Database::create(&database_storage)?);
+    ) -> Result<(Self, impl Future<Output = Result<(), JoinError>>), NodeStartError> {
+        let database = Arc::new(Database::create(&Storage::OnDisk(
+            profile_config.path_database(account_id)?,
+        ))?);
 
         let (event_sink, _) = tokio::sync::broadcast::channel(8);
         let chatroom_service = Arc::new(ChatroomService {
@@ -139,7 +131,15 @@ impl Node {
             event_sink: event_sink.clone(),
         });
 
-        let certificate_verifier: Arc<_> = CertificateVerifier::new(account_id).into();
+        let certificate = async_std::fs::read(profile_config.path_certificate(account_id)?).await?;
+        let key = async_std::fs::read(profile_config.path_key(account_id)?).await?;
+
+        let account_id_calculated = certificate.canonical_id();
+        if account_id_calculated.as_bytes() != account_id {
+            return Err(NodeStartError::IncorrectAccountId);
+        }
+
+        let certificate_verifier: Arc<_> = CertificateVerifier::new(account_id_calculated).into();
         certificate_verifier.set_rules(
             std::iter::empty(),
             PeerService::blacklist(&database.connection.lock().unwrap())?,
@@ -149,7 +149,10 @@ impl Node {
         let (node_grpc_task, node_grpc_shutdown_token) =
             daemon::StandardNode::start(node_grpc_port, event_sink, database.clone());
 
-        let config = endpoint::Config { certificate, key };
+        let endpoint_config = self::endpoint::Config {
+            certificate: &certificate,
+            key: &key,
+        };
         let (window_sender, window_receiver) =
             futures::channel::mpsc::unbounded::<ResponseWindow>();
 
@@ -177,7 +180,7 @@ impl Node {
             }
         }));
 
-        let (endpoint, incomings) = LocalEndpoint::start(&config, certificate_verifier)?;
+        let (endpoint, incomings) = LocalEndpoint::start(&endpoint_config, certificate_verifier)?;
         let connection_manager = Arc::new(ConnectionManager::new(endpoint, window_sender));
 
         // Process incoming connections
@@ -307,15 +310,14 @@ pub enum ConnectionError {
     Handshake(#[from] quinn::ConnectionError),
 }
 
-/// Error when starting a QUIC endpoint.
 #[derive(Error, Debug)]
-#[error("Failed to start a QUIC endpoint")]
-pub enum EndpointError {
-    CryptoMaterial(#[from] quinn::ParseError),
+#[error("Failed to start a Viska node")]
+pub enum NodeStartError {
+    DataFile(#[from] std::io::Error),
     DatabaseInitialization(#[from] DatabaseInitializationError),
     DatabaseQuery(#[from] diesel::result::Error),
-    Grpc(#[from] tonic::transport::Error),
-    Quic(#[from] quinn::EndpointError),
-    Socket(#[from] std::io::Error),
-    TlsConfiguration(#[from] rustls::TLSError),
+    Endpoint(#[from] self::endpoint::Error),
+
+    #[error("Account ID does not match with the certificate")]
+    IncorrectAccountId,
 }

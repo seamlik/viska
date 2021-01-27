@@ -6,7 +6,6 @@ use crate::changelog::PeerRole;
 use crate::changelog::Vcard;
 use crate::database::vcard::VcardService;
 use crate::database::Database;
-use blake3::Hash;
 use chrono::prelude::*;
 use chrono::Duration;
 use chrono::LocalResult;
@@ -21,7 +20,7 @@ use std::sync::Arc;
 
 pub(crate) struct MockProfileService {
     pub database: Arc<Database>,
-    pub account_id: Hash,
+    pub account_id: Vec<u8>,
     pub vcard_service: Arc<VcardService>,
     pub changelog_merger: Arc<ChangelogMerger>,
 }
@@ -34,8 +33,7 @@ impl MockProfileService {
 
     #[cfg(debug_assertions)]
     pub fn populate_mock_data(&self) -> QueryResult<()> {
-        let account_id_bytes = crate::database::bytes_from_hash(self.account_id);
-        let (vcards, changelog) = crate::mock_profile::populate_data(&account_id_bytes);
+        let (vcards, changelog) = crate::mock_profile::populate_data(&self.account_id);
         log::info!(
             "Generated {} entries of vCard and {} entries of changelog",
             vcards.len(),
