@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import androidx.core.content.getSystemService
 import dagger.hilt.android.HiltAndroidApp
 import org.bson.BsonString
+import viska.BuildConfig
 import viska.R
 
 @HiltAndroidApp
@@ -13,7 +14,13 @@ class Application : android.app.Application() {
     super.onCreate()
 
     System.loadLibrary("viska_android")
-    viska_android.Module.initialize(BsonString("INFO"))
+    viska_android.Module.initialize(
+        BsonString(
+            if (BuildConfig.DEBUG) {
+              "Debug"
+            } else {
+              "Info"
+            }))
     initializeNotifications()
   }
 
