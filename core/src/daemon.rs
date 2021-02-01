@@ -6,6 +6,8 @@ use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
 use crate::database::Database;
 use crate::database::Event;
+use crate::EXECUTOR;
+use crate::TOKIO_02;
 use async_channel::Receiver;
 use async_trait::async_trait;
 use diesel::prelude::*;
@@ -17,7 +19,6 @@ use node_client::NodeClient;
 use node_server::NodeServer;
 use std::any::Any;
 use std::sync::Arc;
-use tokio::task::JoinHandle;
 use tonic::transport::Channel;
 use tonic::transport::Server;
 use tonic::Code;
@@ -72,7 +73,7 @@ impl StandardNode {
         node_grpc_port: u16,
         event_stream: Receiver<Arc<Event>>,
         database: Arc<Database>,
-    ) -> (JoinHandle<()>, impl Any + Send + 'static) {
+    ) -> (impl Future<Output = ()>, impl Any + Send + 'static) {
         let instance = Self {
             event_stream,
             database,
@@ -96,7 +97,11 @@ impl StandardNode {
                 .await
                 .expect("Failed to spawn gRPC server")
         };
-        (tokio::spawn(task), sender)
+        let task = TOKIO_02.spawn(task);
+        let task = async {
+            task.await.unwrap()
+        };
+        (task, sender)
     }
 
     fn run_query<Q, T>(
@@ -126,7 +131,7 @@ impl StandardNode {
         let (sender, receiver) = futures::channel::mpsc::unbounded::<Result<T, Status>>();
         let database = self.database.clone();
         let mut event_stream = self.event_stream.clone();
-        tokio::spawn(async move {
+        EXECUTOR.spawn_ok(async move {
             if let Err(_) = Self::run_query(database.clone(), &sender, &query) {
                 return;
             }

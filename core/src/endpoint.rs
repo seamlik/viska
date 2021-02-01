@@ -1,7 +1,9 @@
+use crate::EXECUTOR;
 use crate::packet::ResponseWindow;
 use crate::pki::CanonicalId;
 use crate::Connection;
 use crate::ConnectionError;
+use crate::TOKIO_02;
 use blake3::Hash;
 use futures::channel::mpsc::UnboundedSender;
 use futures::prelude::*;
@@ -77,7 +79,7 @@ impl LocalEndpoint {
         let mut endpoint_builder = Endpoint::builder();
         endpoint_builder.listen(server_config);
         let socket = UdpSocket::bind("[::]:0")?;
-        let (endpoint, incoming) = endpoint_builder.with_socket(socket)?;
+        let (endpoint, incoming) = TOKIO_02.enter(|| endpoint_builder.with_socket(socket))?;
         log::info!(
             "Started local QUIC endpoint on port {}",
             endpoint.local_addr().unwrap().port()
@@ -95,10 +97,11 @@ impl LocalEndpoint {
 
     pub async fn connect(&self, addr: &SocketAddr) -> Result<NewConnection, ConnectionError> {
         log::info!("Outgoing connection to {}", addr);
-        self.quic
-            .connect_with(self.client_config.clone(), addr, "viska.local")?
-            .await
-            .map_err(Into::into)
+        let connecting = TOKIO_02.enter(|| {
+            self.quic
+                .connect_with(self.client_config.clone(), addr, "viska.local")
+        });
+        connecting?.await.map_err(Into::into)
     }
 
     pub fn local_port(&self) -> std::io::Result<u16> {
@@ -172,7 +175,7 @@ impl ConnectionManager {
         let mut bi_streams = new_connection.bi_streams;
         let response_window_sink = self.response_window_sink.clone();
         let connection_manager = self.clone();
-        tokio::spawn(async move {
+        EXECUTOR.spawn_ok(async move {
             while let Some(stream) = bi_streams.next().await {
                 let (sender, receiver) = match stream {
                     Err(err) => {
@@ -184,7 +187,7 @@ impl ConnectionManager {
 
                 let mut response_window_sink = response_window_sink.clone();
                 let connection_2 = connection_2.clone();
-                tokio::spawn(async move {
+                EXECUTOR.spawn_ok(async move {
                     let window = ResponseWindow::new(connection_2.clone(), sender, receiver).await;
                     if let Some(w) = window {
                         response_window_sink.send(w).await.unwrap_or_else(|err| {

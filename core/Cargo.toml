@@ -18,6 +18,8 @@ diesel_derives = { version = "1", features = ["sqlite"] }
 diesel_migrations = { version = "1", features = ["sqlite"] }
 fake = "2"
 futures = "0.3"
+futures-util = "0.3"
+futures-executor = { version = "0.3", features = ["thread-pool"] }
 hex = "0.4"
 http = "0"
 itertools = "0.10"

@@ -6,10 +6,10 @@ publish = false
 
 [dependencies]
 anyhow = "1"
+futures-executor = { version = "0.3", features = ["thread-pool"] }
 clap = "2"
 env_logger = "0.8"
 rand = "0.8"
 structopt = "0.3"
 tempfile = "3"
-tokio = { version = "0.2", features = ["macros"] }
 viska = { path = "../core" }

@@ -35,6 +35,7 @@ use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
 use endpoint::LocalEndpoint;
 use futures::prelude::*;
+use futures_executor::ThreadPool;
 use handler::DeviceHandler;
 use handler::Handler;
 use handler::PeerHandler;
@@ -59,12 +60,14 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use thiserror::Error;
 use tokio::runtime::Runtime;
-use tokio::task::JoinError;
 use uuid::Uuid;
 
 static CURRENT_NODE_HANDLE: AtomicI32 = AtomicI32::new(0);
 static NODES: SyncLazy<Mutex<HashMap<i32, Node>>> = SyncLazy::new(Default::default);
 static TOKIO: SyncLazy<Mutex<Runtime>> = SyncLazy::new(|| Mutex::new(Runtime::new().unwrap()));
+
+static EXECUTOR: SyncLazy<ThreadPool> = SyncLazy::new(|| ThreadPool::new().unwrap());
+static TOKIO_02: SyncLazy<Runtime> = SyncLazy::new(|| Runtime::new().unwrap());
 
 /// Starts a [Node].
 ///
@@ -117,7 +120,7 @@ impl Node {
         account_id: &[u8],
         profile_config: &ProfileConfig,
         node_grpc_port: u16,
-    ) -> Result<(Self, impl Future<Output = Result<(), JoinError>>), NodeStartError> {
+    ) -> Result<(Self, impl Future<Output = ()>), NodeStartError> {
         let database = Arc::new(Database::create(&Storage::OnDisk(
             profile_config.path_database(account_id)?,
         ))?);
@@ -151,7 +154,8 @@ impl Node {
 
         // Handle requests
         let account_id = certificate.canonical_id();
-        tokio::spawn(window_receiver.for_each(move |window| {
+        // TODO: Don't spawn
+        EXECUTOR.spawn_ok(window_receiver.for_each(move |window| {
             let handler: Box<dyn Handler + Send + Sync> = if window.account_id() == Some(account_id)
             {
                 Box::new(DeviceHandler)
@@ -177,9 +181,9 @@ impl Node {
 
         // Process incoming connections
         let connection_manager_cloned = connection_manager.clone();
-        let incoming_connections_task = tokio::spawn(incomings.for_each(move |connecting| {
+        let incoming_connections_task = TOKIO_02.spawn(incomings.for_each(move |connecting| {
             let connection_manager_cloned = connection_manager_cloned.clone();
-            tokio::spawn(async {
+            EXECUTOR.spawn_ok(async {
                 match connecting.await {
                     Ok(new_connection) => {
                         connection_manager_cloned.add(new_connection).await;
@@ -189,11 +193,14 @@ impl Node {
             });
             async {}
         }));
+        let incoming_connections_task = async {
+            incoming_connections_task.await.unwrap()
+        };
+
 
         let task = async {
-            incoming_connections_task.await?;
-            node_grpc_task.await?;
-            Ok(())
+            incoming_connections_task.await;
+            node_grpc_task.await;
         };
 
         log::info!("Started Viska node with account {}", account_id.to_hex());
