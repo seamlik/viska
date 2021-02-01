@@ -6,10 +6,8 @@ use crate::daemon::RosterItem;
 use crate::endpoint::CertificateVerifier;
 use diesel::prelude::*;
 use std::sync::Arc;
-use tokio::sync::broadcast::Sender;
 
 pub(crate) struct PeerService {
-    pub event_sink: Sender<Arc<Event>>,
     pub verifier: Option<Arc<CertificateVerifier>>,
 }
 
@@ -18,7 +16,7 @@ impl PeerService {
         &self,
         connection: &'_ SqliteConnection,
         payload: crate::changelog::Peer,
-    ) -> QueryResult<()> {
+    ) -> QueryResult<Event> {
         diesel::replace_into(Schema::table)
             .values((
                 Schema::columns::account_id.eq(payload.account_id),
@@ -26,9 +24,6 @@ impl PeerService {
                 Schema::columns::role.eq(payload.role),
             ))
             .execute(connection)?;
-
-        // Publish event
-        let _ = self.event_sink.send(Event::Roster.into());
 
         // Update certificate verifier rules
         if let Some(verifier) = &self.verifier {
@@ -43,7 +38,7 @@ impl PeerService {
             verifier.set_rules(std::iter::empty(), blacklist)
         }
 
-        Ok(())
+        Ok(Event::Roster)
     }
 
     pub fn blacklist(connection: &'_ SqliteConnection) -> QueryResult<Vec<Vec<u8>>> {

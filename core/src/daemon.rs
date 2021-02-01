@@ -6,6 +6,7 @@ use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
 use crate::database::Database;
 use crate::database::Event;
+use async_channel::Receiver;
 use async_trait::async_trait;
 use diesel::prelude::*;
 use futures::channel::mpsc::TrySendError;
@@ -16,8 +17,6 @@ use node_client::NodeClient;
 use node_server::NodeServer;
 use std::any::Any;
 use std::sync::Arc;
-use tokio::sync::broadcast::RecvError;
-use tokio::sync::broadcast::Sender;
 use tokio::task::JoinHandle;
 use tonic::transport::Channel;
 use tonic::transport::Server;
@@ -60,7 +59,7 @@ impl<T: prost::Message> NullableResponse<T> for Result<tonic::Response<T>, Statu
 
 /// The standard implementation of a "Node" gRPC daemon.
 pub(crate) struct StandardNode {
-    event_sink: Sender<Arc<Event>>,
+    event_stream: Receiver<Arc<Event>>,
     database: Arc<Database>,
 }
 
@@ -71,11 +70,11 @@ impl StandardNode {
     /// the service manually. Drop the token to shut it down.
     pub fn start(
         node_grpc_port: u16,
-        event_sink: Sender<Arc<Event>>,
+        event_stream: Receiver<Arc<Event>>,
         database: Arc<Database>,
     ) -> (JoinHandle<()>, impl Any + Send + 'static) {
         let instance = Self {
-            event_sink,
+            event_stream,
             database,
         };
 
@@ -126,24 +125,18 @@ impl StandardNode {
     {
         let (sender, receiver) = futures::channel::mpsc::unbounded::<Result<T, Status>>();
         let database = self.database.clone();
-        let mut subscription = self.event_sink.subscribe();
+        let mut event_stream = self.event_stream.clone();
         tokio::spawn(async move {
             if let Err(_) = Self::run_query(database.clone(), &sender, &query) {
                 return;
             }
 
             let event_filter = event_filter;
-            loop {
-                match subscription.recv().await {
-                    Ok(event) => {
-                        if event_filter(&event) {
-                            if let Err(_) = Self::run_query(database.clone(), &sender, &query) {
-                                return;
-                            }
-                        }
+            while let Some(event) = event_stream.next().await {
+                if event_filter(&event) {
+                    if let Err(_) = Self::run_query(database.clone(), &sender, &query) {
+                        return;
                     }
-                    Err(RecvError::Lagged(_)) => continue,
-                    Err(RecvError::Closed) => (),
                 }
             }
         });
@@ -154,6 +147,8 @@ impl StandardNode {
 
 #[async_trait]
 impl node_server::Node for StandardNode {
+    // TODO: Replace futures-channel with async-channel
+
     type WatchVcardStream = UnboundedReceiver<Result<Vcard, Status>>;
 
     async fn watch_vcard(

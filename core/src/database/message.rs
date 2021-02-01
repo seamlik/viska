@@ -10,17 +10,12 @@ use blake3::Hash;
 use blake3::Hasher;
 use diesel::prelude::*;
 use std::collections::BTreeSet;
-use std::sync::Arc;
-use tokio::sync::broadcast::Sender;
 use uuid::Uuid;
 
-pub(crate) struct MessageService {
-    pub chatroom_service: Arc<ChatroomService>,
-    pub event_sink: Sender<Arc<Event>>,
-}
+pub(crate) struct MessageService;
 
 impl MessageService {
-    fn save(&self, connection: &'_ SqliteConnection, payload: &Message) -> QueryResult<()> {
+    fn save(connection: &'_ SqliteConnection, payload: &Message) -> QueryResult<Event> {
         let message_id = super::bytes_from_hash(payload.canonical_id());
         let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
         let attachment_id: Option<Vec<u8>> = payload
@@ -41,19 +36,15 @@ impl MessageService {
             ))
             .execute(connection)?;
         Self::replace_recipients(connection, &message_id, payload.recipients.iter())?;
-        let _ = self.event_sink.send(Event::Message { chatroom_id }.into());
-
-        Ok(())
+        Ok(Event::Message { chatroom_id })
     }
 
-    pub fn update(&self, connection: &'_ SqliteConnection, payload: &Message) -> QueryResult<()> {
+    pub fn update(connection: &'_ SqliteConnection, payload: &Message) -> QueryResult<Event> {
         // Update chatroom
-        self.chatroom_service
-            .update_for_message(connection, &payload)?;
+        ChatroomService::update_for_message(connection, &payload)?;
 
         // Update message
-        self.save(connection, &payload)?;
-        Ok(())
+        Self::save(connection, &payload)
     }
 
     fn replace_recipients<'m>(

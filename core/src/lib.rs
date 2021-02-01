@@ -21,16 +21,15 @@ mod mock_profile;
 mod packet;
 pub mod pki;
 pub mod proto;
-pub mod util;
 
 use self::database::ProfileConfig;
 use crate::database::peer::PeerService;
 use crate::database::Database;
 use crate::endpoint::CertificateVerifier;
+use async_channel::Sender;
 use blake3::Hash;
-use database::chatroom::ChatroomService;
-use database::message::MessageService;
 use database::DatabaseInitializationError;
+use database::Event;
 use database::Storage;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
@@ -103,6 +102,7 @@ pub fn stop(handle: i32) {
 pub struct Node {
     connection_manager: Arc<ConnectionManager>,
     _node_grpc_shutdown_token: Box<dyn Any + Send>,
+    event_sink: Sender<Arc<Event>>,
 }
 
 impl Node {
@@ -122,14 +122,7 @@ impl Node {
             profile_config.path_database(account_id)?,
         ))?);
 
-        let (event_sink, _) = tokio::sync::broadcast::channel(8);
-        let chatroom_service = Arc::new(ChatroomService {
-            event_sink: event_sink.clone(),
-        });
-        let message_service = Arc::new(MessageService {
-            chatroom_service: chatroom_service.clone(),
-            event_sink: event_sink.clone(),
-        });
+        let (event_sink, event_stream) = async_channel::unbounded();
 
         let certificate = async_std::fs::read(profile_config.path_certificate(account_id)?).await?;
         let key = async_std::fs::read(profile_config.path_key(account_id)?).await?;
@@ -147,7 +140,7 @@ impl Node {
 
         // Start gRPC server
         let (node_grpc_task, node_grpc_shutdown_token) =
-            daemon::StandardNode::start(node_grpc_port, event_sink, database.clone());
+            daemon::StandardNode::start(node_grpc_port, event_stream, database.clone());
 
         let endpoint_config = self::endpoint::Config {
             certificate: &certificate,
@@ -165,7 +158,6 @@ impl Node {
             } else {
                 Box::new(PeerHandler {
                     database: database.clone(),
-                    message_service: message_service.clone(),
                 })
             };
             async move {
@@ -209,6 +201,7 @@ impl Node {
             Self {
                 connection_manager,
                 _node_grpc_shutdown_token: Box::new(node_grpc_shutdown_token),
+                event_sink,
             },
             task,
         ))

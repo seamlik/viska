@@ -8,19 +8,15 @@ use blake3::Hash;
 use blake3::Hasher;
 use diesel::prelude::*;
 use std::convert::AsRef;
-use std::sync::Arc;
-use tokio::sync::broadcast::Sender;
 
-pub(crate) struct VcardService {
-    pub event_sink: Sender<Arc<Event>>,
-}
+pub(crate) struct VcardService;
 
 impl VcardService {
     pub fn save(
-        &self,
         connection: &'_ SqliteConnection,
         vcards: impl Iterator<Item = Vcard>,
-    ) -> QueryResult<()> {
+    ) -> QueryResult<Vec<Event>> {
+        let mut events = vec![];
         // TODO: Batch insert
         for vcard in vcards {
             let vcard_id = vcard.canonical_id();
@@ -42,17 +38,14 @@ impl VcardService {
                 .execute(connection)?;
 
             // Publish events
-            let _ = self.event_sink.send(
-                Event::Vcard {
-                    account_id: vcard.account_id.clone(),
-                }
-                .into(),
-            );
+            events.push(Event::Vcard {
+                account_id: vcard.account_id.clone(),
+            });
             if PeerService::is_in_roster(connection, &vcard.account_id)? {
-                let _ = self.event_sink.send(Event::Roster.into());
+                events.push(Event::Roster);
             }
         }
-        Ok(())
+        Ok(events)
     }
 
     pub fn find_by_account_id(

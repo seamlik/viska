@@ -21,7 +21,6 @@ use std::sync::Arc;
 pub(crate) struct MockProfileService {
     pub database: Arc<Database>,
     pub account_id: Vec<u8>,
-    pub vcard_service: Arc<VcardService>,
     pub changelog_merger: Arc<ChangelogMerger>,
 }
 
@@ -42,7 +41,7 @@ impl MockProfileService {
         let connection = self.database.connection.lock().unwrap();
         connection.transaction::<_, diesel::result::Error, _>(|| {
             log::info!("Committing the mock Vcards as a transaction");
-            self.vcard_service.save(&connection, vcards.into_iter())?;
+            VcardService::save(&connection, vcards.into_iter())?;
 
             log::info!("Merging changelog generated from `mock_profile`");
             self.changelog_merger

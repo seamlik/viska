@@ -8,6 +8,7 @@ version = "0.0.1"
 targets = ["jni"]
 
 [dependencies]
+async-channel = "1"
 async-std = "1"
 async-trait = "0.1"
 chrono = "0.4"

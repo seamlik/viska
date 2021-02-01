@@ -9,8 +9,6 @@ pub(crate) mod peer;
 mod schema;
 pub(crate) mod vcard;
 
-use self::chatroom::ChatroomService;
-use self::message::MessageService;
 use self::peer::PeerService;
 use crate::changelog::ChangelogMerger;
 use crate::mock_profile::MockProfileService;
@@ -23,10 +21,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::Mutex;
 use thiserror::Error;
-use vcard::VcardService;
 
 /// THE hash function (BLAKE3) universally used in the project.
 ///
@@ -200,28 +196,13 @@ pub fn create_mock_profile(dir_data: PathBuf) -> Result<ByteBuf, CreateProfileEr
     let account_id = create_standard_profile(dir_data)?;
 
     let database = Database::create(&Storage::OnDisk(profile_config.path_database(&account_id)?))?;
-    let event_sink = crate::util::dummy_mpmc_sender();
-    let chatroom_service = Arc::new(ChatroomService {
-        event_sink: event_sink.clone(),
-    });
     let changelog_merger = ChangelogMerger {
-        peer_service: PeerService {
-            event_sink: event_sink.clone(),
-            verifier: None,
-        }
-        .into(),
-        chatroom_service: chatroom_service.clone(),
-        message_service: MessageService {
-            chatroom_service,
-            event_sink: event_sink.clone(),
-        }
-        .into(),
+        peer_service: PeerService { verifier: None }.into(),
     }
     .into();
     let mock_profile_service = MockProfileService {
         account_id: account_id.clone().into_vec(),
         database: database.into(),
-        vcard_service: VcardService { event_sink }.into(),
         changelog_merger,
     };
     mock_profile_service.populate_mock_data()?;

@@ -3,13 +3,12 @@ tonic::include_proto!("viska.changelog");
 use crate::database::chatroom::ChatroomService;
 use crate::database::message::MessageService;
 use crate::database::peer::PeerService;
+use crate::database::Event;
 use changelog_payload::Content;
 use diesel::prelude::*;
 use std::sync::Arc;
 
 pub(crate) struct ChangelogMerger {
-    pub chatroom_service: Arc<ChatroomService>,
-    pub message_service: Arc<MessageService>,
     pub peer_service: Arc<PeerService>,
 }
 
@@ -18,22 +17,24 @@ impl ChangelogMerger {
         &self,
         connection: &'_ SqliteConnection,
         payloads: impl Iterator<Item = ChangelogPayload>,
-    ) -> QueryResult<()> {
+    ) -> QueryResult<Vec<Event>> {
+        // TODO: Send events and use transaction
+        let mut events = vec![];
         for payload in payloads {
             log::debug!("Committing {:?}", &payload.content);
             match payload.content {
                 Some(Content::AddChatroom(chatroom)) => {
-                    self.chatroom_service.save(connection, &chatroom)?;
+                    events.push(ChatroomService::save(connection, &chatroom)?);
                 }
                 Some(Content::AddPeer(peer)) => {
-                    self.peer_service.save(connection, peer)?;
+                    events.push(self.peer_service.save(connection, peer)?);
                 }
                 Some(Content::AddMessage(message)) => {
-                    self.message_service.update(connection, &message)?;
+                    events.push(MessageService::update(connection, &message)?);
                 }
                 None => todo!("Empty transaction payload"),
             }
         }
-        Ok(())
+        Ok(events)
     }
 }

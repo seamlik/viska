@@ -9,13 +9,9 @@ use blake3::Hasher;
 use chrono::Utc;
 use diesel::prelude::*;
 use std::collections::BTreeSet;
-use std::sync::Arc;
-use tokio::sync::broadcast::Sender;
 use uuid::Uuid;
 
-pub(crate) struct ChatroomService {
-    pub event_sink: Sender<Arc<Event>>,
-}
+pub(crate) struct ChatroomService;
 
 impl ChatroomService {
     /// Creates a [Chatroom](super::Chatroom) when receiving or sending a message belonging to a
@@ -32,10 +28,9 @@ impl ChatroomService {
 
     /// Updates the [Chatroom](super::Chatroom) that is supposed to hold a new [Message].
     pub fn update_for_message(
-        &self,
         connection: &'_ SqliteConnection,
         message: &crate::changelog::Message,
-    ) -> QueryResult<()> {
+    ) -> QueryResult<Option<Event>> {
         let chatroom_id = message.chatroom_id();
         // TODO: Simplify to 1 SQL
         if let Some(time_updated) = Schema::table
@@ -48,14 +43,19 @@ impl ChatroomService {
                 diesel::update(Schema::table.find(chatroom_id.as_bytes().as_ref()))
                     .set(Schema::time_updated.eq(time_updated))
                     .execute(connection)?;
+                Ok(Event::Chatroom {
+                    chatroom_id: chatroom_id.as_bytes().to_vec(),
+                }
+                .into())
+            } else {
+                Ok(None)
             }
         } else {
-            self.save(connection, &ChatroomService::create_for_message(message))?;
+            Self::save(connection, &ChatroomService::create_for_message(message)).map(Into::into)
         }
-        Ok(())
     }
 
-    pub fn save(&self, connection: &'_ SqliteConnection, payload: &Chatroom) -> QueryResult<()> {
+    pub fn save(connection: &'_ SqliteConnection, payload: &Chatroom) -> QueryResult<Event> {
         let chatroom_id = super::bytes_from_hash(payload.chatroom_id());
         diesel::replace_into(Schema::table)
             .values((
@@ -65,9 +65,7 @@ impl ChatroomService {
             ))
             .execute(connection)?;
         Self::replace_members(connection, &chatroom_id, payload.members.iter())?;
-        let _ = self.event_sink.send(Event::Chatroom { chatroom_id }.into());
-
-        Ok(())
+        Ok(Event::Chatroom { chatroom_id })
     }
 
     fn replace_members<'m>(

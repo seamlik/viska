@@ -22,16 +22,16 @@ pub trait Handler {
 
 pub(crate) struct PeerHandler {
     pub database: Arc<Database>,
-    pub message_service: Arc<MessageService>,
 }
 
 impl Handler for PeerHandler {
     fn handle(&self, window: &ResponseWindow) -> Result<Response, Error> {
         match &window.request.payload {
             Some(Payload::Message(message)) => {
+                // TODO: Send events
                 let connection = self.database.connection.lock().unwrap();
                 connection.transaction::<_, diesel::result::Error, _>(|| {
-                    self.message_service.update(&connection, &message)
+                    MessageService::update(&connection, &message)
                 })?;
                 Ok(Default::default())
             }
