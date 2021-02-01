@@ -11,13 +11,12 @@ use crate::TOKIO_02;
 use async_channel::Receiver;
 use async_trait::async_trait;
 use diesel::prelude::*;
-use futures::channel::mpsc::TrySendError;
-use futures::channel::mpsc::UnboundedReceiver;
-use futures::channel::mpsc::UnboundedSender;
-use futures::prelude::*;
+use futures_util::FutureExt;
+use futures_util::StreamExt;
 use node_client::NodeClient;
 use node_server::NodeServer;
 use std::any::Any;
+use std::future::Future;
 use std::sync::Arc;
 use tonic::transport::Channel;
 use tonic::transport::Server;
@@ -80,9 +79,10 @@ impl StandardNode {
         };
 
         // Shutdown token
-        let (sender, receiver) = futures::channel::oneshot::channel::<()>();
+        let (sender, receiver) = async_channel::bounded::<()>(1);
         let shutdown_token = receiver
-            .map(Result::unwrap_or_default)
+            .collect::<Vec<_>>()
+            .map(drop)
             .inspect(move |_| log::info!("Shutting down gRPC daemon at port {}", node_grpc_port));
 
         // TODO: TLS
@@ -98,48 +98,39 @@ impl StandardNode {
                 .expect("Failed to spawn gRPC server")
         };
         let task = TOKIO_02.spawn(task);
-        let task = async {
-            task.await.unwrap()
-        };
+        let task = async { task.await.unwrap() };
         (task, sender)
     }
 
-    fn run_query<Q, T>(
-        database: Arc<Database>,
-        sender: &UnboundedSender<Result<T, Status>>,
-        query: Q,
-    ) -> Result<(), TrySendError<Result<T, Status>>>
+    fn run_query<Q, T>(database: &Database, query: Q) -> Result<T, Status>
     where
         Q: FnOnce(&'_ SqliteConnection) -> QueryResult<T>,
     {
         let connection = database.connection.lock().unwrap();
-        let queried = query(&connection).map_err(IntoTonicStatus::into_tonic_status);
-        drop(connection);
-        sender.unbounded_send(queried)
+        query(&connection).map_err(IntoTonicStatus::into_tonic_status)
     }
 
     fn run_subscription<F, T, Q>(
         &self,
         event_filter: F,
         query: Q,
-    ) -> Result<tonic::Response<UnboundedReceiver<Result<T, Status>>>, Status>
+    ) -> Result<tonic::Response<Receiver<Result<T, Status>>>, Status>
     where
-        F: Fn(&Event) -> bool + Send + Clone + 'static,
+        F: Fn(&Event) -> bool + Send + 'static,
         T: Send + 'static,
-        Q: Fn(&'_ SqliteConnection) -> QueryResult<T> + Send + Clone + 'static,
+        Q: Fn(&'_ SqliteConnection) -> QueryResult<T> + Send + Sync + 'static,
     {
-        let (sender, receiver) = futures::channel::mpsc::unbounded::<Result<T, Status>>();
-        let database = self.database.clone();
+        let (sender, receiver) = async_channel::unbounded::<Result<T, Status>>();
         let mut event_stream = self.event_stream.clone();
+        let database = self.database.clone();
         EXECUTOR.spawn_ok(async move {
-            if let Err(_) = Self::run_query(database.clone(), &sender, &query) {
+            if let Err(_) = sender.send(Self::run_query(&database, &query)).await {
                 return;
             }
 
-            let event_filter = event_filter;
             while let Some(event) = event_stream.next().await {
                 if event_filter(&event) {
-                    if let Err(_) = Self::run_query(database.clone(), &sender, &query) {
+                    if let Err(_) = sender.send(Self::run_query(&database, &query)).await {
                         return;
                     }
                 }
@@ -152,9 +143,7 @@ impl StandardNode {
 
 #[async_trait]
 impl node_server::Node for StandardNode {
-    // TODO: Replace futures-channel with async-channel
-
-    type WatchVcardStream = UnboundedReceiver<Result<Vcard, Status>>;
+    type WatchVcardStream = Receiver<Result<Vcard, Status>>;
 
     async fn watch_vcard(
         &self,
@@ -177,8 +166,7 @@ impl node_server::Node for StandardNode {
         )
     }
 
-    type WatchChatroomMessagesStream =
-        UnboundedReceiver<Result<ChatroomMessagesSubscription, Status>>;
+    type WatchChatroomMessagesStream = Receiver<Result<ChatroomMessagesSubscription, Status>>;
 
     async fn watch_chatroom_messages(
         &self,
@@ -198,7 +186,7 @@ impl node_server::Node for StandardNode {
         )
     }
 
-    type WatchChatroomStream = UnboundedReceiver<Result<Chatroom, Status>>;
+    type WatchChatroomStream = Receiver<Result<Chatroom, Status>>;
 
     async fn watch_chatroom(
         &self,
@@ -221,7 +209,7 @@ impl node_server::Node for StandardNode {
         )
     }
 
-    type WatchChatroomsStream = UnboundedReceiver<Result<ChatroomsSubscription, Status>>;
+    type WatchChatroomsStream = Receiver<Result<ChatroomsSubscription, Status>>;
 
     async fn watch_chatrooms(
         &self,
@@ -239,7 +227,7 @@ impl node_server::Node for StandardNode {
         )
     }
 
-    type WatchRosterStream = UnboundedReceiver<Result<Roster, Status>>;
+    type WatchRosterStream = Receiver<Result<Roster, Status>>;
 
     async fn watch_roster(
         &self,

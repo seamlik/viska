@@ -34,8 +34,8 @@ use database::Storage;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
 use endpoint::LocalEndpoint;
-use futures::prelude::*;
 use futures_executor::ThreadPool;
+use futures_util::StreamExt;
 use handler::DeviceHandler;
 use handler::Handler;
 use handler::PeerHandler;
@@ -52,6 +52,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fmt::Formatter;
+use std::future::Future;
 use std::lazy::SyncLazy;
 use std::net::SocketAddr;
 use std::sync::atomic::AtomicI32;
@@ -149,8 +150,7 @@ impl Node {
             certificate: &certificate,
             key: &key,
         };
-        let (window_sender, window_receiver) =
-            futures::channel::mpsc::unbounded::<ResponseWindow>();
+        let (window_sender, window_receiver) = async_channel::unbounded::<ResponseWindow>();
 
         // Handle requests
         let account_id = certificate.canonical_id();
@@ -193,10 +193,7 @@ impl Node {
             });
             async {}
         }));
-        let incoming_connections_task = async {
-            incoming_connections_task.await.unwrap()
-        };
-
+        let incoming_connections_task = async { incoming_connections_task.await.unwrap() };
 
         let task = async {
             incoming_connections_task.await;

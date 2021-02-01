@@ -1,12 +1,13 @@
-use crate::EXECUTOR;
 use crate::packet::ResponseWindow;
 use crate::pki::CanonicalId;
 use crate::Connection;
 use crate::ConnectionError;
+use crate::EXECUTOR;
 use crate::TOKIO_02;
+use async_channel::Sender;
 use blake3::Hash;
-use futures::channel::mpsc::UnboundedSender;
-use futures::prelude::*;
+use futures_core::Stream;
+use futures_util::StreamExt;
 use quinn::CertificateChain;
 use quinn::Endpoint;
 use quinn::NewConnection;
@@ -143,14 +144,11 @@ impl ConnectionInfo for quinn::Connection {
 pub struct ConnectionManager {
     connections: tokio::sync::RwLock<HashMap<Uuid, Arc<Connection>>>,
     endpoint: LocalEndpoint,
-    response_window_sink: UnboundedSender<ResponseWindow>,
+    response_window_sink: Sender<ResponseWindow>,
 }
 
 impl ConnectionManager {
-    pub fn new(
-        endpoint: LocalEndpoint,
-        response_window_sink: UnboundedSender<ResponseWindow>,
-    ) -> Self {
+    pub fn new(endpoint: LocalEndpoint, response_window_sink: Sender<ResponseWindow>) -> Self {
         Self {
             endpoint,
             response_window_sink,
@@ -185,7 +183,7 @@ impl ConnectionManager {
                     Ok((sender, receiver)) => (sender, receiver),
                 };
 
-                let mut response_window_sink = response_window_sink.clone();
+                let response_window_sink = response_window_sink.clone();
                 let connection_2 = connection_2.clone();
                 EXECUTOR.spawn_ok(async move {
                     let window = ResponseWindow::new(connection_2.clone(), sender, receiver).await;
