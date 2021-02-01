@@ -16,5 +16,6 @@ jni = "0.18"
 log = "0.4"
 quinn = "0.6.1"
 riko = { git = "https://github.com/seamlik/riko" }
-riko_runtime = { git = "https://github.com/seamlik/riko", features = ["riko_jni"] }
+riko_runtime = { git = "https://github.com/seamlik/riko" }
+riko_runtime_jni = { git = "https://github.com/seamlik/riko" }
 viska = { path = "../core" }
