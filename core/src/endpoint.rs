@@ -100,6 +100,10 @@ impl LocalEndpoint {
             .await
             .map_err(Into::into)
     }
+
+    pub fn local_port(&self) -> std::io::Result<u16> {
+        Ok(self.quic.local_addr()?.port())
+    }
 }
 
 /// Error when starting a QUIC endpoint.
@@ -213,6 +217,10 @@ impl ConnectionManager {
         addr: &SocketAddr,
     ) -> Result<Arc<Connection>, ConnectionError> {
         Ok(self.clone().add(self.endpoint.connect(addr).await?).await)
+    }
+
+    pub fn local_port(&self) -> std::io::Result<u16> {
+        self.endpoint.local_port()
     }
 }
 

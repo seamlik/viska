@@ -218,6 +218,11 @@ impl Node {
     pub async fn connect(&self, addr: &SocketAddr) -> Result<Arc<Connection>, ConnectionError> {
         self.connection_manager.clone().connect(addr).await
     }
+
+    /// Gets the local port.
+    pub fn local_port(&self) -> std::io::Result<u16> {
+        self.connection_manager.local_port()
+    }
 }
 
 /// Connection to a remote [Node].

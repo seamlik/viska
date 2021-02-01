@@ -1,29 +1,18 @@
 //! Pings a Node.
-//!
-//! TODO: Turn this into an integration test
 
 use std::net::SocketAddr;
 use std::time::Instant;
 use structopt::StructOpt;
 use tokio::time::Duration;
-use viska::database::ProfileConfig;
 use viska::proto::request::Payload;
 use viska::proto::Request;
-use viska::Node;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::from_args();
 
-    let tmp_dir = tempfile::tempdir()?;
-    let account_id = viska::database::create_standard_profile(tmp_dir.path().to_path_buf())?;
-    let profile_config = ProfileConfig {
-        dir_data: tmp_dir.path().to_path_buf(),
-    };
-    let node_grpc_port = viska::util::random_port();
-
-    let (node, _) = Node::start(&account_id, &profile_config, node_grpc_port).await?;
+    let (node, _) = viska_dev::start_dummy_node().await?;
 
     let connection = node.connect(&cli.destination).await?;
     let mut counter = 0_u32;

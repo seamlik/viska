@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "core-android"]
+members = ["core", "core-android", "core-dev"]
 
 # LTO due to https://github.com/rust-lang/rust/issues/50007
 
