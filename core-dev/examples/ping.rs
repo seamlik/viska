@@ -1,15 +1,18 @@
 //! Pings a Node.
 
 use std::net::SocketAddr;
+use std::time::Duration;
 use std::time::Instant;
 use structopt::StructOpt;
-use tokio::time::Duration;
 use viska::proto::request::Payload;
 use viska::proto::Request;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     env_logger::init();
+    futures_executor::block_on(run())
+}
+
+async fn run() -> anyhow::Result<()> {
     let cli = Cli::from_args();
 
     let (node, _) = viska_dev::start_dummy_node().await?;
@@ -31,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
             ),
             Err(err) => println!("  ERROR: {:?}", err),
         }
-        tokio::time::delay_for(Duration::from_secs(1)).await;
+        async_std::task::sleep(Duration::from_secs(1)).await;
     }
 }
 

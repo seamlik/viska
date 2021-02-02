@@ -1,9 +1,11 @@
 //! Runs a Node that does nothing.
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     env_logger::init();
+    futures_executor::block_on(run())
+}
+
+async fn run() -> anyhow::Result<()> {
     let (_node, future) = viska_dev::start_dummy_node().await?;
-    future.await?;
-    Ok(())
+    Ok(future.await)
 }
