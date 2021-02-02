@@ -14,7 +14,6 @@ crate-type = ["cdylib"]
 android_logger = "0.9"
 jni = "0.18"
 log = "0.4"
-quinn = "0.6.1"
 riko = { git = "https://github.com/seamlik/riko" }
 riko_runtime = { git = "https://github.com/seamlik/riko" }
 riko_runtime_jni = { git = "https://github.com/seamlik/riko" }
