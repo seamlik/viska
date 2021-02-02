@@ -123,13 +123,14 @@ impl Node {
         node_grpc_port: u16,
     ) -> Result<(Self, impl Future<Output = ()>), NodeStartError> {
         let database = Arc::new(Database::create(&Storage::OnDisk(
-            profile_config.path_database(account_id)?,
+            profile_config.path_database(account_id).await?,
         ))?);
 
         let (event_sink, event_stream) = async_channel::unbounded();
 
-        let certificate = async_std::fs::read(profile_config.path_certificate(account_id)?).await?;
-        let key = async_std::fs::read(profile_config.path_key(account_id)?).await?;
+        let certificate =
+            async_std::fs::read(profile_config.path_certificate(account_id).await?).await?;
+        let key = async_std::fs::read(profile_config.path_key(account_id).await?).await?;
 
         let account_id_calculated = certificate.canonical_id();
         if account_id_calculated.as_bytes() != account_id {

@@ -8,7 +8,7 @@ use viska::Node;
 /// Runs a [Node] that does nothing.
 pub async fn start_dummy_node() -> Result<(Node, impl Future<Output = ()>), anyhow::Error> {
     let tmp_dir = tempfile::tempdir()?;
-    let account_id = viska::database::create_standard_profile(tmp_dir.path().to_path_buf())?;
+    let account_id = viska::database::create_standard_profile(tmp_dir.path().to_path_buf()).await?;
     let profile_config = ProfileConfig {
         dir_data: tmp_dir.path().to_path_buf(),
     };
