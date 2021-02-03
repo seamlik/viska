@@ -14,10 +14,12 @@ async fn ping() -> anyhow::Result<()> {
     let request = Request {
         payload: Some(Payload::Ping(())),
     };
-    connection
-        .request(&request)
-        .await
-        .expect("Should receive pong");
+    for _ in 0..4 {
+        connection
+            .request(&request)
+            .await
+            .expect("Should receive pong");
+    }
 
     Ok(())
 }

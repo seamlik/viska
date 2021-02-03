@@ -149,17 +149,15 @@ impl Node {
         let (window_sender, window_receiver) = async_channel::unbounded::<ResponseWindow>();
 
         // Handle requests
-        let account_id = certificate.canonical_id();
-        // TODO: Don't spawn
-        EXECUTOR.spawn(window_receiver.for_each(move |window| {
-            let handler: Box<dyn Handler + Send + Sync> = if window.account_id() == Some(account_id)
-            {
-                Box::new(DeviceHandler)
-            } else {
-                Box::new(PeerHandler {
-                    database: database.clone(),
-                })
-            };
+        let request_handler_task = window_receiver.for_each_concurrent(None, move |window| {
+            let handler: Box<dyn Handler + Send + Sync> =
+                if window.account_id() == Some(account_id_calculated) {
+                    Box::new(DeviceHandler)
+                } else {
+                    Box::new(PeerHandler {
+                        database: database.clone(),
+                    })
+                };
             async move {
                 let response = match handler.handle(&window) {
                     Ok(r) => r,
@@ -170,7 +168,7 @@ impl Node {
                     .await
                     .unwrap_or_else(|err| log::error!("Error sending a response: {:?}", err));
             }
-        }));
+        });
 
         let (endpoint, incomings) = LocalEndpoint::start(&endpoint_config, certificate_verifier)?;
         let connection_manager = Arc::new(ConnectionManager::new(endpoint, window_sender));
@@ -192,11 +190,15 @@ impl Node {
         let incoming_connections_task = async { incoming_connections_task.await.unwrap() };
 
         let task = async {
+            request_handler_task.await;
             incoming_connections_task.await;
             node_grpc_task.await.unwrap();
         };
 
-        log::info!("Started Viska node with account {}", account_id.to_hex());
+        log::info!(
+            "Started Viska node with account {}",
+            account_id_calculated.to_hex()
+        );
         Ok((
             Self {
                 connection_manager,
