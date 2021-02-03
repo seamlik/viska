@@ -3,12 +3,8 @@ use std::str::FromStr;
 use viska::proto::request::Payload;
 use viska::proto::Request;
 
-#[test]
-fn ping() -> anyhow::Result<()> {
-    futures_executor::block_on(run())
-}
-
-async fn run() -> anyhow::Result<()> {
+#[tokio::test]
+async fn ping() -> anyhow::Result<()> {
     let (dummy, _) = viska_dev::start_dummy_node().await?;
     let dummy_port = dummy.local_port()?;
 

@@ -7,12 +7,9 @@ use structopt::StructOpt;
 use viska::proto::request::Payload;
 use viska::proto::Request;
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    futures_executor::block_on(run())
-}
-
-async fn run() -> anyhow::Result<()> {
     let cli = Cli::from_args();
 
     let (node, _) = viska_dev::start_dummy_node().await?;

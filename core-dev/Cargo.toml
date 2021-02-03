@@ -6,7 +6,6 @@ publish = false
 
 [dependencies]
 anyhow = "1"
-futures-executor = { version = "0.3", features = ["thread-pool"] }
 clap = "2"
 rand = "0.8"
 tempfile = "3"
@@ -16,3 +15,4 @@ viska = { path = "../core" }
 async-std = "1"
 env_logger = "0.8"
 structopt = "0.3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
