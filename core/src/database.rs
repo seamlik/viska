@@ -13,7 +13,6 @@ use self::peer::PeerService;
 use crate::changelog::ChangelogMerger;
 use crate::mock_profile::MockProfileService;
 use crate::pki::CanonicalId;
-use async_std::path::PathBuf;
 use blake3::Hash;
 use blake3::Hasher;
 use chrono::prelude::*;
@@ -21,6 +20,7 @@ use diesel::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
+use std::path::PathBuf;
 use std::sync::Mutex;
 use thiserror::Error;
 
@@ -110,7 +110,7 @@ pub struct ProfileConfig {
 
 impl ProfileConfig {
     pub async fn path_database(&self, account_id: &[u8]) -> std::io::Result<PathBuf> {
-        let mut destination = async_std::fs::canonicalize(&self.dir_data).await?;
+        let mut destination = tokio::fs::canonicalize(&self.dir_data).await?;
         destination.push("account");
         destination.push(hex::encode_upper(account_id));
         destination.push("database");
@@ -119,7 +119,7 @@ impl ProfileConfig {
     }
 
     pub async fn path_certificate(&self, account_id: &[u8]) -> std::io::Result<PathBuf> {
-        let mut destination = async_std::fs::canonicalize(&self.dir_data).await?;
+        let mut destination = tokio::fs::canonicalize(&self.dir_data).await?;
         destination.push("account");
         destination.push(hex::encode_upper(account_id));
         destination.push("certificate.der");
@@ -127,7 +127,7 @@ impl ProfileConfig {
     }
 
     pub async fn path_key(&self, account_id: &[u8]) -> std::io::Result<PathBuf> {
-        let mut destination = async_std::fs::canonicalize(&self.dir_data).await?;
+        let mut destination = tokio::fs::canonicalize(&self.dir_data).await?;
         destination.push("account");
         destination.push(hex::encode_upper(account_id));
         destination.push("key.der");
@@ -157,15 +157,15 @@ pub async fn create_standard_profile(
 
     let path_account = path_certificate.parent().unwrap();
     log::debug!("Creating account directory {}", path_account.display());
-    async_std::fs::create_dir_all(path_account).await?;
-    async_std::fs::write(&path_certificate, &bundle.certificate).await?;
-    async_std::fs::write(
+    tokio::fs::create_dir_all(path_account).await?;
+    tokio::fs::write(&path_certificate, &bundle.certificate).await?;
+    tokio::fs::write(
         &profile_config.path_key(account_id.as_bytes()).await?,
         &bundle.key,
     )
     .await?;
 
-    async_std::fs::create_dir_all(
+    tokio::fs::create_dir_all(
         profile_config
             .path_database(account_id.as_bytes())
             .await?

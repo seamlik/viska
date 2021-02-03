@@ -31,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
             ),
             Err(err) => println!("  ERROR: {:?}", err),
         }
-        async_std::task::sleep(Duration::from_secs(1)).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
     }
 }
 

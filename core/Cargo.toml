@@ -9,7 +9,6 @@ targets = ["jni"]
 
 [dependencies]
 async-channel = "1"
-async-std = "1"
 async-trait = "0.1"
 chrono = "0.4"
 blake3 = { version = "0.3", features = ["pure"] }
@@ -38,7 +37,7 @@ tonic = "0.4"
 prost = "0.7"
 prost-types = "0.7"
 thiserror = "1"
-tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "fs"] }
 tokio_02 = { package = "tokio", version = "0.2", features = ["rt-threaded"] }
 uuid = { version = "0", features = ["v4"] }
 webpki = "0"

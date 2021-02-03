@@ -124,8 +124,8 @@ impl Node {
         let (event_sink, event_stream) = async_channel::unbounded();
 
         let certificate =
-            async_std::fs::read(profile_config.path_certificate(account_id).await?).await?;
-        let key = async_std::fs::read(profile_config.path_key(account_id).await?).await?;
+            tokio::fs::read(profile_config.path_certificate(account_id).await?).await?;
+        let key = tokio::fs::read(profile_config.path_key(account_id).await?).await?;
 
         let account_id_calculated = certificate.canonical_id();
         if account_id_calculated.as_bytes() != account_id {
