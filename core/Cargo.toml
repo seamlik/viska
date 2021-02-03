@@ -19,7 +19,6 @@ diesel_migrations = { version = "1", features = ["sqlite"] }
 fake = "2"
 futures-core = "0.3"
 futures-util = "0.3"
-futures-executor = { version = "0.3", features = ["thread-pool"] }
 hex = "0.4"
 http = "0"
 itertools = "0.10"
@@ -35,13 +34,14 @@ riko_runtime_jni = { git = "https://github.com/seamlik/riko" }
 rustls = { version = "0.17", features = ["dangerous_configuration", "quic"]}
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0"
-tonic = "0.3"
-prost = "0.6"
-prost-types = "0.6"
+tonic = "0.4"
+prost = "0.7"
+prost-types = "0.7"
 thiserror = "1"
-tokio = { version = "0.2", features = ["rt-threaded"] }
+tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
+tokio_02 = { package = "tokio", version = "0.2", features = ["rt-threaded"] }
 uuid = { version = "0", features = ["v4"] }
 webpki = "0"
 
 [build-dependencies]
-tonic-build = "0.3"
+tonic-build = "0.4"

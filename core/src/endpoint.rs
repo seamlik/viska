@@ -173,7 +173,7 @@ impl ConnectionManager {
         let mut bi_streams = new_connection.bi_streams;
         let response_window_sink = self.response_window_sink.clone();
         let connection_manager = self.clone();
-        EXECUTOR.spawn_ok(async move {
+        EXECUTOR.spawn(async move {
             while let Some(stream) = bi_streams.next().await {
                 let (sender, receiver) = match stream {
                     Err(err) => {
@@ -185,7 +185,7 @@ impl ConnectionManager {
 
                 let response_window_sink = response_window_sink.clone();
                 let connection_2 = connection_2.clone();
-                EXECUTOR.spawn_ok(async move {
+                EXECUTOR.spawn(async move {
                     let window = ResponseWindow::new(connection_2.clone(), sender, receiver).await;
                     if let Some(w) = window {
                         response_window_sink.send(w).await.unwrap_or_else(|err| {

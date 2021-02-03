@@ -34,7 +34,6 @@ use database::Storage;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
 use endpoint::LocalEndpoint;
-use futures_executor::ThreadPool;
 use futures_util::StreamExt;
 use handler::DeviceHandler;
 use handler::Handler;
@@ -61,14 +60,14 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use thiserror::Error;
 use tokio::runtime::Runtime;
+use tokio_02::runtime::Runtime as Runtime02;
 use uuid::Uuid;
 
 static CURRENT_NODE_HANDLE: AtomicI32 = AtomicI32::new(0);
 static NODES: SyncLazy<Mutex<HashMap<i32, Node>>> = SyncLazy::new(Default::default);
-static TOKIO: SyncLazy<Mutex<Runtime>> = SyncLazy::new(|| Mutex::new(Runtime::new().unwrap()));
 
-static EXECUTOR: SyncLazy<ThreadPool> = SyncLazy::new(|| ThreadPool::new().unwrap());
-static TOKIO_02: SyncLazy<Runtime> = SyncLazy::new(|| Runtime::new().unwrap());
+static EXECUTOR: SyncLazy<Runtime> = SyncLazy::new(|| Runtime::new().unwrap());
+static TOKIO_02: SyncLazy<Runtime02> = SyncLazy::new(|| Runtime02::new().unwrap());
 
 /// Starts a [Node].
 ///
@@ -76,17 +75,13 @@ static TOKIO_02: SyncLazy<Runtime> = SyncLazy::new(|| Runtime::new().unwrap());
 ///
 /// The handle for use with [stop].
 #[riko::fun]
-pub fn start(
+pub async fn start(
     account_id: ByteBuf,
     profile_config: ProfileConfig,
     node_grpc_port: u16,
 ) -> Result<i32, NodeStartError> {
     let handle = CURRENT_NODE_HANDLE.fetch_add(1, Ordering::SeqCst);
-    let (node, _) = TOKIO.lock().unwrap().block_on(Node::start(
-        &account_id,
-        &profile_config,
-        node_grpc_port,
-    ))?;
+    let (node, _) = Node::start(&account_id, &profile_config, node_grpc_port).await?;
     NODES.lock().unwrap().insert(handle, node);
     Ok(handle)
 }
@@ -156,7 +151,7 @@ impl Node {
         // Handle requests
         let account_id = certificate.canonical_id();
         // TODO: Don't spawn
-        EXECUTOR.spawn_ok(window_receiver.for_each(move |window| {
+        EXECUTOR.spawn(window_receiver.for_each(move |window| {
             let handler: Box<dyn Handler + Send + Sync> = if window.account_id() == Some(account_id)
             {
                 Box::new(DeviceHandler)
@@ -184,7 +179,7 @@ impl Node {
         let connection_manager_cloned = connection_manager.clone();
         let incoming_connections_task = TOKIO_02.spawn(incomings.for_each(move |connecting| {
             let connection_manager_cloned = connection_manager_cloned.clone();
-            EXECUTOR.spawn_ok(async {
+            EXECUTOR.spawn(async {
                 match connecting.await {
                     Ok(new_connection) => {
                         connection_manager_cloned.add(new_connection).await;
@@ -198,7 +193,7 @@ impl Node {
 
         let task = async {
             incoming_connections_task.await;
-            node_grpc_task.await;
+            node_grpc_task.await.unwrap();
         };
 
         log::info!("Started Viska node with account {}", account_id.to_hex());

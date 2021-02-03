@@ -7,7 +7,6 @@ use crate::database::vcard::VcardService;
 use crate::database::Database;
 use crate::database::Event;
 use crate::EXECUTOR;
-use crate::TOKIO_02;
 use async_channel::Receiver;
 use async_trait::async_trait;
 use diesel::prelude::*;
@@ -16,8 +15,8 @@ use futures_util::StreamExt;
 use node_client::NodeClient;
 use node_server::NodeServer;
 use std::any::Any;
-use std::future::Future;
 use std::sync::Arc;
+use tokio::task::JoinHandle;
 use tonic::transport::Channel;
 use tonic::transport::Server;
 use tonic::Code;
@@ -72,7 +71,7 @@ impl StandardNode {
         node_grpc_port: u16,
         event_stream: Receiver<Arc<Event>>,
         database: Arc<Database>,
-    ) -> (impl Future<Output = ()>, impl Any + Send + 'static) {
+    ) -> (JoinHandle<()>, impl Any + Send + 'static) {
         let instance = Self {
             event_stream,
             database,
@@ -87,19 +86,14 @@ impl StandardNode {
 
         // TODO: TLS
         log::info!("gRPC daemon serving at port {}", node_grpc_port);
-        let task = async move {
-            Server::builder()
-                .add_service(NodeServer::new(instance))
-                .serve_with_shutdown(
-                    format!("[::1]:{}", node_grpc_port).parse().unwrap(),
-                    shutdown_token,
-                )
-                .await
-                .expect("Failed to spawn gRPC server")
-        };
-        let task = TOKIO_02.spawn(task);
-        let task = async { task.await.unwrap() };
-        (task, sender)
+        let task = Server::builder()
+            .add_service(NodeServer::new(instance))
+            .serve_with_shutdown(
+                format!("[::1]:{}", node_grpc_port).parse().unwrap(),
+                shutdown_token,
+            )
+            .map(|o| o.expect("Failed to spawn gRPC server"));
+        (EXECUTOR.spawn(task), sender)
     }
 
     fn run_query<Q, T>(database: &Database, query: Q) -> Result<T, Status>
@@ -123,7 +117,7 @@ impl StandardNode {
         let (sender, receiver) = async_channel::unbounded::<Result<T, Status>>();
         let mut event_stream = self.event_stream.clone();
         let database = self.database.clone();
-        EXECUTOR.spawn_ok(async move {
+        EXECUTOR.spawn(async move {
             if let Err(_) = sender.send(Self::run_query(&database, &query)).await {
                 return;
             }
