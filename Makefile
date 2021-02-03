@@ -1,5 +1,3 @@
-export DATABASE_URL = file:/tmp/viska-sample-$(shell date +%s).db
-
 # LTO due to https://github.com/rust-lang/rust/issues/50007
 CARGO_ANDROID_COMMAND = CARGO_PROFILE_RELEASE_LTO=true cross build --package viska_android --release --target
 
@@ -8,8 +6,8 @@ PRETTIER_ARGS = --ignore-path .gitignore .
 verify:
 	cargo fmt -- --check
 	prettier --check $(PRETTIER_ARGS)
+	gradle spotlessCheck
 	cargo test
-	gradle check
 
 .PHONY: android-native
 android-native:
@@ -18,18 +16,25 @@ android-native:
 	$(CARGO_ANDROID_COMMAND) x86_64-linux-android
 
 # This target must be run at least once before building the project
-.PHONY: prepare
-prepare: diesel-schema
+.PHONY: prepare-local
+prepare-local:
+	diesel database reset --database-url file:/tmp/viska-sample-$(shell date +%s).db
+	cargo riko
+
+# For GitHub Actions
+.PHONY: prepare-github
+prepare-github:
+	diesel database setup --database-url file:viska-sample.db
+	diesel print-schema --database-url file:viska-sample.db > core/src/database/schema.rs
 	cargo riko
 
 .PHONY: prettier
 prettier:
 	prettier --write $(PRETTIER_ARGS)
 
-.PHONY: install-prettier
-install-prettier:
+# For installing build environment on GitHub Actions
+.PHONY: install-env
+install-env:
 	npm install --global prettier @prettier/plugin-xml
-
-.PHONY: diesel-schema
-diesel-schema:
-	diesel database reset
+	cargo install --git https://github.com/seamlik/riko.git --bin cargo-riko --debug
+	cargo install diesel_cli --no-default-features --features sqlite --debug
