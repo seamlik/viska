@@ -6,9 +6,10 @@ CARGO_ANDROID_COMMAND = CARGO_PROFILE_RELEASE_LTO=true cross build --package vis
 PRETTIER_ARGS = --ignore-path .gitignore .
 
 verify:
+	cargo fmt -- --check
+	prettier --check $(PRETTIER_ARGS)
 	cargo test
 	gradle check
-	prettier --check $(PRETTIER_ARGS)
 
 .PHONY: android-native
 android-native:
