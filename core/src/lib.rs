@@ -26,10 +26,8 @@ use self::database::ProfileConfig;
 use crate::database::peer::PeerService;
 use crate::database::Database;
 use crate::endpoint::CertificateVerifier;
-use async_channel::Sender;
 use blake3::Hash;
 use database::DatabaseInitializationError;
-use database::Event;
 use database::Storage;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
@@ -101,7 +99,6 @@ pub fn stop(handle: i32) {
 pub struct Node {
     connection_manager: Arc<ConnectionManager>,
     _node_grpc_shutdown_token: Box<dyn Any + Send>,
-    event_sink: Sender<Arc<Event>>,
 }
 
 impl Node {
@@ -121,7 +118,7 @@ impl Node {
             profile_config.path_database(account_id).await?,
         ))?);
 
-        let (event_sink, event_stream) = async_channel::unbounded();
+        let (event_sink_database, _) = tokio::sync::broadcast::channel(8);
 
         let certificate =
             tokio::fs::read(profile_config.path_certificate(account_id).await?).await?;
@@ -140,13 +137,13 @@ impl Node {
 
         // Start gRPC server
         let (node_grpc_task, node_grpc_shutdown_token) =
-            daemon::StandardNode::start(node_grpc_port, event_stream, database.clone());
+            daemon::StandardNode::start(node_grpc_port, event_sink_database, database.clone());
 
         let endpoint_config = self::endpoint::Config {
             certificate: &certificate,
             key: &key,
         };
-        let (window_sender, window_receiver) = async_channel::unbounded::<ResponseWindow>();
+        let (window_sender, window_receiver) = futures_channel::mpsc::unbounded::<ResponseWindow>();
 
         // Handle requests
         let request_handler_task = window_receiver.for_each_concurrent(None, move |window| {
@@ -203,7 +200,6 @@ impl Node {
             Self {
                 connection_manager,
                 _node_grpc_shutdown_token: Box::new(node_grpc_shutdown_token),
-                event_sink,
             },
             task,
         ))

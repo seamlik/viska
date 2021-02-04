@@ -5,17 +5,18 @@ use crate::database::message::MessageService;
 use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
 use crate::database::Database;
-use crate::database::Event;
+use crate::database::Event as DatabaseEvent;
 use crate::EXECUTOR;
-use async_channel::Receiver;
 use async_trait::async_trait;
 use diesel::prelude::*;
+use futures_channel::mpsc::UnboundedReceiver as MpscReceiver;
 use futures_util::FutureExt;
-use futures_util::StreamExt;
 use node_client::NodeClient;
 use node_server::NodeServer;
 use std::any::Any;
 use std::sync::Arc;
+use tokio::sync::broadcast::error::RecvError;
+use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::task::JoinHandle;
 use tonic::transport::Channel;
 use tonic::transport::Server;
@@ -58,7 +59,7 @@ impl<T: prost::Message> NullableResponse<T> for Result<tonic::Response<T>, Statu
 
 /// The standard implementation of a "Node" gRPC daemon.
 pub(crate) struct StandardNode {
-    event_stream: Receiver<Arc<Event>>,
+    event_sink_database: BroadcastSender<Arc<DatabaseEvent>>,
     database: Arc<Database>,
 }
 
@@ -69,18 +70,17 @@ impl StandardNode {
     /// the service manually. Drop the token to shut it down.
     pub fn start(
         node_grpc_port: u16,
-        event_stream: Receiver<Arc<Event>>,
+        event_sink_database: BroadcastSender<Arc<DatabaseEvent>>,
         database: Arc<Database>,
     ) -> (JoinHandle<()>, impl Any + Send + 'static) {
         let instance = Self {
-            event_stream,
+            event_sink_database,
             database,
         };
 
         // Shutdown token
-        let (sender, receiver) = async_channel::bounded::<()>(1);
+        let (sender, receiver) = tokio::sync::oneshot::channel::<()>();
         let shutdown_token = receiver
-            .collect::<Vec<_>>()
             .map(drop)
             .inspect(move |_| log::info!("Shutting down gRPC daemon at port {}", node_grpc_port));
 
@@ -108,25 +108,38 @@ impl StandardNode {
         &self,
         event_filter: F,
         query: Q,
-    ) -> Result<tonic::Response<Receiver<Result<T, Status>>>, Status>
+    ) -> Result<tonic::Response<MpscReceiver<Result<T, Status>>>, Status>
     where
-        F: Fn(&Event) -> bool + Send + 'static,
+        F: Fn(&DatabaseEvent) -> bool + Send + 'static,
         T: Send + 'static,
         Q: Fn(&'_ SqliteConnection) -> QueryResult<T> + Send + Sync + 'static,
     {
-        let (sender, receiver) = async_channel::unbounded::<Result<T, Status>>();
-        let mut event_stream = self.event_stream.clone();
+        let (sender, receiver) = futures_channel::mpsc::unbounded();
+        let mut event_stream = self.event_sink_database.subscribe();
         let database = self.database.clone();
+        // TODO: Don't spawn
         EXECUTOR.spawn(async move {
-            if let Err(_) = sender.send(Self::run_query(&database, &query)).await {
+            if sender
+                .unbounded_send(Self::run_query(&database, &query))
+                .is_err()
+            {
                 return;
             }
 
-            while let Some(event) = event_stream.next().await {
-                if event_filter(&event) {
-                    if let Err(_) = sender.send(Self::run_query(&database, &query)).await {
-                        return;
+            loop {
+                match event_stream.recv().await {
+                    Ok(event) => {
+                        if event_filter(&event) {
+                            if sender
+                                .unbounded_send(Self::run_query(&database, &query))
+                                .is_err()
+                            {
+                                return;
+                            }
+                        }
                     }
+                    Err(RecvError::Lagged(_)) => continue,
+                    Err(RecvError::Closed) => (),
                 }
             }
         });
@@ -137,7 +150,7 @@ impl StandardNode {
 
 #[async_trait]
 impl node_server::Node for StandardNode {
-    type WatchVcardStream = Receiver<Result<Vcard, Status>>;
+    type WatchVcardStream = MpscReceiver<Result<Vcard, Status>>;
 
     async fn watch_vcard(
         &self,
@@ -147,11 +160,8 @@ impl node_server::Node for StandardNode {
         let requested_account_id_for_filter = requested_account_id.clone();
         self.run_subscription(
             move |event| {
-                if let Event::Vcard { account_id } = event {
-                    account_id == &requested_account_id_for_filter
-                } else {
-                    false
-                }
+                matches!(event, DatabaseEvent::Vcard { account_id } if account_id == &requested_account_id_for_filter)
+
             },
             move |connection| {
                 VcardService::find_by_account_id(connection, &requested_account_id)
@@ -160,7 +170,7 @@ impl node_server::Node for StandardNode {
         )
     }
 
-    type WatchChatroomMessagesStream = Receiver<Result<ChatroomMessagesSubscription, Status>>;
+    type WatchChatroomMessagesStream = MpscReceiver<Result<ChatroomMessagesSubscription, Status>>;
 
     async fn watch_chatroom_messages(
         &self,
@@ -170,17 +180,13 @@ impl node_server::Node for StandardNode {
         let requested_chatroom_id_for_filter = requested_chatroom_id.clone();
         self.run_subscription(
             move |event| {
-                if let Event::Message { chatroom_id } = event {
-                    chatroom_id == &requested_chatroom_id_for_filter
-                } else {
-                    false
-                }
+                matches!(event, DatabaseEvent::Message { chatroom_id } if chatroom_id == &requested_chatroom_id_for_filter)
             },
             move |connection| MessageService::find_by_chatroom(connection, &requested_chatroom_id),
         )
     }
 
-    type WatchChatroomStream = Receiver<Result<Chatroom, Status>>;
+    type WatchChatroomStream = MpscReceiver<Result<Chatroom, Status>>;
 
     async fn watch_chatroom(
         &self,
@@ -190,11 +196,7 @@ impl node_server::Node for StandardNode {
         let requested_chatroom_id_for_filter = requested_chatroom_id.clone();
         self.run_subscription(
             move |event| {
-                if let Event::Chatroom { chatroom_id } = event {
-                    chatroom_id == &requested_chatroom_id_for_filter
-                } else {
-                    false
-                }
+                matches!(event, DatabaseEvent::Chatroom { chatroom_id } if chatroom_id == &requested_chatroom_id_for_filter)
             },
             move |connection| {
                 ChatroomService::find_by_id(connection, &requested_chatroom_id)
@@ -203,38 +205,26 @@ impl node_server::Node for StandardNode {
         )
     }
 
-    type WatchChatroomsStream = Receiver<Result<ChatroomsSubscription, Status>>;
+    type WatchChatroomsStream = MpscReceiver<Result<ChatroomsSubscription, Status>>;
 
     async fn watch_chatrooms(
         &self,
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<Self::WatchChatroomsStream>, Status> {
         self.run_subscription(
-            |event| {
-                if let Event::Chatroom { chatroom_id: _ } = event {
-                    true
-                } else {
-                    false
-                }
-            },
+            |event| matches!(event, DatabaseEvent::Chatroom { chatroom_id: _ }),
             move |connection| ChatroomService::find_all(connection),
         )
     }
 
-    type WatchRosterStream = Receiver<Result<Roster, Status>>;
+    type WatchRosterStream = MpscReceiver<Result<Roster, Status>>;
 
     async fn watch_roster(
         &self,
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<Self::WatchRosterStream>, Status> {
         self.run_subscription(
-            |event| {
-                if let Event::Roster = event {
-                    true
-                } else {
-                    false
-                }
-            },
+            |event| matches!(event, DatabaseEvent::Roster),
             move |connection| PeerService::roster(connection),
         )
     }

@@ -8,7 +8,6 @@ version = "0.0.1"
 targets = ["jni"]
 
 [dependencies]
-async-channel = "1"
 async-trait = "0.1"
 chrono = "0.4"
 blake3 = { version = "0.3", features = ["pure"] }
@@ -16,6 +15,7 @@ diesel = { version = "1", features = ["sqlite"] }
 diesel_derives = { version = "1", features = ["sqlite"] }
 diesel_migrations = { version = "1", features = ["sqlite"] }
 fake = "2"
+futures-channel = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
 hex = "0.4"

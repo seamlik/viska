@@ -4,8 +4,8 @@ use crate::Connection;
 use crate::ConnectionError;
 use crate::EXECUTOR;
 use crate::TOKIO_02;
-use async_channel::Sender;
 use blake3::Hash;
+use futures_channel::mpsc::UnboundedSender;
 use futures_core::Stream;
 use futures_util::StreamExt;
 use quinn::CertificateChain;
@@ -144,11 +144,14 @@ impl ConnectionInfo for quinn::Connection {
 pub struct ConnectionManager {
     connections: tokio::sync::RwLock<HashMap<Uuid, Arc<Connection>>>,
     endpoint: LocalEndpoint,
-    response_window_sink: Sender<ResponseWindow>,
+    response_window_sink: UnboundedSender<ResponseWindow>,
 }
 
 impl ConnectionManager {
-    pub fn new(endpoint: LocalEndpoint, response_window_sink: Sender<ResponseWindow>) -> Self {
+    pub fn new(
+        endpoint: LocalEndpoint,
+        response_window_sink: UnboundedSender<ResponseWindow>,
+    ) -> Self {
         Self {
             endpoint,
             response_window_sink,
@@ -188,9 +191,11 @@ impl ConnectionManager {
                 EXECUTOR.spawn(async move {
                     let window = ResponseWindow::new(connection_2.clone(), sender, receiver).await;
                     if let Some(w) = window {
-                        response_window_sink.send(w).await.unwrap_or_else(|err| {
-                            log::error!("Failed to create a ResponseWindow: {:?}", err)
-                        });
+                        response_window_sink
+                            .unbounded_send(w)
+                            .unwrap_or_else(|err| {
+                                log::error!("Failed to create a ResponseWindow: {:?}", err)
+                            });
                     }
                 });
             }
