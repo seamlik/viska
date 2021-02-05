@@ -35,6 +35,7 @@ use database::Storage;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
 use endpoint::LocalEndpoint;
+use futures_util::FutureExt;
 use futures_util::StreamExt;
 use handler::DeviceHandler;
 use handler::Handler;
@@ -84,7 +85,8 @@ pub async fn start(
     node_grpc_port: u16,
 ) -> Result<i32, NodeStartError> {
     let handle = CURRENT_NODE_HANDLE.fetch_add(1, Ordering::SeqCst);
-    let (node, _) = Node::start(&account_id, &profile_config, node_grpc_port).await?;
+    let (node, task) = Node::new(&account_id, &profile_config, node_grpc_port).await?;
+    EXECUTOR.spawn(task);
     NODES.lock().unwrap().insert(handle, node);
     Ok(handle)
 }
@@ -114,9 +116,8 @@ impl Node {
     /// Port to serve ths gRPC service must be manually chosen because Tonic currently does not
     /// support getting the port number from a started service.
     ///
-    /// The returned [Future] is a handle for awaiting all operations. Everything is running once
-    /// this method finishes.
-    pub async fn start(
+    /// The returned [Future] is for driving all operations. Nothing runs until it is run.
+    pub async fn new(
         account_id: &[u8],
         profile_config: &ProfileConfig,
         grpc_port: u16,
@@ -144,7 +145,7 @@ impl Node {
 
         // Start gRPC server
         let (event_sink_daemon, _) = tokio::sync::broadcast::channel(8);
-        let (node_grpc_task, node_grpc_shutdown_token) = daemon::StandardNode::start(
+        let (grpc_task, node_grpc_shutdown_token) = daemon::StandardNode::new(
             grpc_port,
             event_sink_database,
             event_sink_daemon.clone(),
@@ -198,10 +199,12 @@ impl Node {
         }));
         let incoming_connections_task = async { incoming_connections_task.await.unwrap() };
 
-        let task = async {
-            request_handler_task.await;
-            incoming_connections_task.await;
-            node_grpc_task.await.unwrap();
+        let task = async move {
+            futures_util::join!(
+                grpc_task.boxed(),
+                request_handler_task.boxed(),
+                incoming_connections_task.boxed(),
+            );
         };
 
         log::info!(

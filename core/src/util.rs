@@ -2,10 +2,11 @@
 
 use crate::database::ProfileConfig;
 use crate::Node;
+use crate::EXECUTOR;
 use rand::prelude::*;
 use std::future::Future;
 
-/// Runs a [Node] that does nothing.
+/// Configures to start a [Node] that does nothing.
 pub async fn start_dummy_node() -> anyhow::Result<(Node, impl Future<Output = ()>)> {
     // TODO: In-memory database
     let tmp_dir = tempfile::tempdir()?;
@@ -15,9 +16,10 @@ pub async fn start_dummy_node() -> anyhow::Result<(Node, impl Future<Output = ()
     };
     let node_grpc_port = random_port();
 
-    Node::start(&account_id, &profile_config, node_grpc_port)
-        .await
-        .map_err(Into::into)
+    let (node, task) = Node::new(&account_id, &profile_config, node_grpc_port).await?;
+    let handle = EXECUTOR.spawn(task);
+    let task = async move { handle.await.unwrap() };
+    Ok((node, task))
 }
 
 /// Generates a random port within the private range untouched by IANA.

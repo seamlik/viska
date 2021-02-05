@@ -10,13 +10,16 @@ use crate::EXECUTOR;
 use async_trait::async_trait;
 use diesel::prelude::*;
 use futures_channel::mpsc::UnboundedReceiver as MpscReceiver;
+use futures_channel::mpsc::UnboundedSender as MpscSender;
+use futures_core::future::BoxFuture;
 use futures_util::FutureExt;
+use futures_util::StreamExt;
 use node_server::NodeServer;
 use std::any::Any;
+use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::broadcast::Sender as BroadcastSender;
-use tokio::task::JoinHandle;
 use tonic::transport::Server;
 use tonic::Code;
 use tonic::Response;
@@ -49,23 +52,29 @@ pub(crate) struct StandardNode {
     event_sink_database: BroadcastSender<Arc<DatabaseEvent>>,
     event_sink_daemon: BroadcastSender<Arc<Event>>,
     database: Arc<Database>,
+    handler_sink: MpscSender<BoxFuture<'static, ()>>,
 }
 
 impl StandardNode {
-    /// Starts the gRPC daemon.
+    /// Constructor.
     ///
-    /// Returns a [Future] to await the shutdown of the gRPC service and a token for shutting down
+    /// Returns a [Future] to drive the gRPC service and a token for shutting down
     /// the service manually. Drop the token to shut it down.
-    pub fn start(
+    pub fn new(
         node_grpc_port: u16,
         event_sink_database: BroadcastSender<Arc<DatabaseEvent>>,
         event_sink_daemon: BroadcastSender<Arc<Event>>,
         database: Arc<Database>,
-    ) -> (JoinHandle<()>, impl Any + Send + 'static) {
+    ) -> (impl Future<Output = ()>, impl Any + Send + 'static) {
+        // Handlers
+        let (handler_sink, handler_stream) = futures_channel::mpsc::unbounded();
+        let handler_task = handler_stream.for_each_concurrent(None, |o| o);
+
         let instance = Self {
             event_sink_database,
             event_sink_daemon,
             database,
+            handler_sink,
         };
 
         // Shutdown token
@@ -74,16 +83,24 @@ impl StandardNode {
             .map(drop)
             .inspect(move |_| log::info!("Shutting down gRPC daemon at port {}", node_grpc_port));
 
+        // gRPC
         // TODO: TLS
         log::info!("gRPC daemon serving at port {}", node_grpc_port);
-        let task = Server::builder()
+        let grpc_task = Server::builder()
             .add_service(NodeServer::new(instance))
             .serve_with_shutdown(
                 format!("[::1]:{}", node_grpc_port).parse().unwrap(),
                 shutdown_token,
             )
             .map(|o| o.expect("Failed to spawn gRPC server"));
-        (EXECUTOR.spawn(task), sender)
+
+        let task = async move {
+            let handle = EXECUTOR.spawn(grpc_task);
+            handler_task.await;
+            handle.await.unwrap();
+        };
+
+        (task, sender)
     }
 
     fn run_query<Q, T>(database: &Database, query: Q) -> Result<T, Status>
@@ -107,8 +124,7 @@ impl StandardNode {
         let (sender, receiver) = futures_channel::mpsc::unbounded();
         let mut event_stream = self.event_sink_database.subscribe();
         let database = self.database.clone();
-        // TODO: Don't spawn
-        EXECUTOR.spawn(async move {
+        let task = async move {
             if sender
                 .unbounded_send(Self::run_query(&database, &query))
                 .is_err()
@@ -118,21 +134,21 @@ impl StandardNode {
 
             loop {
                 match event_stream.recv().await {
-                    Ok(event) => {
+                    Ok(event)
                         if event_filter(&event)
                             && sender
                                 .unbounded_send(Self::run_query(&database, &query))
-                                .is_err()
-                        {
-                            return;
-                        }
+                                .is_err() =>
+                    {
+                        return
                     }
                     Err(RecvError::Lagged(_)) => continue,
-                    Err(RecvError::Closed) => (),
+                    _ => return,
                 }
             }
-        });
-
+        }
+        .boxed();
+        let _ = self.handler_sink.unbounded_send(task);
         tonic::Response::new(receiver)
     }
 }
@@ -147,15 +163,19 @@ impl node_server::Node for StandardNode {
     ) -> Result<Response<Self::WatchEventsStream>, Status> {
         let (sender, receiver) = futures_channel::mpsc::unbounded();
         let mut subscription = self.event_sink_daemon.subscribe();
-        EXECUTOR.spawn(async move {
+        let task = async move {
             loop {
                 match subscription.recv().await {
-                    Ok(event) if sender.unbounded_send(Ok(event.as_ref().clone())).is_err() => (),
+                    Ok(event) if sender.unbounded_send(Ok(event.as_ref().clone())).is_err() => {
+                        return
+                    }
                     Err(RecvError::Lagged(_)) => continue,
-                    _ => (),
+                    _ => return,
                 }
             }
-        });
+        }
+        .boxed();
+        let _ = self.handler_sink.unbounded_send(task);
         Ok(Response::new(receiver))
     }
 
