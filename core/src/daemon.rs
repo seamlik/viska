@@ -21,6 +21,7 @@ use tokio::task::JoinHandle;
 use tonic::transport::Channel;
 use tonic::transport::Server;
 use tonic::Code;
+use tonic::Response;
 use tonic::Status;
 
 #[async_trait]
@@ -108,7 +109,7 @@ impl StandardNode {
         &self,
         event_filter: F,
         query: Q,
-    ) -> Result<tonic::Response<MpscReceiver<Result<T, Status>>>, Status>
+    ) -> Response<MpscReceiver<Result<T, Status>>>
     where
         F: Fn(&DatabaseEvent) -> bool + Send + 'static,
         T: Send + 'static,
@@ -129,13 +130,12 @@ impl StandardNode {
             loop {
                 match event_stream.recv().await {
                     Ok(event) => {
-                        if event_filter(&event) {
-                            if sender
+                        if event_filter(&event)
+                            && sender
                                 .unbounded_send(Self::run_query(&database, &query))
                                 .is_err()
-                            {
-                                return;
-                            }
+                        {
+                            return;
                         }
                     }
                     Err(RecvError::Lagged(_)) => continue,
@@ -144,7 +144,7 @@ impl StandardNode {
             }
         });
 
-        Ok(tonic::Response::new(receiver))
+        tonic::Response::new(receiver)
     }
 }
 
@@ -158,7 +158,7 @@ impl node_server::Node for StandardNode {
     ) -> Result<tonic::Response<Self::WatchVcardStream>, Status> {
         let requested_account_id = request.into_inner();
         let requested_account_id_for_filter = requested_account_id.clone();
-        self.run_subscription(
+        let result = self.run_subscription(
             move |event| {
                 matches!(event, DatabaseEvent::Vcard { account_id } if account_id == &requested_account_id_for_filter)
 
@@ -167,7 +167,8 @@ impl node_server::Node for StandardNode {
                 VcardService::find_by_account_id(connection, &requested_account_id)
                     .map(Option::unwrap_or_default)
             },
-        )
+        );
+        Ok(result)
     }
 
     type WatchChatroomMessagesStream = MpscReceiver<Result<ChatroomMessagesSubscription, Status>>;
@@ -178,12 +179,13 @@ impl node_server::Node for StandardNode {
     ) -> Result<tonic::Response<Self::WatchChatroomMessagesStream>, Status> {
         let requested_chatroom_id = request.into_inner();
         let requested_chatroom_id_for_filter = requested_chatroom_id.clone();
-        self.run_subscription(
+        let result = self.run_subscription(
             move |event| {
                 matches!(event, DatabaseEvent::Message { chatroom_id } if chatroom_id == &requested_chatroom_id_for_filter)
             },
             move |connection| MessageService::find_by_chatroom(connection, &requested_chatroom_id),
-        )
+        );
+        Ok(result)
     }
 
     type WatchChatroomStream = MpscReceiver<Result<Chatroom, Status>>;
@@ -194,7 +196,7 @@ impl node_server::Node for StandardNode {
     ) -> Result<tonic::Response<Self::WatchChatroomStream>, Status> {
         let requested_chatroom_id = request.into_inner();
         let requested_chatroom_id_for_filter = requested_chatroom_id.clone();
-        self.run_subscription(
+        let result = self.run_subscription(
             move |event| {
                 matches!(event, DatabaseEvent::Chatroom { chatroom_id } if chatroom_id == &requested_chatroom_id_for_filter)
             },
@@ -202,7 +204,8 @@ impl node_server::Node for StandardNode {
                 ChatroomService::find_by_id(connection, &requested_chatroom_id)
                     .map(Option::unwrap_or_default)
             },
-        )
+        );
+        Ok(result)
     }
 
     type WatchChatroomsStream = MpscReceiver<Result<ChatroomsSubscription, Status>>;
@@ -211,10 +214,11 @@ impl node_server::Node for StandardNode {
         &self,
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<Self::WatchChatroomsStream>, Status> {
-        self.run_subscription(
+        let result = self.run_subscription(
             |event| matches!(event, DatabaseEvent::Chatroom { chatroom_id: _ }),
             move |connection| ChatroomService::find_all(connection),
-        )
+        );
+        Ok(result)
     }
 
     type WatchRosterStream = MpscReceiver<Result<Roster, Status>>;
@@ -223,10 +227,11 @@ impl node_server::Node for StandardNode {
         &self,
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<Self::WatchRosterStream>, Status> {
-        self.run_subscription(
+        let result = self.run_subscription(
             |event| matches!(event, DatabaseEvent::Roster),
             move |connection| PeerService::roster(connection),
-        )
+        );
+        Ok(result)
     }
 }
 

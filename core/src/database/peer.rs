@@ -30,10 +30,7 @@ impl PeerService {
             let blacklist = Self::blacklist(connection)?;
             log::info!(
                 "Updating certificate blacklist to: {:?}",
-                blacklist
-                    .iter()
-                    .map(|id| hex::encode_upper(id))
-                    .collect::<Vec<_>>()
+                blacklist.iter().map(hex::encode_upper).collect::<Vec<_>>()
             );
             verifier.set_rules(std::iter::empty(), blacklist)
         }

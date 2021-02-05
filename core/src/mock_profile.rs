@@ -52,7 +52,7 @@ impl MockProfileService {
     }
 }
 
-pub fn populate_data(account_id: &Vec<u8>) -> (Vec<Vcard>, Vec<ChangelogPayload>) {
+pub fn populate_data(account_id: &[u8]) -> (Vec<Vcard>, Vec<ChangelogPayload>) {
     let num_friends = 16;
     let num_messages = 128;
 
@@ -86,7 +86,7 @@ pub fn populate_data(account_id: &Vec<u8>) -> (Vec<Vcard>, Vec<ChangelogPayload>
     (vcards, changelog)
 }
 
-fn random_messages(account_id: &Vec<u8>, friends: &[Vcard]) -> Message {
+fn random_messages(account_id: &[u8], friends: &[Vcard]) -> Message {
     let mut rng = thread_rng();
 
     let content = match rng.gen_range(1..6) {
@@ -98,15 +98,16 @@ fn random_messages(account_id: &Vec<u8>, friends: &[Vcard]) -> Message {
             .join(" "),
     };
 
-    let mut chatroom_members: Vec<&Vec<u8>> =
-        friends.iter().map(|vcard| &vcard.account_id).collect();
+    let mut chatroom_members: Vec<&[u8]> = friends
+        .iter()
+        .map(|vcard| vcard.account_id.as_slice())
+        .collect();
     chatroom_members.push(account_id);
 
     let num_recipients = rng.gen_range(2..5);
-    let recipients: Vec<_> = chatroom_members
+    let recipients: Vec<Vec<u8>> = chatroom_members
         .choose_multiple(&mut rng, num_recipients)
-        .cloned()
-        .cloned()
+        .map(|o| o.to_vec())
         .collect();
 
     Message {
