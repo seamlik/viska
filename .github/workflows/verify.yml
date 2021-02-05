@@ -33,7 +33,7 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: 11
-      - run: make install-env
+      - run: make install-env-github
       - run: make prepare-github
       - run: make verify
       - uses: actions-rs/clippy-check@v1

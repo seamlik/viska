@@ -1,6 +1,9 @@
 # LTO due to https://github.com/rust-lang/rust/issues/50007
 CARGO_ANDROID_COMMAND = CARGO_PROFILE_RELEASE_LTO=true cross build --package viska_android --release --target
 
+# `--target-dir` due to https://github.com/rust-lang/cargo/issues/9137
+CARGO_INSTALL_GITHUB_ARGS = --debug --target-dir=target
+
 PRETTIER_ARGS = --ignore-path .gitignore .
 
 verify:
@@ -33,8 +36,8 @@ prettier:
 	prettier --write $(PRETTIER_ARGS)
 
 # For installing build environment on GitHub Actions
-.PHONY: install-env
-install-env:
+.PHONY: install-env-github
+install-env-github:
 	npm install --global prettier @prettier/plugin-xml
-	cargo install --git https://github.com/seamlik/riko.git --bin cargo-riko --debug
-	cargo install diesel_cli --no-default-features --features sqlite --debug
+	cargo install --git https://github.com/seamlik/riko.git --bin cargo-riko $(CARGO_INSTALL_GITHUB_ARGS)
+	cargo install diesel_cli --no-default-features --features sqlite $(CARGO_INSTALL_GITHUB_ARGS)
