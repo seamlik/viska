@@ -44,5 +44,11 @@ tokio_02 = { package = "tokio", version = "0.2", features = ["rt-threaded"] }
 uuid = { version = "0", features = ["v4"] }
 webpki = "0"
 
+[dev-dependencies]
+clap = "2"
+env_logger = "0.8"
+structopt = "0.3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
 [build-dependencies]
 tonic-build = "0.4"

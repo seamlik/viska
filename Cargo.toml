@@ -1,2 +1,2 @@
 [workspace]
-members = ["core", "core-android", "core-dev"]
+members = ["core", "core-android"]
