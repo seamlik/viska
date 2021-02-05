@@ -37,7 +37,10 @@ prettier:
 
 # For installing build environment on GitHub Actions
 .PHONY: install-env-github
-install-env-github:
-	npm install --global prettier @prettier/plugin-xml
+install-env-github: install-prettier
 	cargo install --git https://github.com/seamlik/riko.git --bin cargo-riko $(CARGO_INSTALL_GITHUB_ARGS)
 	cargo install diesel_cli --no-default-features --features sqlite $(CARGO_INSTALL_GITHUB_ARGS)
+
+.PHONY: install-prettier
+install-prettier:
+	npm install --global prettier @prettier/plugin-xml
