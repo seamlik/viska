@@ -12,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::from_args();
 
-    let (node, _) = viska_dev::start_dummy_node().await?;
+    let (node, _) = viska::util::start_dummy_node().await?;
 
     let connection = node.connect(&cli.destination).await?;
     let mut counter = 0_u32;

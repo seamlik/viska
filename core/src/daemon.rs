@@ -11,30 +11,16 @@ use async_trait::async_trait;
 use diesel::prelude::*;
 use futures_channel::mpsc::UnboundedReceiver as MpscReceiver;
 use futures_util::FutureExt;
-use node_client::NodeClient;
 use node_server::NodeServer;
 use std::any::Any;
 use std::sync::Arc;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::broadcast::Sender as BroadcastSender;
 use tokio::task::JoinHandle;
-use tonic::transport::Channel;
 use tonic::transport::Server;
 use tonic::Code;
 use tonic::Response;
 use tonic::Status;
-
-#[async_trait]
-pub(crate) trait GrpcClient: Sized {
-    async fn create(port: u16) -> Result<Self, tonic::transport::Error>;
-}
-
-#[async_trait]
-impl GrpcClient for NodeClient<Channel> {
-    async fn create(port: u16) -> Result<Self, tonic::transport::Error> {
-        Self::connect(format!("http://[::1]:{}", port)).await
-    }
-}
 
 /// Nullable gRPC response.
 ///
@@ -61,6 +47,7 @@ impl<T: prost::Message> NullableResponse<T> for Result<tonic::Response<T>, Statu
 /// The standard implementation of a "Node" gRPC daemon.
 pub(crate) struct StandardNode {
     event_sink_database: BroadcastSender<Arc<DatabaseEvent>>,
+    event_sink_daemon: BroadcastSender<Arc<Event>>,
     database: Arc<Database>,
 }
 
@@ -72,10 +59,12 @@ impl StandardNode {
     pub fn start(
         node_grpc_port: u16,
         event_sink_database: BroadcastSender<Arc<DatabaseEvent>>,
+        event_sink_daemon: BroadcastSender<Arc<Event>>,
         database: Arc<Database>,
     ) -> (JoinHandle<()>, impl Any + Send + 'static) {
         let instance = Self {
             event_sink_database,
+            event_sink_daemon,
             database,
         };
 
@@ -150,6 +139,26 @@ impl StandardNode {
 
 #[async_trait]
 impl node_server::Node for StandardNode {
+    type WatchEventsStream = MpscReceiver<Result<Event, Status>>;
+
+    async fn watch_events(
+        &self,
+        _: tonic::Request<()>,
+    ) -> Result<Response<Self::WatchEventsStream>, Status> {
+        let (sender, receiver) = futures_channel::mpsc::unbounded();
+        let mut subscription = self.event_sink_daemon.subscribe();
+        EXECUTOR.spawn(async move {
+            loop {
+                match subscription.recv().await {
+                    Ok(event) if sender.unbounded_send(Ok(event.as_ref().clone())).is_err() => (),
+                    Err(RecvError::Lagged(_)) => continue,
+                    _ => (),
+                }
+            }
+        });
+        Ok(Response::new(receiver))
+    }
+
     type WatchVcardStream = MpscReceiver<Result<Vcard, Status>>;
 
     async fn watch_vcard(
@@ -245,5 +254,33 @@ impl IntoTonicStatus for diesel::result::Error {
             diesel::result::Error::NotFound => Status::not_found(self.to_string()),
             _ => Status::internal(self.to_string()),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::event::Content;
+    use super::*;
+    use futures_util::StreamExt;
+
+    #[tokio::test]
+    async fn watch_events() -> anyhow::Result<()> {
+        let (node, _) = crate::util::start_dummy_node().await?;
+
+        let mut client_1 = node.grpc_client().await?;
+        let mut stream_1 = client_1.watch_events(()).await?.into_inner();
+
+        let mut client_2 = node.grpc_client().await?;
+        let mut stream_2 = client_2.watch_events(()).await?.into_inner();
+
+        let event = Event {
+            content: Content::Message(vec![]).into(),
+        };
+        node.event_sink_daemon.send(event.into())?;
+
+        assert!(matches!(stream_1.next().await, Some(_)));
+        assert!(matches!(stream_2.next().await, Some(_)));
+
+        Ok(())
     }
 }

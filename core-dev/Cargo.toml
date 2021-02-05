@@ -4,14 +4,10 @@ name = "viska_dev"
 version = "0.0.1"
 publish = false
 
-[dependencies]
-anyhow = "1"
-rand = "0.8"
-tempfile = "3"
-viska = { path = "../core" }
-
 [dev-dependencies]
+anyhow = "1"
 clap = "2"
 env_logger = "0.8"
 structopt = "0.3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+viska = { path = "../core" }

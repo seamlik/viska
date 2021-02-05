@@ -8,6 +8,7 @@ version = "0.0.1"
 targets = ["jni"]
 
 [dependencies]
+anyhow = "1"
 async-trait = "0.1"
 chrono = "0.4"
 blake3 = { version = "0.3", features = ["pure"] }
@@ -33,6 +34,7 @@ riko_runtime_jni = { git = "https://github.com/seamlik/riko" }
 rustls = { version = "0.17", features = ["dangerous_configuration", "quic"]}
 serde = { version = "1", features = ["derive"] }
 serde_bytes = "0"
+tempfile = "3"
 tonic = "0.4"
 prost = "0.7"
 prost-types = "0.7"

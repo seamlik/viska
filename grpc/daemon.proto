@@ -9,6 +9,9 @@ import "google/protobuf/wrappers.proto";
 
 // Represents a Node
 service Node {
+  // Subscribes to events.
+  rpc WatchEvents(google.protobuf.Empty) returns (stream Event) {}
+
   rpc WatchVcard(google.protobuf.BytesValue) returns (stream Vcard) {}
 
   rpc WatchChatroomMessages(google.protobuf.BytesValue) returns (stream ChatroomMessagesSubscription) {}
@@ -20,6 +23,15 @@ service Node {
   rpc WatchChatrooms(google.protobuf.Empty) returns (stream ChatroomsSubscription) {}
 
   rpc WatchRoster(google.protobuf.Empty) returns (stream Roster) {}
+}
+
+message Event {
+  oneof content {
+    // Receives a new message.
+    //
+    // Payload is the message ID.
+    google.protobuf.BytesValue message = 1;
+  }
 }
 
 message Roster {

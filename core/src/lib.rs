@@ -21,7 +21,10 @@ mod mock_profile;
 mod packet;
 pub mod pki;
 pub mod proto;
+pub mod util;
 
+use self::daemon::node_client::NodeClient;
+use self::daemon::Event;
 use self::database::ProfileConfig;
 use crate::database::peer::PeerService;
 use crate::database::Database;
@@ -58,7 +61,9 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use thiserror::Error;
 use tokio::runtime::Runtime;
+use tokio::sync::broadcast::Sender;
 use tokio_02::runtime::Runtime as Runtime02;
+use tonic::transport::Channel;
 use uuid::Uuid;
 
 static CURRENT_NODE_HANDLE: AtomicI32 = AtomicI32::new(0);
@@ -99,6 +104,8 @@ pub fn stop(handle: i32) {
 pub struct Node {
     connection_manager: Arc<ConnectionManager>,
     _node_grpc_shutdown_token: Box<dyn Any + Send>,
+    grpc_port: u16,
+    event_sink_daemon: Sender<Arc<Event>>,
 }
 
 impl Node {
@@ -112,7 +119,7 @@ impl Node {
     pub async fn start(
         account_id: &[u8],
         profile_config: &ProfileConfig,
-        node_grpc_port: u16,
+        grpc_port: u16,
     ) -> Result<(Self, impl Future<Output = ()>), NodeStartError> {
         let database = Arc::new(Database::create(&Storage::OnDisk(
             profile_config.path_database(account_id).await?,
@@ -136,8 +143,13 @@ impl Node {
         );
 
         // Start gRPC server
-        let (node_grpc_task, node_grpc_shutdown_token) =
-            daemon::StandardNode::start(node_grpc_port, event_sink_database, database.clone());
+        let (event_sink_daemon, _) = tokio::sync::broadcast::channel(8);
+        let (node_grpc_task, node_grpc_shutdown_token) = daemon::StandardNode::start(
+            grpc_port,
+            event_sink_database,
+            event_sink_daemon.clone(),
+            database.clone(),
+        );
 
         let endpoint_config = self::endpoint::Config {
             certificate: &certificate,
@@ -200,6 +212,8 @@ impl Node {
             Self {
                 connection_manager,
                 _node_grpc_shutdown_token: Box::new(node_grpc_shutdown_token),
+                grpc_port,
+                event_sink_daemon,
             },
             task,
         ))
@@ -213,6 +227,11 @@ impl Node {
     /// Gets the local port.
     pub fn local_port(&self) -> std::io::Result<u16> {
         self.connection_manager.local_port()
+    }
+
+    #[cfg(test)]
+    async fn grpc_client(&self) -> Result<NodeClient<Channel>, tonic::transport::Error> {
+        NodeClient::<Channel>::connect(format!("http://[::1]:{}", self.grpc_port)).await
     }
 }
 
