@@ -1,11 +1,8 @@
+# Viska (WiP)
+
+![badge](https://github.com/seamlik/viska/workflows/Verify/badge.svg)
+
 Nothing right now, come back later.
-
-## Building
-
-### Android
-
-1. Run `android/build.sh`
-2. Run `./gradlew assemble`
 
 ## License
 
