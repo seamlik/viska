@@ -7,9 +7,13 @@ use crate::ConnectionError;
 use blake3::Hash;
 use futures_channel::mpsc::UnboundedSender;
 use futures_core::Stream;
+use futures_util::FutureExt;
+use futures_util::SinkExt;
 use futures_util::StreamExt;
 use quinn::CertificateChain;
 use quinn::Endpoint;
+use quinn::Incoming;
+use quinn::IncomingBiStreams;
 use quinn::NewConnection;
 use rustls::internal::msgs::handshake::DistinguishedNames;
 use rustls::ClientCertVerified;
@@ -39,7 +43,7 @@ pub struct Config<'a> {
 /// QUIC endpoint that binds to all local interfaces in the network.
 ///
 /// This also serves as the main endpoint that is used to connect with remote [Node](crate::Node)s.
-pub struct LocalEndpoint {
+struct LocalEndpoint {
     account_id: Hash,
     quic: Endpoint,
     client_config: quinn::ClientConfig,
@@ -49,7 +53,7 @@ impl LocalEndpoint {
     pub fn start(
         config: &Config,
         verifier: Arc<CertificateVerifier>,
-    ) -> Result<(Self, impl Stream<Item = quinn::Connecting>), Error> {
+    ) -> Result<(Self, Incoming), Error> {
         let cert_chain = CertificateChain::from_certs(std::iter::once(
             quinn::Certificate::from_der(&config.certificate)?,
         ));
@@ -97,7 +101,7 @@ impl LocalEndpoint {
         ))
     }
 
-    pub async fn connect(&self, addr: &SocketAddr) -> Result<NewConnection, ConnectionError> {
+    async fn connect(&self, addr: &SocketAddr) -> Result<NewConnection, ConnectionError> {
         log::info!("Outgoing connection to {}", addr);
         let connecting = TOKIO_02.enter(|| {
             self.quic
@@ -151,20 +155,44 @@ pub struct ConnectionManager {
 
 impl ConnectionManager {
     pub fn new(
-        endpoint: LocalEndpoint,
+        config: &Config,
+        verifier: Arc<CertificateVerifier>,
         response_window_sink: UnboundedSender<ResponseWindow>,
-    ) -> (Self, impl Future<Output = ()>) {
+    ) -> Result<(Arc<Self>, impl Future<Output = ()>), Error> {
         let (task_sink, dynamic_task) = TaskSink::new();
+        let (endpoint, incoming) = LocalEndpoint::start(config, verifier)?;
+
         let instance = Self {
             endpoint,
             response_window_sink,
             connections: Default::default(),
             task_sink,
         };
-        (instance, dynamic_task)
+        let instance = Arc::new(instance);
+        let instance_clone = instance.clone();
+
+        // Process incoming connections
+        let incoming_connections_task = incoming.for_each_concurrent(None, move |connecting| {
+            let instance = instance_clone.clone();
+            async move {
+                match connecting.await {
+                    Ok(new_connection) => {
+                        instance.add(new_connection).await;
+                    }
+                    Err(err) => log::error!("Failed to accept an incoming connection: {:?}", err),
+                }
+            }
+        });
+
+        let task = async {
+            futures_util::join!(dynamic_task, incoming_connections_task);
+        };
+
+        Ok((instance, task))
     }
 
-    pub async fn add(self: Arc<Self>, new_connection: NewConnection) -> Arc<Connection> {
+    async fn add(self: Arc<Self>, new_connection: NewConnection) -> Arc<Connection> {
+        // TODO: Don't refer to self so that no need to implement Drop for Node
         let connection_id = Uuid::new_v4();
         let connection = Arc::<Connection>::new(Connection {
             quic: new_connection.connection,
@@ -174,47 +202,25 @@ impl ConnectionManager {
             .write()
             .await
             .insert(connection.id, connection.clone());
+        let self_clone = self.clone();
 
         // Create ResponseWindow
-        let connection_1 = connection.clone();
-        let connection_2 = connection.clone();
-        let mut bi_streams = new_connection.bi_streams;
+        let connection_clone = connection.clone();
+        let bi_streams = new_connection.bi_streams;
         let response_window_sink = self.response_window_sink.clone();
-        let connection_manager = self.clone();
-        let task_sink = self.task_sink.clone();
-        let task_sink_clone = task_sink.clone();
-        let task = async move {
-            let task_sink = task_sink_clone.clone();
-            while let Some(stream) = bi_streams.next().await {
-                let (sender, receiver) = match stream {
-                    Err(err) => {
-                        log::error!("Closing {:?}: {:?}", connection_1.clone(), err);
-                        break;
-                    }
-                    Ok((sender, receiver)) => (sender, receiver),
-                };
-
-                let response_window_sink = response_window_sink.clone();
-                let connection_2 = connection_2.clone();
-                let task = async move {
-                    let window = ResponseWindow::new(connection_2.clone(), sender, receiver).await;
-                    if let Some(w) = window {
-                        response_window_sink
-                            .unbounded_send(w)
-                            .unwrap_or_else(|err| {
-                                log::error!("Failed to create a ResponseWindow: {:?}", err)
-                            });
-                    }
-                };
-                task_sink.submit(task);
-            }
-            connection_manager
-                .connections
-                .write()
-                .await
-                .remove(&connection_id);
-        };
-        task_sink.submit(task);
+        let response_windows_creator_task = bi_streams
+            .for_each_concurrent(None, move |incoming| {
+                Self::consume_bi_streams(
+                    incoming,
+                    connection_clone.clone(),
+                    response_window_sink.clone(),
+                )
+            })
+            .then(move |_| async move {
+                // Auto-remove the connection after it is closed (stream ends)
+                self_clone.connections.write().await.remove(&connection_id);
+            });
+        self.task_sink.submit(response_windows_creator_task);
 
         log::info!(
             "Connected to {} {:?}",
@@ -226,6 +232,24 @@ impl ConnectionManager {
             &connection
         );
         connection
+    }
+
+    async fn consume_bi_streams(
+        incoming: <IncomingBiStreams as Stream>::Item,
+        connection: Arc<Connection>,
+        mut response_window_sink: impl SinkExt<ResponseWindow> + Unpin,
+    ) {
+        match incoming {
+            Ok((sender, receiver)) => {
+                let window = ResponseWindow::new(connection, sender, receiver).await;
+                if let Some(w) = window {
+                    let _ = response_window_sink.send(w).await;
+                };
+            }
+            Err(err) => {
+                log::error!("Error on {:?}: {:?}", &connection, err);
+            }
+        };
     }
 
     pub async fn connect(

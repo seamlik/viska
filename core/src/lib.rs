@@ -34,12 +34,7 @@ use database::DatabaseInitializationError;
 use database::Storage;
 use endpoint::ConnectionInfo;
 use endpoint::ConnectionManager;
-use endpoint::LocalEndpoint;
 use futures_util::FutureExt;
-use futures_util::StreamExt;
-use handler::DeviceHandler;
-use handler::Handler;
-use handler::PeerHandler;
 use http::StatusCode;
 use packet::ResponseWindow;
 use pki::CanonicalId;
@@ -111,7 +106,8 @@ impl Node {
     /// Port to serve ths gRPC service must be manually chosen because Tonic currently does not
     /// support getting the port number from a started service.
     ///
-    /// The returned [Future] is for driving all operations. Nothing runs until it is run.
+    /// The returned [Future] is for driving all operations. Nothing runs until it is run. It will
+    /// run to completion once [Node] is dropped.
     pub async fn new(
         account_id: &[u8],
         profile_config: &ProfileConfig,
@@ -147,59 +143,21 @@ impl Node {
             database.clone(),
         );
 
+        // QUIC endpoint and connection manager
         let endpoint_config = self::endpoint::Config {
             certificate: &certificate,
             key: &key,
         };
         let (window_sender, window_receiver) = futures_channel::mpsc::unbounded::<ResponseWindow>();
-
-        // Handle requests
-        let request_handler_task = window_receiver.for_each_concurrent(None, move |window| {
-            let handler: Box<dyn Handler + Send + Sync> =
-                if window.account_id() == Some(account_id_calculated) {
-                    Box::new(DeviceHandler)
-                } else {
-                    Box::new(PeerHandler {
-                        database: database.clone(),
-                    })
-                };
-            async move {
-                let response = match handler.handle(&window) {
-                    Ok(r) => r,
-                    Err(err) => err.into(),
-                };
-                window
-                    .send_response(response)
-                    .await
-                    .unwrap_or_else(|err| log::error!("Error sending a response: {:?}", err));
-            }
-        });
-
-        let (endpoint, incomings) = LocalEndpoint::start(&endpoint_config, certificate_verifier)?;
-
+        let request_handler_task =
+            ResponseWindow::consumer_task(account_id_calculated, window_receiver, database.clone());
         let (connection_manager, connection_manager_task) =
-            ConnectionManager::new(endpoint, window_sender);
-        let connection_manager = Arc::new(connection_manager);
-
-        // Process incoming connections
-        let connection_manager_cloned = connection_manager.clone();
-        let incoming_connections_task = incomings.for_each_concurrent(None, move |connecting| {
-            let connection_manager_cloned = connection_manager_cloned.clone();
-            async move {
-                match connecting.await {
-                    Ok(new_connection) => {
-                        connection_manager_cloned.clone().add(new_connection).await;
-                    }
-                    Err(err) => log::error!("Failed to accept an incoming connection: {:?}", err),
-                }
-            }
-        });
+            ConnectionManager::new(&endpoint_config, certificate_verifier, window_sender)?;
 
         let task = async move {
             futures_util::join!(
                 grpc_task.boxed(),
                 request_handler_task.boxed(),
-                incoming_connections_task.boxed(),
                 connection_manager_task.boxed(),
             );
         };
@@ -210,7 +168,7 @@ impl Node {
         );
         Ok((
             Self {
-                connection_manager,
+                connection_manager: connection_manager.into(),
                 _node_grpc_shutdown_token: Box::new(node_grpc_shutdown_token),
                 grpc_port,
                 event_sink_daemon,

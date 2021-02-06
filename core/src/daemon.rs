@@ -75,9 +75,7 @@ impl StandardNode {
 
         // Shutdown token
         let (sender, receiver) = tokio::sync::oneshot::channel::<()>();
-        let shutdown_token = receiver
-            .map(drop)
-            .inspect(move |_| log::info!("Shutting down gRPC daemon at port {}", node_grpc_port));
+        let shutdown_token = receiver.map(drop);
 
         // gRPC
         // TODO: TLS
@@ -94,6 +92,7 @@ impl StandardNode {
             let handle = crate::util::spawn(grpc_task);
             dynamic_task.await;
             handle.await.unwrap();
+            log::info!("Shutting down gRPC daemon at port {}", node_grpc_port);
         };
 
         (task, sender)
