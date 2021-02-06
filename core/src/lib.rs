@@ -124,8 +124,8 @@ impl Node {
         let (event_sink_database, _) = tokio::sync::broadcast::channel(8);
 
         let certificate =
-            tokio::fs::read(profile_config.path_certificate(account_id).await?).await?;
-        let key = tokio::fs::read(profile_config.path_key(account_id).await?).await?;
+            async_fs::read(profile_config.path_certificate(account_id).await?).await?;
+        let key = async_fs::read(profile_config.path_key(account_id).await?).await?;
 
         let account_id_calculated = certificate.canonical_id();
         if account_id_calculated.as_bytes() != account_id {

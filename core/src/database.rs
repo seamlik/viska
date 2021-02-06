@@ -110,7 +110,7 @@ pub struct ProfileConfig {
 
 impl ProfileConfig {
     pub async fn path_database(&self, account_id: &[u8]) -> std::io::Result<PathBuf> {
-        let mut destination = tokio::fs::canonicalize(&self.dir_data).await?;
+        let mut destination = async_fs::canonicalize(&self.dir_data).await?;
         destination.push("account");
         destination.push(hex::encode_upper(account_id));
         destination.push("database");
@@ -119,7 +119,7 @@ impl ProfileConfig {
     }
 
     pub async fn path_certificate(&self, account_id: &[u8]) -> std::io::Result<PathBuf> {
-        let mut destination = tokio::fs::canonicalize(&self.dir_data).await?;
+        let mut destination = async_fs::canonicalize(&self.dir_data).await?;
         destination.push("account");
         destination.push(hex::encode_upper(account_id));
         destination.push("certificate.der");
@@ -127,7 +127,7 @@ impl ProfileConfig {
     }
 
     pub async fn path_key(&self, account_id: &[u8]) -> std::io::Result<PathBuf> {
-        let mut destination = tokio::fs::canonicalize(&self.dir_data).await?;
+        let mut destination = async_fs::canonicalize(&self.dir_data).await?;
         destination.push("account");
         destination.push(hex::encode_upper(account_id));
         destination.push("key.der");
@@ -157,15 +157,15 @@ pub async fn create_standard_profile(
 
     let path_account = path_certificate.parent().unwrap();
     log::debug!("Creating account directory {}", path_account.display());
-    tokio::fs::create_dir_all(path_account).await?;
-    tokio::fs::write(&path_certificate, &bundle.certificate).await?;
-    tokio::fs::write(
+    async_fs::create_dir_all(path_account).await?;
+    async_fs::write(&path_certificate, &bundle.certificate).await?;
+    async_fs::write(
         &profile_config.path_key(account_id.as_bytes()).await?,
         &bundle.key,
     )
     .await?;
 
-    tokio::fs::create_dir_all(
+    async_fs::create_dir_all(
         profile_config
             .path_database(account_id.as_bytes())
             .await?
