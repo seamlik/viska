@@ -17,11 +17,9 @@ use tokio_02::runtime::Runtime as Runtime02;
 /// Configures to start a [Node] that does nothing.
 pub async fn start_dummy_node() -> anyhow::Result<(Node, impl Future<Output = ()>)> {
     // TODO: In-memory database
-    let tmp_dir = tempfile::tempdir()?;
-    let account_id = crate::database::create_standard_profile(tmp_dir.path().to_path_buf()).await?;
-    let profile_config = ProfileConfig {
-        dir_data: tmp_dir.path().to_path_buf(),
-    };
+    let tmp_dir = tempfile::tempdir()?.into_path();
+    let account_id = crate::database::create_standard_profile(tmp_dir.clone()).await?;
+    let profile_config = ProfileConfig { dir_data: tmp_dir };
     let node_grpc_port = random_port();
 
     let (node, task) = Node::new(&account_id, &profile_config, node_grpc_port).await?;
