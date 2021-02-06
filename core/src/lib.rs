@@ -193,6 +193,12 @@ impl Node {
     }
 }
 
+impl Drop for Node {
+    fn drop(&mut self) {
+        self.connection_manager.close();
+    }
+}
+
 /// Connection to a remote [Node].
 pub struct Connection {
     id: Uuid,

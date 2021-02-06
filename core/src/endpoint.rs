@@ -113,6 +113,10 @@ impl LocalEndpoint {
     pub fn local_port(&self) -> std::io::Result<u16> {
         Ok(self.quic.local_addr()?.port())
     }
+
+    fn close(&self) {
+        self.quic.close(0_u8.into(), &[]);
+    }
 }
 
 /// Error when starting a QUIC endpoint.
@@ -261,6 +265,10 @@ impl ConnectionManager {
 
     pub fn local_port(&self) -> std::io::Result<u16> {
         self.endpoint.local_port()
+    }
+
+    pub fn close(&self) {
+        self.endpoint.close();
     }
 }
 
