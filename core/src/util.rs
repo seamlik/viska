@@ -3,6 +3,10 @@
 use crate::database::ProfileConfig;
 use crate::Node;
 use crate::EXECUTOR;
+use futures_channel::mpsc::UnboundedSender;
+use futures_core::future::BoxFuture;
+use futures_util::FutureExt;
+use futures_util::StreamExt;
 use rand::prelude::*;
 use std::future::Future;
 
@@ -25,4 +29,25 @@ pub async fn start_dummy_node() -> anyhow::Result<(Node, impl Future<Output = ()
 /// Generates a random port within the private range untouched by IANA.
 fn random_port() -> u16 {
     thread_rng().gen_range(49152..u16::MAX)
+}
+
+#[derive(Clone)]
+pub(crate) struct TaskSink {
+    sink: UnboundedSender<BoxFuture<'static, ()>>,
+}
+
+impl TaskSink {
+    pub fn new() -> (Self, impl Future<Output = ()>) {
+        let (sink, receiver) = futures_channel::mpsc::unbounded();
+        let task = receiver.for_each_concurrent(None, |o| o);
+        let instance = Self { sink };
+        (instance, task)
+    }
+
+    pub fn submit<F>(&self, task: F)
+    where
+        F: Future<Output = ()> + Send + 'static,
+    {
+        let _ = self.sink.unbounded_send(task.boxed());
+    }
 }

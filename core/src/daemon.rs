@@ -6,14 +6,12 @@ use crate::database::peer::PeerService;
 use crate::database::vcard::VcardService;
 use crate::database::Database;
 use crate::database::Event as DatabaseEvent;
+use crate::util::TaskSink;
 use crate::EXECUTOR;
 use async_trait::async_trait;
 use diesel::prelude::*;
 use futures_channel::mpsc::UnboundedReceiver as MpscReceiver;
-use futures_channel::mpsc::UnboundedSender as MpscSender;
-use futures_core::future::BoxFuture;
 use futures_util::FutureExt;
-use futures_util::StreamExt;
 use node_server::NodeServer;
 use std::any::Any;
 use std::future::Future;
@@ -52,7 +50,7 @@ pub(crate) struct StandardNode {
     event_sink_database: BroadcastSender<Arc<DatabaseEvent>>,
     event_sink_daemon: BroadcastSender<Arc<Event>>,
     database: Arc<Database>,
-    handler_sink: MpscSender<BoxFuture<'static, ()>>,
+    task_sink: TaskSink,
 }
 
 impl StandardNode {
@@ -67,14 +65,13 @@ impl StandardNode {
         database: Arc<Database>,
     ) -> (impl Future<Output = ()>, impl Any + Send + 'static) {
         // Handlers
-        let (handler_sink, handler_stream) = futures_channel::mpsc::unbounded();
-        let handler_task = handler_stream.for_each_concurrent(None, |o| o);
+        let (task_sink, dynamic_task) = TaskSink::new();
 
         let instance = Self {
             event_sink_database,
             event_sink_daemon,
             database,
-            handler_sink,
+            task_sink,
         };
 
         // Shutdown token
@@ -96,7 +93,7 @@ impl StandardNode {
 
         let task = async move {
             let handle = EXECUTOR.spawn(grpc_task);
-            handler_task.await;
+            dynamic_task.await;
             handle.await.unwrap();
         };
 
@@ -146,9 +143,8 @@ impl StandardNode {
                     _ => return,
                 }
             }
-        }
-        .boxed();
-        let _ = self.handler_sink.unbounded_send(task);
+        };
+        self.task_sink.submit(task);
         tonic::Response::new(receiver)
     }
 }
@@ -173,9 +169,8 @@ impl node_server::Node for StandardNode {
                     _ => return,
                 }
             }
-        }
-        .boxed();
-        let _ = self.handler_sink.unbounded_send(task);
+        };
+        self.task_sink.submit(task);
         Ok(Response::new(receiver))
     }
 

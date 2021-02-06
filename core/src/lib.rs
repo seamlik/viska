@@ -181,29 +181,31 @@ impl Node {
         });
 
         let (endpoint, incomings) = LocalEndpoint::start(&endpoint_config, certificate_verifier)?;
-        let connection_manager = Arc::new(ConnectionManager::new(endpoint, window_sender));
+
+        let (connection_manager, connection_manager_task) =
+            ConnectionManager::new(endpoint, window_sender);
+        let connection_manager = Arc::new(connection_manager);
 
         // Process incoming connections
         let connection_manager_cloned = connection_manager.clone();
-        let incoming_connections_task = TOKIO_02.spawn(incomings.for_each(move |connecting| {
+        let incoming_connections_task = incomings.for_each_concurrent(None, move |connecting| {
             let connection_manager_cloned = connection_manager_cloned.clone();
-            EXECUTOR.spawn(async {
+            async move {
                 match connecting.await {
                     Ok(new_connection) => {
-                        connection_manager_cloned.add(new_connection).await;
+                        connection_manager_cloned.clone().add(new_connection).await;
                     }
                     Err(err) => log::error!("Failed to accept an incoming connection: {:?}", err),
                 }
-            });
-            async {}
-        }));
-        let incoming_connections_task = async { incoming_connections_task.await.unwrap() };
+            }
+        });
 
         let task = async move {
             futures_util::join!(
                 grpc_task.boxed(),
                 request_handler_task.boxed(),
                 incoming_connections_task.boxed(),
+                connection_manager_task.boxed(),
             );
         };
 

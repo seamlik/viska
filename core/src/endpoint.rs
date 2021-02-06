@@ -1,8 +1,8 @@
 use crate::packet::ResponseWindow;
 use crate::pki::CanonicalId;
+use crate::util::TaskSink;
 use crate::Connection;
 use crate::ConnectionError;
-use crate::EXECUTOR;
 use crate::TOKIO_02;
 use blake3::Hash;
 use futures_channel::mpsc::UnboundedSender;
@@ -20,6 +20,7 @@ use rustls::ServerCertVerifier;
 use rustls::TLSError;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::future::Future;
 use std::net::SocketAddr;
 use std::net::UdpSocket;
 use std::sync::Arc;
@@ -145,18 +146,22 @@ pub struct ConnectionManager {
     connections: tokio::sync::RwLock<HashMap<Uuid, Arc<Connection>>>,
     endpoint: LocalEndpoint,
     response_window_sink: UnboundedSender<ResponseWindow>,
+    task_sink: TaskSink,
 }
 
 impl ConnectionManager {
     pub fn new(
         endpoint: LocalEndpoint,
         response_window_sink: UnboundedSender<ResponseWindow>,
-    ) -> Self {
-        Self {
+    ) -> (Self, impl Future<Output = ()>) {
+        let (task_sink, dynamic_task) = TaskSink::new();
+        let instance = Self {
             endpoint,
             response_window_sink,
             connections: Default::default(),
-        }
+            task_sink,
+        };
+        (instance, dynamic_task)
     }
 
     pub async fn add(self: Arc<Self>, new_connection: NewConnection) -> Arc<Connection> {
@@ -176,7 +181,10 @@ impl ConnectionManager {
         let mut bi_streams = new_connection.bi_streams;
         let response_window_sink = self.response_window_sink.clone();
         let connection_manager = self.clone();
-        EXECUTOR.spawn(async move {
+        let task_sink = self.task_sink.clone();
+        let task_sink_clone = task_sink.clone();
+        let task = async move {
+            let task_sink = task_sink_clone.clone();
             while let Some(stream) = bi_streams.next().await {
                 let (sender, receiver) = match stream {
                     Err(err) => {
@@ -188,7 +196,7 @@ impl ConnectionManager {
 
                 let response_window_sink = response_window_sink.clone();
                 let connection_2 = connection_2.clone();
-                EXECUTOR.spawn(async move {
+                let task = async move {
                     let window = ResponseWindow::new(connection_2.clone(), sender, receiver).await;
                     if let Some(w) = window {
                         response_window_sink
@@ -197,14 +205,16 @@ impl ConnectionManager {
                                 log::error!("Failed to create a ResponseWindow: {:?}", err)
                             });
                     }
-                });
+                };
+                task_sink.submit(task);
             }
             connection_manager
                 .connections
                 .write()
                 .await
                 .remove(&connection_id);
-        });
+        };
+        task_sink.submit(task);
 
         log::info!(
             "Connected to {} {:?}",
