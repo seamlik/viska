@@ -7,7 +7,6 @@ use crate::database::vcard::VcardService;
 use crate::database::Database;
 use crate::database::Event as DatabaseEvent;
 use crate::util::TaskSink;
-use crate::EXECUTOR;
 use async_trait::async_trait;
 use diesel::prelude::*;
 use futures_channel::mpsc::UnboundedReceiver as MpscReceiver;
@@ -92,7 +91,7 @@ impl StandardNode {
             .map(|o| o.expect("Failed to spawn gRPC server"));
 
         let task = async move {
-            let handle = EXECUTOR.spawn(grpc_task);
+            let handle = crate::util::spawn(grpc_task);
             dynamic_task.await;
             handle.await.unwrap();
         };

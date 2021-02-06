@@ -2,13 +2,17 @@
 
 use crate::database::ProfileConfig;
 use crate::Node;
-use crate::EXECUTOR;
 use futures_channel::mpsc::UnboundedSender;
 use futures_core::future::BoxFuture;
 use futures_util::FutureExt;
 use futures_util::StreamExt;
 use rand::prelude::*;
 use std::future::Future;
+use std::lazy::SyncLazy;
+use tokio::runtime::Handle;
+use tokio::runtime::Runtime;
+use tokio::task::JoinHandle;
+use tokio_02::runtime::Runtime as Runtime02;
 
 /// Configures to start a [Node] that does nothing.
 pub async fn start_dummy_node() -> anyhow::Result<(Node, impl Future<Output = ()>)> {
@@ -49,5 +53,20 @@ impl TaskSink {
         F: Future<Output = ()> + Send + 'static,
     {
         let _ = self.sink.unbounded_send(task.boxed());
+    }
+}
+
+static EXECUTOR: SyncLazy<Runtime> = SyncLazy::new(|| Runtime::new().unwrap());
+pub(crate) static TOKIO_02: SyncLazy<Runtime02> = SyncLazy::new(|| Runtime02::new().unwrap());
+
+pub(crate) fn spawn<F, T>(task: F) -> JoinHandle<T>
+where
+    F: Future<Output = T> + Send + 'static,
+    T: Send + 'static,
+{
+    if let Ok(runtime) = Handle::try_current() {
+        runtime.spawn(task)
+    } else {
+        EXECUTOR.spawn(task)
     }
 }

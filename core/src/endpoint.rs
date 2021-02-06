@@ -1,9 +1,9 @@
 use crate::packet::ResponseWindow;
 use crate::pki::CanonicalId;
 use crate::util::TaskSink;
+use crate::util::TOKIO_02;
 use crate::Connection;
 use crate::ConnectionError;
-use crate::TOKIO_02;
 use blake3::Hash;
 use futures_channel::mpsc::UnboundedSender;
 use futures_core::Stream;

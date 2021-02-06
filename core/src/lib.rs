@@ -61,17 +61,12 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
 use thiserror::Error;
-use tokio::runtime::Runtime;
 use tokio::sync::broadcast::Sender;
-use tokio_02::runtime::Runtime as Runtime02;
 use tonic::transport::Channel;
 use uuid::Uuid;
 
 static CURRENT_NODE_HANDLE: AtomicI32 = AtomicI32::new(0);
 static NODES: SyncLazy<Mutex<HashMap<i32, Node>>> = SyncLazy::new(Default::default);
-
-static EXECUTOR: SyncLazy<Runtime> = SyncLazy::new(|| Runtime::new().unwrap());
-static TOKIO_02: SyncLazy<Runtime02> = SyncLazy::new(|| Runtime02::new().unwrap());
 
 /// Starts a [Node].
 ///
@@ -86,7 +81,7 @@ pub async fn start(
 ) -> Result<i32, NodeStartError> {
     let handle = CURRENT_NODE_HANDLE.fetch_add(1, Ordering::SeqCst);
     let (node, task) = Node::new(&account_id, &profile_config, node_grpc_port).await?;
-    EXECUTOR.spawn(task);
+    self::util::spawn(task);
     NODES.lock().unwrap().insert(handle, node);
     Ok(handle)
 }
