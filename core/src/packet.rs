@@ -10,6 +10,7 @@ use blake3::Hash;
 use futures_core::Stream;
 use futures_util::StreamExt;
 use http::StatusCode;
+use prost::DecodeError;
 use prost::Message as _;
 use quinn::ReadToEndError;
 use quinn::RecvStream;
@@ -32,21 +33,19 @@ impl ResponseWindow {
         connection: Arc<Connection>,
         mut sender: SendStream,
         receiver: RecvStream,
-    ) -> Option<Self> {
-        // TODO: Return a result instead
+    ) -> Result<Self, Error> {
         match receiver.read_to_end(MAX_PACKET_SIZE_BYTES).await {
             Ok(raw) => match Request::decode(raw.as_slice()) {
                 Ok(request) => {
                     log::debug!("Received request: {:?}", &request);
-                    Some(Self {
+                    Ok(Self {
                         connection,
                         request,
                         sender,
                     })
                 }
                 Err(err) => {
-                    log::error!("Failed to parse an incoming request: {:?}", &err);
-                    send_response(&mut sender, &err.into())
+                    send_response(&mut sender, &Response::from_decode_error(&err))
                         .await
                         .unwrap_or_else(|err| {
                             log::error!(
@@ -54,20 +53,16 @@ impl ResponseWindow {
                                 err
                             )
                         });
-                    None
+                    Err(err.into())
                 }
             },
-            Err(err) => match err {
-                ReadToEndError::TooLong => {
+            Err(err) => {
+                if let ReadToEndError::TooLong = err {
                     sender.reset(StatusCode::PAYLOAD_TOO_LARGE.as_u16().into());
                     connection.close(StatusCode::PAYLOAD_TOO_LARGE);
-                    None
-                }
-                ReadToEndError::Read(inner) => {
-                    log::error!("Failed to read an incoming request: {:?}", inner);
-                    None
-                }
-            },
+                };
+                Err(err.into())
+            }
         }
     }
 
@@ -124,4 +119,11 @@ async fn send_response(sender: &mut SendStream, response: &Response) -> Result<(
 async fn send_raw(sender: &mut SendStream, response: &[u8]) -> Result<(), WriteError> {
     sender.write_all(&response).await?;
     sender.finish().await
+}
+
+#[derive(thiserror::Error, Debug)]
+#[error("Error handling a packet")]
+pub enum Error {
+    Decode(#[from] DecodeError),
+    ReadToEnd(#[from] ReadToEndError),
 }

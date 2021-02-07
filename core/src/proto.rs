@@ -20,10 +20,8 @@ impl Response {
             reason,
         }
     }
-}
 
-impl From<DecodeError> for Response {
-    fn from(src: DecodeError) -> Self {
+    pub fn from_decode_error(src: &DecodeError) -> Self {
         Self {
             status: StatusCode::BAD_REQUEST.as_u16().into(),
             reason: format!("{}", src),

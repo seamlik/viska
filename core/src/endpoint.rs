@@ -259,13 +259,22 @@ impl ConnectionManager {
     ) {
         match incoming {
             Ok((sender, receiver)) => {
-                let window = ResponseWindow::new(connection, sender, receiver).await;
-                if let Some(w) = window {
-                    let _ = response_window_sink.send(w).await;
+                match ResponseWindow::new(connection, sender, receiver).await {
+                    Ok(window) => {
+                        let _ = response_window_sink.send(window).await;
+                    }
+                    Err(err) => log::error!(
+                        "Error turning a QUIC bidirectional stream to a response window: {:?}",
+                        err
+                    ),
                 };
             }
             Err(err) => {
-                log::error!("Error on {:?}: {:?}", &connection, err);
+                log::error!(
+                    "Error comsuming an incoming connection on {:?}: {:?}",
+                    &connection,
+                    err
+                );
             }
         };
     }
