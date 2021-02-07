@@ -94,7 +94,7 @@ pub fn stop(handle: i32) {
 
 /// The protagonist.
 pub struct Node {
-    connection_manager: Arc<ConnectionManager>,
+    connection_manager: ConnectionManager,
     _node_grpc_shutdown_token: Box<dyn Any + Send>,
     grpc_port: u16,
     event_sink_daemon: Sender<Arc<Event>>,
@@ -179,7 +179,7 @@ impl Node {
 
     /// Connects to a remote [Node].
     pub async fn connect(&self, addr: &SocketAddr) -> Result<Arc<Connection>, ConnectionError> {
-        self.connection_manager.clone().connect(addr).await
+        self.connection_manager.connect(addr).await
     }
 
     /// Gets the local port.
@@ -190,12 +190,6 @@ impl Node {
     #[cfg(test)]
     async fn grpc_client(&self) -> Result<NodeClient<Channel>, tonic::transport::Error> {
         NodeClient::<Channel>::connect(format!("http://[::1]:{}", self.grpc_port)).await
-    }
-}
-
-impl Drop for Node {
-    fn drop(&mut self) {
-        self.connection_manager.close();
     }
 }
 

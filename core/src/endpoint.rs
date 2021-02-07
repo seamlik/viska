@@ -113,8 +113,10 @@ impl LocalEndpoint {
     pub fn local_port(&self) -> std::io::Result<u16> {
         Ok(self.quic.local_addr()?.port())
     }
+}
 
-    fn close(&self) {
+impl Drop for LocalEndpoint {
+    fn drop(&mut self) {
         self.quic.close(0_u8.into(), &[]);
     }
 }
@@ -151,7 +153,7 @@ impl ConnectionInfo for quinn::Connection {
 }
 
 pub struct ConnectionManager {
-    connections: tokio::sync::RwLock<HashMap<Uuid, Arc<Connection>>>,
+    connections: Arc<tokio::sync::RwLock<HashMap<Uuid, Arc<Connection>>>>,
     endpoint: LocalEndpoint,
     response_window_sink: UnboundedSender<ResponseWindow>,
     task_sink: TaskSink,
@@ -162,26 +164,35 @@ impl ConnectionManager {
         config: &Config,
         verifier: Arc<CertificateVerifier>,
         response_window_sink: UnboundedSender<ResponseWindow>,
-    ) -> Result<(Arc<Self>, impl Future<Output = ()>), Error> {
+    ) -> Result<(Self, impl Future<Output = ()>), Error> {
         let (task_sink, dynamic_task) = TaskSink::new();
         let (endpoint, incoming) = LocalEndpoint::start(config, verifier)?;
 
         let instance = Self {
             endpoint,
-            response_window_sink,
+            response_window_sink: response_window_sink.clone(),
             connections: Default::default(),
-            task_sink,
+            task_sink: task_sink.clone(),
         };
-        let instance = Arc::new(instance);
-        let instance_clone = instance.clone();
+        let account_id = instance.endpoint.account_id;
+        let connections = instance.connections.clone();
 
         // Process incoming connections
         let incoming_connections_task = incoming.for_each_concurrent(None, move |connecting| {
-            let instance = instance_clone.clone();
+            let connections = connections.clone();
+            let task_sink = task_sink.clone();
+            let response_window_sink = response_window_sink.clone();
             async move {
                 match connecting.await {
                     Ok(new_connection) => {
-                        instance.add(new_connection).await;
+                        Self::add(
+                            new_connection,
+                            connections.clone(),
+                            response_window_sink,
+                            task_sink.clone(),
+                            account_id,
+                        )
+                        .await;
                     }
                     Err(err) => log::error!("Failed to accept an incoming connection: {:?}", err),
                 }
@@ -195,23 +206,26 @@ impl ConnectionManager {
         Ok((instance, task))
     }
 
-    async fn add(self: Arc<Self>, new_connection: NewConnection) -> Arc<Connection> {
-        // TODO: Don't refer to self so that no need to implement Drop for Node
+    async fn add(
+        new_connection: NewConnection,
+        connections: Arc<tokio::sync::RwLock<HashMap<Uuid, Arc<Connection>>>>,
+        response_window_sink: UnboundedSender<ResponseWindow>,
+        task_sink: TaskSink,
+        account_id: Hash,
+    ) -> Arc<Connection> {
         let connection_id = Uuid::new_v4();
         let connection = Arc::<Connection>::new(Connection {
             quic: new_connection.connection,
             id: connection_id,
         });
-        self.connections
+        connections
             .write()
             .await
             .insert(connection.id, connection.clone());
-        let self_clone = self.clone();
 
         // Create ResponseWindow
         let connection_clone = connection.clone();
         let bi_streams = new_connection.bi_streams;
-        let response_window_sink = self.response_window_sink.clone();
         let response_windows_creator_task = bi_streams
             .for_each_concurrent(None, move |incoming| {
                 Self::consume_bi_streams(
@@ -222,13 +236,13 @@ impl ConnectionManager {
             })
             .then(move |_| async move {
                 // Auto-remove the connection after it is closed (stream ends)
-                self_clone.connections.write().await.remove(&connection_id);
+                connections.write().await.remove(&connection_id);
             });
-        self.task_sink.submit(response_windows_creator_task);
+        task_sink.submit(response_windows_creator_task);
 
         log::info!(
             "Connected to {} {:?}",
-            if Some(self.endpoint.account_id) == connection.account_id() {
+            if Some(account_id) == connection.account_id() {
                 "Device"
             } else {
                 "Peer"
@@ -256,19 +270,19 @@ impl ConnectionManager {
         };
     }
 
-    pub async fn connect(
-        self: Arc<Self>,
-        addr: &SocketAddr,
-    ) -> Result<Arc<Connection>, ConnectionError> {
-        Ok(self.clone().add(self.endpoint.connect(addr).await?).await)
+    pub async fn connect(&self, addr: &SocketAddr) -> Result<Arc<Connection>, ConnectionError> {
+        Ok(Self::add(
+            self.endpoint.connect(addr).await?,
+            self.connections.clone(),
+            self.response_window_sink.clone(),
+            self.task_sink.clone(),
+            self.endpoint.account_id,
+        )
+        .await)
     }
 
     pub fn local_port(&self) -> std::io::Result<u16> {
         self.endpoint.local_port()
-    }
-
-    pub fn close(&self) {
-        self.endpoint.close();
     }
 }
 
