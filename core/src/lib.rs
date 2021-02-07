@@ -138,7 +138,7 @@ impl Node {
         let (event_sink_daemon, _) = tokio::sync::broadcast::channel(8);
         let (grpc_task, node_grpc_shutdown_token) = daemon::StandardNode::create(
             grpc_port,
-            event_sink_database,
+            event_sink_database.clone(),
             event_sink_daemon.clone(),
             database.clone(),
         );
@@ -149,8 +149,13 @@ impl Node {
             key: &key,
         };
         let (window_sender, window_receiver) = futures_channel::mpsc::unbounded::<ResponseWindow>();
-        let request_handler_task =
-            ResponseWindow::consumer_task(account_id_calculated, window_receiver, database.clone());
+        let request_handler_task = ResponseWindow::consumer_task(
+            account_id_calculated,
+            window_receiver,
+            database.clone(),
+            event_sink_database,
+            event_sink_daemon.clone(),
+        );
         let (connection_manager, connection_manager_task) =
             ConnectionManager::new(&endpoint_config, certificate_verifier, window_sender)?;
 

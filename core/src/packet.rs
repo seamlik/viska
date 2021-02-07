@@ -1,4 +1,6 @@
+use crate::daemon::Event as DaemonEvent;
 use crate::database::Database;
+use crate::database::Event as DatabaseEvent;
 use crate::endpoint::ConnectionInfo;
 use crate::handler::DeviceHandler;
 use crate::handler::Handler;
@@ -19,6 +21,7 @@ use quinn::WriteError;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tokio::sync::broadcast::Sender;
 
 pub const MAX_PACKET_SIZE_BYTES: usize = 1024 * 1024;
 
@@ -74,6 +77,8 @@ impl ResponseWindow {
         account_id: Hash,
         window_stream: impl Stream<Item = Self>,
         database: Arc<Database>,
+        event_sink_database: Sender<Arc<DatabaseEvent>>,
+        event_sink_daemon: Sender<Arc<DaemonEvent>>,
     ) -> impl Future<Output = ()> {
         window_stream.for_each_concurrent(None, move |window| {
             let handler: Box<dyn Handler + Send + Sync> = if window.account_id() == Some(account_id)
@@ -82,6 +87,8 @@ impl ResponseWindow {
             } else {
                 Box::new(PeerHandler {
                     database: database.clone(),
+                    event_sink_database: event_sink_database.clone(),
+                    event_sink_daemon: event_sink_daemon.clone(),
                 })
             };
             async move {
