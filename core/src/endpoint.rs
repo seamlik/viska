@@ -153,7 +153,7 @@ impl ConnectionInfo for quinn::Connection {
 }
 
 pub struct ConnectionManager {
-    connections: Arc<tokio::sync::RwLock<HashMap<Uuid, Arc<Connection>>>>,
+    connections: Arc<RwLock<HashMap<Uuid, Arc<Connection>>>>,
     endpoint: LocalEndpoint,
     response_window_sink: UnboundedSender<ResponseWindow>,
     task_sink: TaskSink,
@@ -208,7 +208,7 @@ impl ConnectionManager {
 
     async fn add(
         new_connection: NewConnection,
-        connections: Arc<tokio::sync::RwLock<HashMap<Uuid, Arc<Connection>>>>,
+        connections: Arc<RwLock<HashMap<Uuid, Arc<Connection>>>>,
         response_window_sink: UnboundedSender<ResponseWindow>,
         task_sink: TaskSink,
         account_id: Hash,
@@ -220,7 +220,7 @@ impl ConnectionManager {
         });
         connections
             .write()
-            .await
+            .unwrap()
             .insert(connection.id, connection.clone());
 
         // Create ResponseWindow
@@ -236,7 +236,7 @@ impl ConnectionManager {
             })
             .then(move |_| async move {
                 // Auto-remove the connection after it is closed (stream ends)
-                connections.write().await.remove(&connection_id);
+                connections.write().unwrap().remove(&connection_id);
             });
         task_sink.submit(response_windows_creator_task);
 
