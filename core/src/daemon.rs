@@ -57,7 +57,7 @@ impl StandardNode {
     ///
     /// Returns a [Future] to drive the gRPC service and a token for shutting down
     /// the service manually. Drop the token to shut it down.
-    pub fn new(
+    pub fn create(
         node_grpc_port: u16,
         event_sink_database: BroadcastSender<Arc<DatabaseEvent>>,
         event_sink_daemon: BroadcastSender<Arc<Event>>,

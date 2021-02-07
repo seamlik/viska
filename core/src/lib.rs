@@ -136,7 +136,7 @@ impl Node {
 
         // Start gRPC server
         let (event_sink_daemon, _) = tokio::sync::broadcast::channel(8);
-        let (grpc_task, node_grpc_shutdown_token) = daemon::StandardNode::new(
+        let (grpc_task, node_grpc_shutdown_token) = daemon::StandardNode::create(
             grpc_port,
             event_sink_database,
             event_sink_daemon.clone(),
@@ -168,7 +168,7 @@ impl Node {
         );
         Ok((
             Self {
-                connection_manager: connection_manager.into(),
+                connection_manager,
                 _node_grpc_shutdown_token: Box::new(node_grpc_shutdown_token),
                 grpc_port,
                 event_sink_daemon,
