@@ -302,9 +302,8 @@ impl CertificateVerifier {
     }
 
     fn verify(&self, presented_certs: &[rustls::Certificate]) -> Result<(), TLSError> {
-        // TODO: Check expiration
         match presented_certs {
-            [cert] => {
+            [cert, ..] => {
                 let peer_id = cert.canonical_id();
                 if self.account_id == peer_id || self.peer_is_allowed(peer_id) {
                     log::info!("Peer {} is known, accepting connection.", peer_id.to_hex());
@@ -314,9 +313,6 @@ impl CertificateVerifier {
                 }
             }
             [] => Err(TLSError::NoCertificatesPresented),
-            _ => Err(TLSError::PeerMisbehavedError(
-                "Only 1 certificate is allowed in the chain".into(),
-            )),
         }
     }
 
