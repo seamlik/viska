@@ -23,7 +23,6 @@ pub mod pki;
 pub mod proto;
 pub mod util;
 
-use self::daemon::node_client::NodeClient;
 use self::daemon::Event;
 use self::database::ProfileConfig;
 use crate::database::peer::PeerService;
@@ -57,7 +56,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use thiserror::Error;
 use tokio::sync::broadcast::Sender;
-use tonic::transport::Channel;
 use uuid::Uuid;
 
 static CURRENT_NODE_HANDLE: AtomicI32 = AtomicI32::new(0);
@@ -192,9 +190,9 @@ impl Node {
         self.connection_manager.local_port()
     }
 
-    #[cfg(test)]
-    async fn grpc_client(&self) -> Result<NodeClient<Channel>, tonic::transport::Error> {
-        NodeClient::<Channel>::connect(format!("http://[::1]:{}", self.grpc_port)).await
+    /// Gets the gRPC port.
+    pub fn grpc_port(&self) -> u16 {
+        self.grpc_port
     }
 }
 

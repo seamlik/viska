@@ -273,17 +273,23 @@ impl IntoTonicStatus for diesel::result::Error {
 #[cfg(test)]
 mod test {
     use super::event::Content;
+    use super::node_client::NodeClient;
     use super::*;
     use futures_util::StreamExt;
+    use tonic::transport::Channel;
+
+    async fn grpc_client(port: u16) -> Result<NodeClient<Channel>, tonic::transport::Error> {
+        NodeClient::<Channel>::connect(format!("http://[::1]:{}", port)).await
+    }
 
     #[tokio::test]
     async fn watch_events() -> anyhow::Result<()> {
         let (node, _) = crate::util::start_dummy_node().await?;
 
-        let mut client_1 = node.grpc_client().await?;
+        let mut client_1 = grpc_client(node.grpc_port()).await?;
         let mut stream_1 = client_1.watch_events(()).await?.into_inner();
 
-        let mut client_2 = node.grpc_client().await?;
+        let mut client_2 = grpc_client(node.grpc_port()).await?;
         let mut stream_2 = client_2.watch_events(()).await?.into_inner();
 
         let event = Event {
