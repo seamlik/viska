@@ -17,4 +17,5 @@ log = "0.4"
 riko = { git = "https://github.com/seamlik/riko" }
 riko_runtime = { git = "https://github.com/seamlik/riko" }
 riko_runtime_jni = { git = "https://github.com/seamlik/riko" }
+libsqlite3-sys = { version = "*", features = ["bundled"] }
 viska = { path = "../core" }

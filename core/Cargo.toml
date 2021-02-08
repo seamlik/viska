@@ -24,7 +24,6 @@ hex = "0.4"
 http = "0"
 itertools = "0.10"
 jni = "0.18"
-libsqlite3-sys = { version = "*", features = ["bundled"] }
 log = "0.4"
 quinn = "0.6.1"
 rand = "0.8"
